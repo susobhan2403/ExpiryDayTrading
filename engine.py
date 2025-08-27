@@ -38,9 +38,15 @@ LOG_DIR = ROOT / "logs"
 for p in (OUT_DIR, SNAP_DIR, LOG_DIR):
     p.mkdir(parents=True, exist_ok=True)
 
+# Ensure stdout/stderr can handle Unicode characters
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 logger = logging.getLogger("engine")
 logger.setLevel(logging.INFO)
-fh = RotatingFileHandler(LOG_DIR / "engine.log", maxBytes=2_000_000, backupCount=5)
+fh = RotatingFileHandler(LOG_DIR / "engine.log", maxBytes=2_000_000, backupCount=5, encoding="utf-8")
 fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
 logger.addHandler(fh)
 sh = logging.StreamHandler(sys.stdout)
@@ -166,8 +172,7 @@ def minutes_to_expiry(expiry_iso: str) -> float:
 
 def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
     # tie → higher strike
-    diffs = [(abs(spot-k), -k, k) for k in strikes]  # -k so larger k wins on tie
-    return max(diffs)[2]
+    return min(strikes, key=lambda k: (abs(spot - k), -k))
 
 def pcr_from_chain(chain: Dict) -> float:
     ce = sum(v['oi'] for v in chain['calls'].values())
@@ -295,7 +300,7 @@ class KiteProvider(MarketDataProvider):
         try:
             data = self.kite.historical_data(
                 token, start, now, "minute",
-                continuous=is_future,  # stitch series for futures if needed
+                continuous=False,  # continuous minute candles unsupported
                 oi=False
             )
         except Exception as e:
@@ -308,7 +313,7 @@ class KiteProvider(MarketDataProvider):
                 alt_start = now - dt.timedelta(days=2)
                 data = self.kite.historical_data(
                     token, alt_start, now, "minute",
-                    continuous=is_future,
+                    continuous=False,
                     oi=False
                 )
             except Exception as e:
