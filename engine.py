@@ -626,8 +626,10 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
     def mad(arr):
+        if not arr:
+            return 0.0
         m = statistics.median(arr)
-        return statistics.median([abs(x-m) for x in arr]) if arr else 0.0
+        return statistics.median([abs(x - m) for x in arr])
     d_oi_ce=[]; d_oi_pe=[]
     ce_write_above=False; pe_unwind_below=False; pe_write_above=False; ce_unwind_below=False
     same_side_add=False; unwind_present=False; two_sided_adjacent=False
