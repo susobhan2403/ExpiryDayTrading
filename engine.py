@@ -281,30 +281,76 @@ class KiteProvider(MarketDataProvider):
         if futs.empty: raise RuntimeError(f"No futures for {symbol}")
         return futs.iloc[0]
 
-    def _hist(self, token: int, interval: str, lookback_minutes: int) -> pd.DataFrame:
-        # Kite wants naive datetimes
+    def _hist(self, token: int, interval: str, lookback_minutes: int, is_future: bool = False) -> pd.DataFrame:
+        # Kite expects naive datetimes
         now = dt.datetime.now().replace(tzinfo=None)
-        start = now - dt.timedelta(minutes=lookback_minutes+15)
-        data = self.kite.historical_data(token, start, now, "minute", continuous=False, oi=False)
-        if not data: return pd.DataFrame(columns=["open","high","low","close","volume"])
+        start = now - dt.timedelta(minutes=max(lookback_minutes + 15, 240))
+        data = []
+        try:
+            data = self.kite.historical_data(
+                token, start, now, "minute",
+                continuous=is_future,  # stitch series for futures if needed
+                oi=False
+            )
+        except Exception as e:
+            logger.warning(f"[hist] token={token} error: {e}")
+            data = []
+
+        if not data:
+            # Retry with a wider window (2 days) — sometimes minute API can be sparse around session boundaries
+            try:
+                alt_start = now - dt.timedelta(days=2)
+                data = self.kite.historical_data(
+                    token, alt_start, now, "minute",
+                    continuous=is_future,
+                    oi=False
+                )
+            except Exception as e:
+                logger.warning(f"[hist-retry] token={token} error: {e}")
+                data = []
+
+        if not data:
+            return pd.DataFrame(columns=["open","high","low","close","volume"])
+
         df = pd.DataFrame(data)
-        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(dt.timezone.utc).tz_convert(IST)
-        df = df.set_index("date")[["open","high","low","close","volume"]]
-        if interval=="5m":
-            df = df.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
+
+        # Handle tz-awareness safely (Kite may already return tz-aware datetimes)
+        dates = pd.to_datetime(df["date"])
+        try:
+            if dates.dt.tz is None:
+                dates = dates.dt.tz_localize(dt.timezone.utc).dt.tz_convert(IST)
+            else:
+                dates = dates.dt.tz_convert(IST)
+        except Exception:
+            # last resort: assume UTC then convert
+            dates = pd.to_datetime(df["date"]).tz_localize(dt.timezone.utc).tz_convert(IST)
+
+        df = df.set_index(dates)[["open","high","low","close","volume"]]
+        df.index.name = "date"
+
+        if interval == "5m":
+            df = df.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna(how="any")
+
         return df.tail(lookback_minutes)
+
 
     def get_spot_ohlcv(self, symbol: str, interval: str, lookback_minutes: int) -> pd.DataFrame:
         tok = self._resolve_index_token(symbol)
+        df = pd.DataFrame()
         if tok:
-            return self._hist(tok, interval, lookback_minutes)
-        # fallback to futures if index token not found
-        fut = self._nearest_future_row(symbol)
-        return self._hist(int(fut["instrument_token"]), interval, lookback_minutes)
+            df = self._hist(tok, interval, lookback_minutes, is_future=False)
+        if df.empty:
+            # Fallback to futures for spot technicals if index candles aren’t available
+            fut = self._nearest_future_row(symbol)
+            df = self._hist(int(fut["instrument_token"]), interval, lookback_minutes, is_future=True)
+            if df.empty:
+                logger.warning(f"{symbol}: spot proxy via futures also empty (fut token {int(fut['instrument_token'])}).")
+        return df
 
     def get_futures_ohlcv(self, symbol: str, interval: str, expiry: str, lookback_minutes: int) -> pd.DataFrame:
         fut = self._nearest_future_row(symbol)
-        return self._hist(int(fut["instrument_token"]), interval, lookback_minutes)
+        return self._hist(int(fut["instrument_token"]), interval, lookback_minutes, is_future=True)
+
 
     def get_option_chain(self, symbol: str, expiry: str) -> Dict:
         chain_df, exp_sel = self._nearest_weekly_chain_df(symbol)
@@ -526,8 +572,17 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     lookback = 420
     spot_1m = provider.get_spot_ohlcv(symbol, "1m", lookback)
     fut_1m  = provider.get_futures_ohlcv(symbol, "1m", expiry, lookback)
-    if spot_1m.empty or fut_1m.empty:
-        logger.warning(f"{symbol}: empty OHLCV.")
+
+    # Substitute if one side is missing so we can still compute indicators/VWAP
+    if spot_1m.empty and not fut_1m.empty:
+        logger.warning(f"{symbol}: spot OHLCV empty, substituting futures OHLCV for spot technicals.")
+        spot_1m = fut_1m.copy()
+    if fut_1m.empty and not spot_1m.empty:
+        logger.warning(f"{symbol}: futures OHLCV empty, substituting spot OHLCV for futures technicals.")
+        fut_1m = spot_1m.copy()
+
+    if spot_1m.empty and fut_1m.empty:
+        logger.warning(f"{symbol}: both spot and futures OHLCV empty. Check Kite Historical addon and access token.")
         return None
     spot_5m = spot_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
     fut_5m  = fut_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
