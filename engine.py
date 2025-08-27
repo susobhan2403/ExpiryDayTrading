@@ -180,7 +180,13 @@ def max_pain(chain: Dict) -> int:
     pe_oi = {k: chain['puts'][k]['oi'] for k in strikes}
     bestK, bestPain = None, float('inf')
     for K in strikes:
-        pain = sum(ce_oi[s]*max(0, s-K) for s in strikes) + sum(pe_oi[s]*max(0, K-s) for s in strikes)
+        # Option value at settlement K for strike s:
+        #   Calls -> max(0, K - s)
+        #   Puts  -> max(0, s - K)
+        pain = (
+            sum(ce_oi[s] * max(0, K - s) for s in strikes) +
+            sum(pe_oi[s] * max(0, s - K) for s in strikes)
+        )
         if pain < bestPain: bestPain, bestK = pain, K
     return int(bestK)
 
@@ -849,7 +855,9 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     # Print/alerts
     probs_sorted = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
     alt = f"{probs_sorted[1][0]} {int(probs_sorted[1][1]*100)}%" if len(probs_sorted)>1 else ""
-    line = (f"{now.strftime('%H:%M')} IST | {symbol} {int(spot_now)} | VWAP(fut) {int(vwap_fut)}\n"
+    spot_print = int(spot_now) if not math.isnan(spot_now) else "NA"
+    vwap_fut_print = int(vwap_fut) if not math.isnan(vwap_fut) else "NA"
+    line = (f"{now.strftime('%H:%M')} IST | {symbol} {spot_print} | VWAP(fut) {vwap_fut_print}\n"
             f"D={int(D)} | ATR_D={int(ATR_D)} | VND={snap.vnd} | SSD={snap.ssd} | PD={snap.pdist_pct}%\n"
             f"PCR {snap.pcr} (Δz={snap.dpcr_z}) | MaxPain {mp} | Drift {snap.mph_pts_per_hr}/hr (norm {snap.mph_norm})\n"
             f"ATM {atm_k} IV {snap.atm_iv}% (ΔIV_z={snap.iv_z}) | Basis {snap.basis}\n"
