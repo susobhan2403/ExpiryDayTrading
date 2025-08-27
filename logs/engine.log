@@ -1,0 +1,7 @@
+2025-08-27 23:16:32,460 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=240s
+2025-08-27 23:17:32,385 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=240s
+2025-08-27 23:17:38,698 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=240s
+2025-08-27 23:17:40,135 WARNING: BANKNIFTY: empty OHLCV.
+2025-08-27 23:17:40,391 WARNING: NIFTY: empty OHLCV.
+2025-08-27 23:18:03,079 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=240s
+2025-08-27 23:18:04,683 WARNING: BANKNIFTY: empty OHLCV.
