@@ -11,3 +11,194 @@
 2025-08-28 00:04:25,986 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=240s
 2025-08-28 00:04:27,554 WARNING: [hist-retry] token=16409602 error: invalid interval for continuous data
 2025-08-28 00:04:27,556 WARNING: BANKNIFTY: futures OHLCV empty, substituting spot OHLCV for futures technicals.
+2025-08-28 20:14:27,887 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=240s
+2025-08-28 20:16:45,703 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=240s
+2025-08-28 20:17:08,093 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s
+2025-08-28 20:45:35,980 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s
+2025-08-28 20:57:02,086 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s
+2025-08-28 20:57:38,076 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s
+2025-08-28 20:57:40,581 INFO: 20:57 IST | NIFTY 24500 | VWAP(fut) 24661
+D=-99 | ATR_D=110 | VND=0.9 | SSD=1.98 | PD=0.4%
+PCR 0.645 (Δz=0.0) | MaxPain 24600 | Drift nan/hr (norm nan)
+ATM 24500 IV 8.8% (ΔIV_z=0.0) | Basis 135.3
+Scenario: Pin & decay day (IV crush) 21% (alt: Bear migration 19%)
+Action: NO-TRADE  | Entry - | SL - | Targets - | Invalidate -
+
+2025-08-28 21:20:39,878 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s
+2025-08-28 21:20:41,583 INFO: 21:20 IST | NIFTY 24500 | VWAP(fut) 24659
+D=-99 | ATR_D=110 | VND=0.9 | SSD=1.98 | PD=0.4%
+PCR 0.645 (Δz=0.0) | MaxPain 24600 | Drift nan/hr (norm nan)
+ATM 24500 IV 8.81% (ΔIV_z=0.0) | Basis 135.3
+Scenario: Pin and Decay (IV crush) 14% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+Enter when atleast 3 of below 4 are satisfied:
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 22:57:28,333 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 22:57:28,333 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s | mode=auto
+2025-08-28 23:19:07,753 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:19:07,753 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s | mode=auto
+2025-08-28 23:22:26,523 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:22:26,524 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s | mode=auto
+2025-08-28 23:24:35,168 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:24:35,168 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s | mode=auto
+2025-08-28 23:26:51,388 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:26:51,388 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=240s | mode=auto
+2025-08-28 23:26:53,884 INFO: 23:26 IST | NIFTY 24500 | VWAP(fut) 24701
+D=-99 | ATR_D=221 | VND=0.45 | SSD=1.98 | PD=0.4%
+PCR 0.645 (Δz=0.0) | MaxPain 24600 | Drift nan/hr (norm nan)
+ATM 24500 IV 8.88% (ΔIV_z=0.0) | Basis 135.3
+Scenario: Pin and Decay (IV crush) 12% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+Enter when atleast 3 of below 4 are satisfied:
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:27:58,367 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:27:58,368 INFO: Engine started | provider=KITE | symbols=['SENSEX'] | poll=240s | mode=auto
+2025-08-28 23:28:00,786 INFO: 23:27 IST | SENSEX 80080 | VWAP(fut) 80808
+D=-419 | ATR_D=221 | VND=1.9 | SSD=8.39 | PD=0.52%
+PCR 0.645 (Δz=0.0) | MaxPain 80500 | Drift nan/hr (norm nan)
+ATM 80100 IV 9.71% (ΔIV_z=0.0) | Basis 56181.9
+Scenario: Short-Cover Reversion Up 20% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 80150 CE / 80200 CE[0m
+Enter when atleast 3 of below 6 are satisfied:
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [32m✔[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:32:42,426 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:32:42,427 INFO: Engine started | provider=KITE | symbols=['SENSEX'] | poll=240s | mode=auto
+2025-08-28 23:32:44,676 INFO: 23:32 IST | SENSEX 80080 | VWAP(fut) 80808
+D=-419 | ATR_D=221 | VND=1.9 | SSD=8.39 | PD=0.52%
+PCR 0.645 (Δz=0.0) | MaxPain 80500 | Drift nan/hr (norm nan)
+ATM 80100 IV 9.71% (ΔIV_z=0.0) | Basis 56181.9
+Scenario: Short-Cover Reversion Up 20% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 80150 CE / 80200 CE[0m
+Enter when atleast 3 of below 6 are satisfied:
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [32m✔[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+Exit when atleast one or more satisfies:
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:34:57,031 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:34:57,032 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=240s | mode=auto
+2025-08-28 23:34:58,960 INFO: 23:34 IST | BANKNIFTY 53820 | VWAP(fut) 54395
+D=-1179 | ATR_D=613 | VND=1.92 | SSD=11.8 | PD=2.19%
+PCR 0.93 (Δz=0.0) | MaxPain 55000 | Drift nan/hr (norm nan)
+ATM 53800 IV 10.22% (ΔIV_z=0.0) | Basis 440.6
+Scenario: Short-Cover Reversion Up 19% (alt: Bull Migration 19%)
+[1m[36mAction: TRADE | BUY 53900 CE / 54000 CE[0m
+Enter when atleast 3 of below 6 are satisfied:
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [32m✔[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+Exit when atleast one or more satisfies:
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:35:39,932 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:35:39,933 INFO: Engine started | provider=KITE | symbols=['MIDCPNIFTY'] | poll=240s | mode=auto
+2025-08-28 23:35:42,591 INFO: 23:35 IST | MIDCPNIFTY 12535 | VWAP(fut) 12645
+D=-164 | ATR_D=171 | VND=0.96 | SSD=3.3 | PD=1.32%
+PCR 1.502 (Δz=0.0) | MaxPain 12700 | Drift nan/hr (norm nan)
+ATM 12525 IV 15.13% (ΔIV_z=0.0) | Basis 48.6
+Scenario: Bear Migration 23% (alt: Squeeze Continuation (One-way) 22%)
+[1m[36mAction: TRADE | BUY 12475 PE / 12425 PE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price below VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports down (CE write, PE unwind) - [31m✘[0m
+4. PCR momentum down (Δz <= -0.5) - [31m✘[0m
+5. MACD(5m) cross down - [32m✔[0m
+6. MaxPain drift down (norm <= -thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back above VWAP
+2. ADX weakening (<16)
+3. OI flips bullish (PE write, CE unwind)
+4. PCR momentum up (Δz >= 0.5)
+5. MACD(5m) cross up
+6. MaxPain drift up (norm >= thr)
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:36:50,810 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-28 23:36:50,811 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY'] | poll=240s | mode=auto
+2025-08-28 23:36:53,186 INFO: 23:36 IST | NIFTY 24500 | VWAP(fut) 24701
+D=-99 | ATR_D=221 | VND=0.45 | SSD=1.98 | PD=0.4%
+PCR 0.645 (Δz=0.0) | MaxPain 24600 | Drift 0.0/hr (norm 0.0)
+ATM 24500 IV 8.88% (ΔIV_z=0.0) | Basis 135.3
+Scenario: Pin and Decay (IV crush) 13% (alt: Bull Migration 19%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:36:53,187 INFO: 
+2025-08-28 23:36:53,994 INFO: 23:36 IST | BANKNIFTY 53820 | VWAP(fut) 54395
+D=-1179 | ATR_D=613 | VND=1.92 | SSD=11.8 | PD=2.19%
+PCR 0.93 (Δz=0.0) | MaxPain 55000 | Drift nan/hr (norm nan)
+ATM 53800 IV 10.22% (ΔIV_z=0.0) | Basis 440.6
+Scenario: Short-Cover Reversion Up 20% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 53900 CE / 54000 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [32m✔[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+2025-08-28 23:36:53,995 INFO: 
+2025-08-28 23:36:54,701 INFO: 23:36 IST | MIDCPNIFTY 12535 | VWAP(fut) 12645
+D=-164 | ATR_D=171 | VND=0.96 | SSD=3.3 | PD=1.32%
+PCR 1.502 (Δz=0.0) | MaxPain 12700 | Drift nan/hr (norm nan)
+ATM 12525 IV 15.13% (ΔIV_z=0.0) | Basis 48.6
+Scenario: Bear Migration 23% (alt: Squeeze Continuation (One-way) 22%)
+[1m[36mAction: TRADE | BUY 12475 PE / 12425 PE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price below VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports down (CE write, PE unwind) - [31m✘[0m
+4. PCR momentum down (Δz <= -0.5) - [31m✘[0m
+5. MACD(5m) cross down - [32m✔[0m
+6. MaxPain drift down (norm <= -thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back above VWAP
+2. ADX weakening (<16)
+3. OI flips bullish (PE write, CE unwind)
+4. PCR momentum up (Δz >= 0.5)
+5. MACD(5m) cross up
+6. MaxPain drift up (norm >= thr)
+[1m[33mFinal Verdict: Hold[0m

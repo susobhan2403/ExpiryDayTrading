@@ -29,6 +29,11 @@ import pytz
 import requests
 from logging.handlers import RotatingFileHandler
 from colorama import init as colorama_init, Fore, Style
+import src.provider.kite as provider_mod
+import src.features.technicals as tech
+import src.features.options as opt
+from src.config import load_settings, save_settings, compute_dynamic_bands
+from src.ai.ensemble import ai_predict_probs, blend_probs
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -87,6 +92,8 @@ CONFIRM_SNAPSHOTS = 2         # require consecutive confirmations for OI/drift r
 MAD_K = float(os.getenv("OI_DELTA_K", "1.5"))
 
 ADX_LOW = int(os.getenv("ADX_THRESHOLD_LOW", "15"))
+# Min ADX increase to qualify as rising trend for breakout conditions (can be overridden via settings.json)
+ADX_RISE_MIN = float(os.getenv("ADX_RISE_MIN", "2.0"))
 PIN_NORM = float(os.getenv("PIN_DISTANCE_NORM", "0.4"))     # VND < 0.4
 REV_NORM = float(os.getenv("REVERSION_NORM", "1.0"))        # VND >= 1.0
 SQUEEZE_NORM = float(os.getenv("SQUEEZE_DISTANCE_NORM", "1.5"))
@@ -198,6 +205,74 @@ def volume_profile(df: pd.DataFrame, bins: int = 50) -> Dict[str,float]:
                 right = right_cand; cum += vol_bins[right]
     return {"POC": float(centers[poc_idx]), "VAL": float(centers[left]), "VAH": float(centers[right])}
 
+# ---------- settings helpers ----------
+def _load_settings() -> Dict:
+    path = ROOT / "settings.json"
+    try:
+        if path.exists():
+            return json.loads(path.read_text())
+    except Exception:
+        pass
+    return {}
+
+def _save_settings(cfg: Dict) -> None:
+    path = ROOT / "settings.json"
+    try:
+        path.write_text(json.dumps(cfg, indent=2))
+    except Exception:
+        pass
+
+def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: float, VND: float, D: float, step: int) -> Tuple[int,int,int,int]:
+    """
+    Returns: (max_above_steps, max_below_steps, far_otm_points, pin_distance_points)
+    Tuned by index type, expiry vs non-expiry, and current intraday conditions.
+    """
+    sym = symbol.upper()
+    is_bank = "BANK" in sym
+    # Base values
+    base_above = 3
+    base_below = 2
+    base_far = 1200 if is_bank else 600
+    base_pin = 200 if is_bank else 100
+
+    # Regime flags
+    range_bound = (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= base_pin)
+    trending = (adx5 >= 25) or (VND >= SQUEEZE_NORM) or (ATR_D >= (300 if is_bank else 150))
+
+    above = base_above
+    below = base_below
+    far_pts = base_far
+    pin_pts = base_pin
+
+    if expiry_today:
+        # Tighter bands around ATM on expiry unless strong trend
+        if trending:
+            above += 1; below += 1
+            far_pts += (400 if is_bank else 200)
+            pin_pts = int(pin_pts * 1.25)
+        else:
+            above = max(2, above); below = max(2, below)
+            far_pts = max(base_far - (400 if is_bank else 200), base_far//2)
+            pin_pts = max(int(pin_pts * 0.7), step)
+    else:
+        # Non-expiry: widen for trend days, narrow for range days
+        if trending:
+            above += 1; below += 1
+            far_pts += (400 if is_bank else 200)
+            pin_pts = int(pin_pts * 1.5)
+        if range_bound:
+            above = min(above, 2)
+            below = min(below, 2)
+            far_pts = max(base_far - (400 if is_bank else 200), base_far//2)
+            pin_pts = max(int(pin_pts * 0.7), step)
+
+    # Clamp sensible bounds
+    above = int(max(1, min(6, above)))
+    below = int(max(1, min(6, below)))
+    far_pts = int(max(6*step, min(30*step, far_pts)))
+    pin_pts = int(max(1*step, min(6*step, pin_pts)))
+    return above, below, far_pts, pin_pts
+
 # ---------- options/math ----------
 def bs_price(S,K,r,T,sig,call=True):
     if T<=0 or sig<=0: return 0.0
@@ -219,8 +294,11 @@ def implied_vol(price,S,K,r,T,call=True):
 
 def nearest_weekly_expiry(now_ist: dt.datetime) -> str:
     d = now_ist.date()
-    days_ahead = (3 - d.weekday()) % 7  # Thursday
-    if days_ahead==0 and now_ist.time() > dt.time(15,30): days_ahead = 7
+    # Weekly index expiries (NIFTY/BANKNIFTY) are on Thursday => weekday 3
+    days_ahead = (1 - d.weekday()) % 7
+    # After market close on expiry day, roll to next week
+    if days_ahead == 0 and now_ist.time() > dt.time(15, 30):
+        days_ahead = 7
     return (d + dt.timedelta(days=days_ahead)).isoformat()
 
 def minutes_to_expiry(expiry_iso: str) -> float:
@@ -330,25 +408,38 @@ class KiteProvider(MarketDataProvider):
 
     def _nearest_weekly_chain_df(self, symbol: str) -> Tuple[pd.DataFrame, str]:
         nfo = self._instruments("NFO").copy()
-        df = nfo[(nfo["name"]==symbol.upper()) & (nfo["segment"]=="NFO-OPT")].copy()
+        df = nfo[(nfo["name"] == symbol.upper()) & (nfo["segment"] == "NFO-OPT")].copy()
         if df.empty:
             raise RuntimeError(f"No NFO options for {symbol}")
         df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
-        today = dt.datetime.now(IST).date()
-        exps = sorted([e for e in df["expiry"].unique() if e >= today])
-        if not exps: raise RuntimeError("No future expiries")
+        now_ist = dt.datetime.now(IST)
+        today = now_ist.date()
+        # If we are past the market close on expiry day, skip today's expiry
+        if now_ist.time() > dt.time(15, 30):
+            exps = sorted([e for e in df["expiry"].unique() if e > today])
+        else:
+            exps = sorted([e for e in df["expiry"].unique() if e >= today])
+        if not exps:
+            raise RuntimeError("No future expiries")
         expiry = exps[0]
-        chain = df[df["expiry"]==expiry].copy()
+        chain = df[df["expiry"] == expiry].copy()
         chain["strike"] = chain["strike"].astype(int)
         return chain, expiry.isoformat()
 
     def _nearest_future_row(self, symbol: str) -> pd.Series:
         nfo = self._instruments("NFO").copy()
-        futs = nfo[(nfo["name"]==symbol.upper()) & (nfo["instrument_type"]=="FUT")].copy()
+        futs = nfo[(nfo["name"] == symbol.upper()) & (nfo["instrument_type"] == "FUT")].copy()
         futs["expiry"] = pd.to_datetime(futs["expiry"]).dt.date
-        today = dt.datetime.now(IST).date()
-        futs = futs[futs["expiry"]>=today].sort_values("expiry")
-        if futs.empty: raise RuntimeError(f"No futures for {symbol}")
+        now_ist = dt.datetime.now(IST)
+        today = now_ist.date()
+        # After market close on expiry day, skip today's futures expiry
+        if now_ist.time() > dt.time(15, 30):
+            futs = futs[futs["expiry"] > today]
+        else:
+            futs = futs[futs["expiry"] >= today]
+        futs = futs.sort_values("expiry")
+        if futs.empty:
+            raise RuntimeError(f"No futures for {symbol}")
         return futs.iloc[0]
 
     def _hist(self, token: int, interval: str, lookback_minutes: int, is_future: bool = False) -> pd.DataFrame:
@@ -554,6 +645,7 @@ def score_normalized(
     oi_flags: Dict[str,bool],
     confirmations: Dict[str,int],
     techs: Dict[str,float],
+    pin_distance_points: int,
 ) -> Tuple[Dict[str,float], Dict[str,Dict[str,bool]]]:
     """
     Returns: (probs_by_scenario, block_flags_by_scenario)
@@ -585,7 +677,7 @@ def score_normalized(
     price_block["reversion"] = (VND >= REV_NORM and D < 0 and (above_vwap or macd_up)) or abs(bb_pos) >= 1.0
     price_block["bear"]      = (below_vwap and adx5 >= 18) or bearish_bias or (not fut_up)
     price_block["bull"]      = (above_vwap and adx5 >= 18) or bullish_bias or fut_up
-    price_block["pin"]       = (VND < PIN_NORM and adx5 < ADX_LOW)
+    price_block["pin"]       = (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= pin_distance_points)
     price_block["squeeze"]   = (VND >= SQUEEZE_NORM and adx5 >= 20 and (above_vwap or below_vwap))
     price_block["event"]     = (abs(div) > 0 and abs(iv_z) >= 2.0)
 
@@ -652,10 +744,173 @@ def score_normalized(
     probs = softmax(list(scores.values()))
     return ({k: round(v,3) for k,v in zip(scores.keys(), probs)}, block_ok)
 
+# ---------- intraday (non-expiry) scoring ----------
+def score_intraday(
+    symbol: str,
+    D: float,
+    VND: float,
+    adx5: float,
+    dpcr_z: float,
+    iv_z: float,
+    iv_pct_hint: float,
+    above_vwap: bool,
+    below_vwap: bool,
+    breakout_up: bool,
+    breakdown: bool,
+    trending_up_mtf: bool,
+    trending_down_mtf: bool,
+    short_covering: bool,
+    oi_flags: Dict[str,bool],
+    pin_distance_points: int,
+) -> Tuple[Dict[str,float], Dict[str,Dict[str,bool]]]:
+    """
+    Produce probabilities for the same SCENARIOS set, but using multi-timeframe trend/flow
+    appropriate for non-expiry days. Keeps block gating logic identical for consistency.
+    """
+    # Price/Trend block
+    price_block = {
+        "reversion": short_covering and above_vwap,
+        "bear": (trending_down_mtf or (below_vwap and adx5 >= 18)),
+        "bull": (trending_up_mtf or (above_vwap and adx5 >= 18)),
+        "pin": (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= pin_distance_points),
+        "squeeze": (breakout_up or breakdown),
+        "event": (iv_z >= 2.0),
+    }
+
+    # Options Flow block (aggregate stance)
+    flow_block = {
+        "reversion": short_covering,
+        "bear": (oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)) or oi_flags.get("pe_oi_down", False),
+        "bull": (oi_flags.get("pe_write_above", False) and oi_flags.get("ce_unwind_below", False)) or oi_flags.get("ce_oi_down", False),
+        "pin": oi_flags.get("two_sided_adjacent", False),
+        "squeeze": oi_flags.get("same_side_add", False) and not oi_flags.get("unwind_present", False),
+        "event": abs(dpcr_z) < 0.5,
+    }
+
+    # Volatility block
+    vol_block = {
+        "reversion": (iv_pct_hint < 60),
+        "bear": (dpcr_z <= -1.0),
+        "bull": (dpcr_z >= +1.0),
+        "pin": (iv_pct_hint < 30 and iv_z <= 0.0),
+        "squeeze": (iv_z >= +0.5),
+        "event": (iv_z >= +2.0),
+    }
+
+    # Scores with same weights
+    scores = {
+        "Short-cover reversion up": WEIGHTS["price_trend"]*float(price_block["reversion"]) + WEIGHTS["options_flow"]*float(flow_block["reversion"]) + WEIGHTS["volatility"]*float(vol_block["reversion"]),
+        "Bear migration": WEIGHTS["price_trend"]*float(price_block["bear"]) + WEIGHTS["options_flow"]*float(flow_block["bear"]) + WEIGHTS["volatility"]*float(vol_block["bear"]),
+        "Bull migration / gamma carry": WEIGHTS["price_trend"]*float(price_block["bull"]) + WEIGHTS["options_flow"]*float(flow_block["bull"]) + WEIGHTS["volatility"]*float(vol_block["bull"]),
+        "Pin & decay day (IV crush)": WEIGHTS["price_trend"]*float(price_block["pin"]) + WEIGHTS["options_flow"]*float(flow_block["pin"]) + WEIGHTS["volatility"]*float(vol_block["pin"]),
+        "Squeeze continuation (one-way)": WEIGHTS["price_trend"]*float(price_block["squeeze"]) + WEIGHTS["options_flow"]*float(flow_block["squeeze"]) + WEIGHTS["volatility"]*float(vol_block["squeeze"]),
+        "Event knee-jerk then revert": WEIGHTS["price_trend"]*float(price_block["event"]) + WEIGHTS["options_flow"]*float(flow_block["event"]) + WEIGHTS["volatility"]*float(vol_block["event"]),
+    }
+
+    # Gating: require at least one flag in each block else cap 0.49
+    block_ok = {}
+    for name in SCENARIOS:
+        if name=="Short-cover reversion up":
+            ok = price_block["reversion"] and flow_block["reversion"] and vol_block["reversion"]
+        elif name=="Bear migration":
+            ok = price_block["bear"] and flow_block["bear"] and vol_block["bear"]
+        elif name=="Bull migration / gamma carry":
+            ok = price_block["bull"] and flow_block["bull"] and vol_block["bull"]
+        elif name=="Pin & decay day (IV crush)":
+            ok = price_block["pin"] and flow_block["pin"] and vol_block["pin"]
+        elif name=="Squeeze continuation (one-way)":
+            ok = price_block["squeeze"] and flow_block["squeeze"] and vol_block["squeeze"]
+        else:
+            ok = price_block["event"] and flow_block["event"] and vol_block["event"]
+        block_ok[name] = ok
+        if not ok:
+            scores[name] = min(scores[name], 0.49)
+
+    probs = softmax(list(scores.values()))
+    return ({k: round(v,3) for k,v in zip(scores.keys(), probs)}, block_ok)
+
+# ---------- AI/GenAI-inspired ensemble ----------
+def ai_predict_probs(
+    symbol: str,
+    above_vwap: bool,
+    below_vwap: bool,
+    macd_up: bool,
+    macd_dn: bool,
+    bull_flow: bool,
+    bear_flow: bool,
+    breakout_up: bool,
+    breakdown: bool,
+    adx5: float,
+    dpcr_z: float,
+    iv_z: float,
+    mph_norm: float,
+    VND: float,
+) -> Dict[str, float]:
+    """
+    Lightweight ensemble that maps salient signals into scenario probabilities.
+    Acts as a learned heuristic prior; blended with rule-based probs.
+    """
+    # Scores in [0,1]
+    def nz(x):
+        return 0.0 if x!=x else x
+    adx_s = max(0.0, (nz(adx5) - 18.0) / 22.0)
+    pcr_s_up = max(0.0, nz(dpcr_z)) / 2.0
+    pcr_s_dn = max(0.0, -nz(dpcr_z)) / 2.0
+    iv_s = min(1.0, abs(nz(iv_z)) / 2.0)
+    drift_up = max(0.0, nz(mph_norm))
+    drift_dn = max(0.0, -nz(mph_norm))
+    range_s = max(0.0, (PIN_NORM - nz(VND))) / max(PIN_NORM, 1e-9)
+
+    bull = (0.25*float(above_vwap) + 0.2*float(macd_up) + 0.25*float(bull_flow)
+            + 0.15*pcr_s_up + 0.15*drift_up + 0.2*adx_s)
+    bear = (0.25*float(below_vwap) + 0.2*float(macd_dn) + 0.25*float(bear_flow)
+            + 0.15*pcr_s_dn + 0.15*drift_dn + 0.2*adx_s)
+    squeeze = 0.6*float(breakout_up or breakdown) + 0.4*adx_s
+    pin = 0.7*range_s + 0.3*(1.0 - adx_s)
+    event = 1.0 if abs(nz(iv_z)) >= 2.0 and abs(nz(dpcr_z)) < 0.5 else 0.0
+
+    raw = {
+        "Short-cover reversion up": max(0.0, bull),
+        "Bear migration": max(0.0, bear),
+        "Bull migration / gamma carry": max(0.0, bull + 0.2*drift_up),
+        "Pin & decay day (IV crush)": max(0.0, pin),
+        "Squeeze continuation (one-way)": max(0.0, squeeze),
+        "Event knee-jerk then revert": max(0.0, event),
+    }
+    vals = list(raw.values())
+    if sum(vals) <= 1e-9:
+        # fallback to uniform
+        out = {k: 1.0/len(raw) for k in raw}
+    else:
+        s = sum(vals)
+        out = {k: v/s for k, v in raw.items()}
+    return out
+
+def blend_probs(rule_probs: Dict[str,float], ai_probs: Dict[str,float], adx5: float, dpcr_z: float, iv_z: float, mph_norm: float) -> Dict[str,float]:
+    """
+    Blend AI prior with rule-based probs. Alpha rises with trend/clarity.
+    """
+    def clamp(x,a,b):
+        return max(a, min(b, x))
+    strength = (
+        max(0.0, (adx5 - 18.0)/22.0) + min(1.0, abs(dpcr_z)/2.0) + min(1.0, abs(iv_z)/2.0) + min(1.0, abs(mph_norm))
+    ) / 4.0
+    alpha = clamp(0.2 + 0.5*strength, 0.2, 0.6)
+    keys = rule_probs.keys()
+    out = {k: clamp((1-alpha)*rule_probs.get(k,0.0) + alpha*ai_probs.get(k,0.0), 0.0, 1.0) for k in keys}
+    # renormalize
+    s = sum(out.values()) or 1.0
+    return {k: round(v/s,3) for k,v in out.items()}
+
 # ---------- main cycle ----------
-def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_telegram: bool, slack_webhook: str) -> Optional[Snapshot]:
+def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: int, use_telegram: bool, slack_webhook: str, mode: str = "auto") -> Optional[Snapshot]:
     now = dt.datetime.now(IST)
-    expiry = nearest_weekly_expiry(now)
+    # Use provider-selected earliest expiry to avoid calendar mismatches (weekly/monthly + symbol-specific rules)
+    try:
+        expiry = provider.get_current_expiry_date(symbol)
+    except Exception:
+        # Fallback to rules-based weekly date
+        expiry = opt.nearest_weekly_expiry(now, symbol)
 
     # OHLCV
     lookback = 420
@@ -677,19 +932,42 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     fut_5m  = fut_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
 
     # Technicals
-    rsi5 = float(rsi(spot_5m["close"], 14).iloc[-1])
-    macd_line, macd_sig, _ = macd(spot_5m["close"]); macd_last, macd_sig_last = float(macd_line.iloc[-1]), float(macd_sig.iloc[-1])
-    adx5 = float(adx(spot_5m, 14).iloc[-1])
-    vwap_spot = session_vwap(spot_1m); vwap_fut = session_vwap(fut_1m)
-    vp = volume_profile(spot_1m); poc = vp["POC"]
-    sma20 = float(sma(spot_5m["close"], 20).iloc[-1])
-    ema20 = float(ema(spot_5m["close"], 20).iloc[-1])
-    bb_u, bb_m, bb_l = bollinger(spot_5m["close"], 20, 2)
+    rsi5 = float(tech.rsi(spot_5m["close"], 14).iloc[-1])
+    macd_line, macd_sig, _ = tech.macd(spot_5m["close"]); macd_last, macd_sig_last = float(macd_line.iloc[-1]), float(macd_sig.iloc[-1])
+    adx5 = float(tech.adx(spot_5m, 14).iloc[-1])
+    vwap_spot = tech.session_vwap(spot_1m); vwap_fut = tech.session_vwap(fut_1m)
+    vp = tech.volume_profile(spot_1m); poc = vp["POC"]
+    sma20 = float(tech.sma(spot_5m["close"], 20).iloc[-1])
+    ema20 = float(tech.ema(spot_5m["close"], 20).iloc[-1])
+    bb_u, bb_m, bb_l = tech.bollinger(spot_5m["close"], 20, 2)
     bb_u = float(bb_u.iloc[-1]); bb_m = float(bb_m.iloc[-1]); bb_l = float(bb_l.iloc[-1])
-    tenkan, kijun, span_a, span_b, _ = ichimoku(spot_5m)
+    tenkan, kijun, span_a, span_b, _ = tech.ichimoku(spot_5m)
     tenkan_last = float(tenkan.iloc[-1]); kijun_last = float(kijun.iloc[-1])
     span_a_last = float(span_a.iloc[-1]); span_b_last = float(span_b.iloc[-1])
-    pivot, r1_p, s1_p, r2_p, s2_p = pivot_points(spot_5m)
+    pivot, r1_p, s1_p, r2_p, s2_p = tech.pivot_points(spot_5m)
+    # Multi-timeframe aggregates
+    def resamp(df, mins):
+        return df.resample(f"{mins}min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
+    spot_10m = resamp(spot_1m, 10)
+    spot_15m = resamp(spot_1m, 15)
+    ema1_20 = float(ema(spot_1m["close"], 20).iloc[-1]) if len(spot_1m) >= 20 else float('nan')
+    ema5_20 = float(ema(spot_5m["close"], 20).iloc[-1]) if len(spot_5m) >= 20 else float('nan')
+    ema15_20 = float(ema(spot_15m["close"], 20).iloc[-1]) if len(spot_15m) >= 20 else float('nan')
+    rsi5_15 = float(rsi(spot_15m["close"], 14).iloc[-1]) if len(spot_15m) >= 20 else float('nan')
+    adx15_series = adx(spot_15m, 14) if len(spot_15m) >= 30 else pd.Series([], dtype=float)
+    adx15 = float(adx15_series.iloc[-1]) if len(adx15_series) else float('nan')
+    adx5_series = adx(spot_5m, 14)
+    adx5_up = bool(adx5_series.iloc[-1] > adx5_series.iloc[-3]) if len(adx5_series) >= 3 else False
+    adx5_delta = float(adx5_series.iloc[-1] - adx5_series.iloc[-3]) if len(adx5_series) >= 3 else 0.0
+    price_now = float(spot_1m["close"].iloc[-1])
+    trending_up_mtf = (price_now > ema1_20 == ema1_20) and (float(spot_5m["close"].iloc[-1]) > ema5_20 == ema5_20) and (float(spot_15m["close"].iloc[-1]) > ema15_20 == ema15_20) and (adx5 >= 18 or (adx15==adx15 and adx15 >= 18))
+    trending_down_mtf = (price_now < ema1_20 == ema1_20) and (float(spot_5m["close"].iloc[-1]) < ema5_20 == ema5_20) and (float(spot_15m["close"].iloc[-1]) < ema15_20 == ema15_20) and (adx5 >= 18 or (adx15==adx15 and adx15 >= 18))
+    # Breakout sensitivity tightened: close > BB upper AND > R1, ADX rising by at least threshold; symmetric for breakdown
+    settings = load_settings()
+    adx_rise_min = float(settings.get("ADX_RISE_MIN", ADX_RISE_MIN))
+    close_5m = float(spot_5m["close"].iloc[-1])
+    breakout_up = (close_5m > bb_u) and (close_5m > (r1_p if r1_p==r1_p else bb_u)) and (adx5_delta >= adx_rise_min) and (price_now > vwap_spot)
+    breakdown  = (close_5m < bb_l) and (close_5m < (s1_p if s1_p==s1_p else bb_l)) and (adx5_delta >= adx_rise_min) and (price_now < vwap_spot)
 
     # Snapshot index & chain
     idx_snap = provider.get_indices_snapshot([symbol]); spot_now = float(idx_snap[symbol])
@@ -699,11 +977,11 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     if chain["expiry"] != expiry:
         logger.warning(f"{symbol}: chain expiry mismatch ({chain['expiry']} != {expiry}) → NO-TRADE this tick.")
     # ATM with tie-high rule
-    atm_k = atm_strike_with_tie_high(spot_now, chain["strikes"]) if chain["strikes"] else None
+    atm_k = opt.atm_strike_with_tie_high(spot_now, chain["strikes"]) if chain["strikes"] else None
 
     # Core metrics
-    pcr = pcr_from_chain(chain)
-    mp  = max_pain(chain)
+    pcr = opt.pcr_from_chain(chain)
+    mp  = opt.max_pain(chain)
     D   = float(spot_now - mp)
     session_hi, session_lo = float(spot_1m["high"].max()), float(spot_1m["low"].min())
     ATR_D = max(1.0, session_hi - session_lo)  # session-range proxy (robust intraday)
@@ -712,7 +990,7 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     SSD  = abs(D) / step
     PD   = 100.0 * abs(D) / max(1.0, spot_now)
 
-    fibs = fibonacci_levels(session_hi, session_lo)
+    fibs = tech.fibonacci_levels(session_hi, session_lo)
     bb_pos = (spot_now - bb_m) / (bb_u - bb_m) if (bb_u > bb_m) else 0.0
     ich_trend = 1 if spot_now > max(span_a_last, span_b_last) else (-1 if spot_now < min(span_a_last, span_b_last) else 0)
     above_sma = spot_now > sma20
@@ -762,8 +1040,8 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     mph_norm = (mph_pts_hr / ATR_D) if (mph_pts_hr==mph_pts_hr) else float('nan')
 
     # ATM IV + deltas for z-scores
-    mins_to_exp = minutes_to_expiry(expiry)
-    atm_iv = atm_iv_from_chain(chain, spot_now, mins_to_exp)  # fraction (e.g., 0.12)
+    mins_to_exp = opt.minutes_to_expiry(expiry)
+    atm_iv = opt.atm_iv_from_chain(chain, spot_now, mins_to_exp, RISK_FREE)  # fraction (e.g., 0.12)
     # Rolling z-scores (20)
     state_file = OUT_DIR / f"state_{symbol}.json"
     state = {}
@@ -805,6 +1083,19 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
 
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
+    # Dynamic banding and filters for OI analysis
+    step = 100 if "BANK" in symbol.upper() else 50
+    expiry_today = (dt.date.fromisoformat(expiry) == now.date())
+    dm_above, dm_below, dm_far, dm_pin = compute_dynamic_bands(symbol, expiry_today, ATR_D, adx5, VND, D, step)
+    # Persist dynamic choices for visibility
+    _cfg = load_settings()
+    _cfg.update({
+        "BAND_MAX_STRIKES_ABOVE": dm_above,
+        "BAND_MAX_STRIKES_BELOW": dm_below,
+        "FAR_OTM_FILTER_POINTS": dm_far,
+        "PIN_DISTANCE_POINTS": dm_pin,
+    })
+    save_settings(_cfg)
     def mad(arr):
         if not arr:
             return 0.0
@@ -816,8 +1107,10 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     ce_shift = 0.0; pe_shift = 0.0
     if prev_chain and chain["strikes"]:
         atm = atm_k
-        above = set([k for k in chain["strikes"] if k>atm and k<=atm+3*(100 if "BANK" in symbol.upper() else 50)])
-        below = set([k for k in chain["strikes"] if k<atm and k>=atm-2*(100 if "BANK" in symbol.upper() else 50)])
+        # Limit to near-ATM band and ignore far OTM strikes based on dynamic points
+        considered = [k for k in chain["strikes"] if (atm - dm_far) <= k <= (atm + dm_far)]
+        above = set([k for k in considered if (k > atm and k <= atm + dm_above*step)])
+        below = set([k for k in considered if (k < atm and k >= atm - dm_below*step)])
         # collect deltas where quotes liquid
         ce_deltas={}; pe_deltas={}
         for k in chain["strikes"]:
@@ -883,14 +1176,54 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
         "bearish": float(bearish_count),
         "bb_pos": bb_pos,
         "fut_move_up": float(fut_move_up),
+        "trending_up_mtf": bool(trending_up_mtf),
+        "trending_down_mtf": bool(trending_down_mtf),
+        "breakout_up": bool(breakout_up),
+        "breakdown": bool(breakdown),
     }
 
-    # Normalized scoring
-    probs, blocks_ok = score_normalized(
-        symbol, D, ATR_D, VND, SSD, PD, pcr, dpcr, dpcr_z,
-        mph_pts_hr, mph_norm, atm_iv, div, iv_z, iv_pct_hint,
-        spot_now, vwap_spot, adx5, oi_flags, conf, techs
-    )
+    # Scoring: expiry vs non-expiry (mode override)
+    if mode == "expiry":
+        expiry_today = True
+    elif mode == "intraday":
+        expiry_today = False
+    else:
+        expiry_today = (dt.date.fromisoformat(expiry) == now.date())
+    if expiry_today:
+        probs, blocks_ok = score_normalized(
+            symbol, D, ATR_D, VND, SSD, PD, pcr, dpcr, dpcr_z,
+            mph_pts_hr, mph_norm, atm_iv, div, iv_z, iv_pct_hint,
+            spot_now, vwap_spot, adx5, oi_flags, conf, techs,
+            dm_pin
+        )
+    else:
+        probs, blocks_ok = score_intraday(
+            symbol,
+            D,
+            VND,
+            adx5,
+            dpcr_z,
+            iv_z,
+            iv_pct_hint,
+            above_vwap=(spot_now > vwap_spot),
+            below_vwap=(spot_now < vwap_spot),
+            breakout_up=bool(breakout_up),
+            breakdown=bool(breakdown),
+            trending_up_mtf=bool(trending_up_mtf),
+            trending_down_mtf=bool(trending_down_mtf),
+            short_covering=bool(oi_flags.get("short_covering", False)),
+            oi_flags=oi_flags,
+            pin_distance_points=dm_pin,
+        )
+    # AI ensemble blending
+    avw = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now > vwap_spot)
+    bvw = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now < vwap_spot)
+    macd_up = macd_last > macd_sig_last
+    macd_dn = macd_last < macd_sig_last
+    bull_flow = oi_flags.get("pe_write_above", False) and oi_flags.get("ce_unwind_below", False)
+    bear_flow = oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)
+    ai_p = ai_predict_probs(symbol, avw, bvw, macd_up, macd_dn, bull_flow, bear_flow, bool(breakout_up), bool(breakdown), adx5, dpcr_z, iv_z, mph_norm, VND)
+    probs = blend_probs(probs, ai_p, adx5, dpcr_z, iv_z, mph_norm)
     # Scenario flip gating
     last_probs = state.get("last_probs", {})
     last_top = state.get("last_top", "")
@@ -1015,6 +1348,126 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
             f"Action: {tp.get('action')} {tp.get('instrument','')} | Entry {tp.get('entry','-')} | SL {tp.get('sl','-')} | "
             f"Targets {', '.join(tp.get('targets',[])) if tp.get('targets') else '-'} | Invalidate {tp.get('invalidate','-')}\n"
             f"{snap.eq_line if snap.eq_line else ''}")
+    # ----- Override: formatted output with action, checklist, and verdict -----
+    def pretty_scn(name: str) -> str:
+        mapping = {
+            "Short-cover reversion up": "Short-Cover Reversion Up",
+            "Bear migration": "Bear Migration",
+            "Bull migration / gamma carry": "Bull Migration",
+            "Pin & decay day (IV crush)": "Pin and Decay (IV crush)",
+            "Squeeze continuation (one-way)": "Squeeze Continuation (One-way)",
+            "Event knee-jerk then revert": "Event Knee-jerk then Revert",
+        }
+        return mapping.get(name, name)
+
+    iv_crush = (div == div and div <= 0) and (iv_pct_hint == iv_pct_hint and iv_pct_hint < 33)
+    step_sz = 100 if "BANK" in symbol.upper() else 50
+    def suggest_spread(action: str):
+        if action == "BUY_CE":
+            return ("BUY", (int(atm_k + step_sz), int(atm_k + 2*step_sz)))
+        if action == "BUY_PE":
+            return ("BUY", (int(atm_k - step_sz), int(atm_k - 2*step_sz)))
+        return ("NO-TRADE", None)
+
+    side, spread = suggest_spread(tp.get("action", "NO-TRADE"))
+    _sorted = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
+    alt_name = pretty_scn(_sorted[1][0]) if len(_sorted) > 1 else ""
+    alt_name = alt_name.replace(" (IV crush)", "") if alt_name else ""
+    alt_pct  = int(_sorted[1][1]*100) if len(_sorted) > 1 else 0
+    top_disp = pretty_scn(top)
+    if iv_crush and "(IV crush)" not in top_disp:
+        top_disp = f"{top_disp} (IV crush)"
+
+    above_vwap = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now > vwap_spot)
+    below_vwap = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now < vwap_spot)
+    macd_up = macd_last > macd_sig_last
+    macd_dn = macd_last < macd_sig_last
+    trend_strong = adx5 >= 18
+    bull_flow = oi_flags.get("pe_write_above", False) and oi_flags.get("ce_unwind_below", False)
+    bear_flow = oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)
+    bull_pcr = dpcr_z >= 0.5
+    bear_pcr = dpcr_z <= -0.5
+    bull_drift = (mph_norm == mph_norm) and (mph_norm >= MPH_NORM_THR)
+    bear_drift = (mph_norm == mph_norm) and (mph_norm <= -MPH_NORM_THR)
+
+    conds = []
+    if side == "BUY":
+        if tp.get("action") == "BUY_CE":
+            conds = [
+                ("Price above VWAP", above_vwap),
+                ("ADX >= 18 (trend strength)", trend_strong),
+                ("OI flow supports up (PE write, CE unwind)", bull_flow),
+                ("PCR momentum up (Δz >= 0.5)", bull_pcr),
+                ("MACD(5m) cross up", macd_up),
+                ("MaxPain drift up (norm >= thr)", bull_drift),
+            ]
+        elif tp.get("action") == "BUY_PE":
+            conds = [
+                ("Price below VWAP", below_vwap),
+                ("ADX >= 18 (trend strength)", trend_strong),
+                ("OI flow supports down (CE write, PE unwind)", bear_flow),
+                ("PCR momentum down (Δz <= -0.5)", bear_pcr),
+                ("MACD(5m) cross down", macd_dn),
+                ("MaxPain drift down (norm <= -thr)", bear_drift),
+            ]
+    else:
+        conds = [
+            ("VND < pin norm (range-bound)", VND < PIN_NORM),
+            ("ADX < low (chop)", adx5 < ADX_LOW),
+            ("Two-sided OI near ATM", oi_flags.get("two_sided_adjacent", False)),
+            ("IV crushing (div<=0, pctile<33)", iv_crush),
+        ]
+
+    total = len(conds)
+    threshold = max(3, (total * 3)//5) if total else 0
+    met = sum(1 for _, ok in conds if ok)
+
+    def tick(ok: bool) -> str:
+        # Use unicode escapes to avoid source encoding issues
+        return (Fore.GREEN + "\u2714" + Style.RESET_ALL) if ok else (Fore.RED + "\u2718" + Style.RESET_ALL)
+
+    cond_lines = []
+    for idx, (name, ok) in enumerate(conds, start=1):
+        cond_lines.append(f"{idx}. {name} - {tick(ok)}")
+
+    spot_print = int(spot_now) if not math.isnan(spot_now) else "NA"
+    vwap_fut_print = int(vwap_fut) if not math.isnan(vwap_fut) else "NA"
+    header = f"{now.strftime('%H:%M')} IST | {symbol} {spot_print} | VWAP(fut) {vwap_fut_print}"
+    l1 = f"D={int(D)} | ATR_D={int(ATR_D)} | VND={snap.vnd} | SSD={snap.ssd} | PD={snap.pdist_pct}%"
+    l2 = f"PCR {snap.pcr} (Δz={snap.dpcr_z}) | MaxPain {mp} | Drift {snap.mph_pts_per_hr}/hr (norm {snap.mph_norm})"
+    l3 = f"ATM {atm_k} IV {snap.atm_iv}% (ΔIV_z={snap.iv_z}) | Basis {snap.basis}"
+    l4 = f"Scenario: {top_disp} {int(probs[top]*100)}%" + (f" (alt: {alt_name} {alt_pct}%)" if alt_name else "")
+
+    if side == "BUY" and spread:
+        k1, k2 = spread
+        cepe = 'CE' if tp.get('action')=='BUY_CE' else 'PE'
+        action_line = Style.BRIGHT + Fore.CYAN + f"Action: TRADE | BUY {k1} {cepe} / {k2} {cepe}" + Style.RESET_ALL
+    else:
+        reason = tp.get('why', 'No favorable setup')
+        action_line = Style.BRIGHT + Fore.YELLOW + f"Action: NO-TRADE | {reason}" + Style.RESET_ALL
+
+    entry_gate = f"Enter when atleast {threshold} of below {total} are satisfied:"
+    verdict_ok = (side == "BUY") and (met >= threshold)
+    verdict = (Style.BRIGHT + Fore.GREEN + "Final Verdict: Enter Now" + Style.RESET_ALL) if verdict_ok else (Style.BRIGHT + Fore.YELLOW + "Final Verdict: Hold" + Style.RESET_ALL)
+
+    from src.output.format import format_output_line
+    snap_dict = {
+        "vnd": snap.vnd,
+        "ssd": snap.ssd,
+        "pdist_pct": snap.pdist_pct,
+        "pcr": snap.pcr,
+        "dpcr_z": snap.dpcr_z,
+        "mph_pts_per_hr": snap.mph_pts_per_hr,
+        "mph_norm": snap.mph_norm,
+        "atm_iv": snap.atm_iv,
+        "iv_z": snap.iv_z,
+        "basis": snap.basis,
+    }
+    line = format_output_line(
+        now, symbol, spot_now, vwap_fut, D, ATR_D, snap_dict, mp, atm_k,
+        probs, top, tp, oi_flags, vwap_spot, adx5, div, iv_pct_hint,
+        macd_last, macd_sig_last, VND, PIN_NORM, MPH_NORM_THR
+    )
     logger.info(line)
 
     if use_telegram and TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
@@ -1039,6 +1492,7 @@ def main():
     ap.add_argument("--run-once", action="store_true")
     ap.add_argument("--use-telegram", action="store_true")
     ap.add_argument("--slack-webhook", default=os.getenv("SLACK_WEBHOOK",""))
+    ap.add_argument("--mode", choices=["auto","intraday","expiry"], default="auto")
     args = ap.parse_args()
 
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
@@ -1046,22 +1500,30 @@ def main():
         logger.error("Only KITE provider is wired in this build. Use --provider KITE.")
         sys.exit(2)
 
-    provider = KiteProvider()
-    logger.info(f"Engine started | provider=KITE | symbols={symbols} | poll={args.poll_seconds}s")
+    provider = provider_mod.KiteProvider()
+    logger.info(f"Engine started | provider=KITE | symbols={symbols} | poll={args.poll_seconds}s | mode={args.mode}")
     if args.run_once:
-        for sym in symbols:
-            run_once(provider, sym, args.poll_seconds, args.use_telegram, args.slack_webhook)
+        for i, sym in enumerate(symbols):
+            run_once(provider, sym, args.poll_seconds, args.use_telegram, args.slack_webhook, args.mode)
+            # blank line between different indexes when running together
+            if i < len(symbols) - 1:
+                logger.info("")
         return
     while True:
         start = time.time()
         if market_open_now():
-            for sym in symbols:
+            for i, sym in enumerate(symbols):
                 try:
-                    run_once(provider, sym, args.poll_seconds, args.use_telegram, args.slack_webhook)
+                    run_once(provider, sym, args.poll_seconds, args.use_telegram, args.slack_webhook, args.mode)
                 except Exception as e:
                     logger.exception(f"Run error for {sym}: {e}")
+                # blank line between different indexes
+                if i < len(symbols) - 1:
+                    logger.info("")
         else:
             logger.info("Market closed (IST). Sleeping until next poll...")
+        # one line break between cycles in continuous mode
+        logger.info("")
         slp = max(10, args.poll_seconds - int(time.time()-start))
         time.sleep(slp)
 
