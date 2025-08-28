@@ -28,6 +28,7 @@ import pandas as pd
 import pytz
 import requests
 from logging.handlers import RotatingFileHandler
+from colorama import init as colorama_init, Fore, Style
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -38,19 +39,38 @@ LOG_DIR = ROOT / "logs"
 for p in (OUT_DIR, SNAP_DIR, LOG_DIR):
     p.mkdir(parents=True, exist_ok=True)
 
+colorama_init(autoreset=True)
+
 # Ensure stdout/stderr can handle Unicode characters
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        logging.DEBUG: Fore.BLUE,
+        logging.INFO: Fore.GREEN,
+        logging.WARNING: Fore.YELLOW,
+        logging.ERROR: Fore.RED,
+        logging.CRITICAL: Fore.MAGENTA,
+    }
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, "")
+        record.levelname = f"{color}{record.levelname}{Style.RESET_ALL}"
+        return super().format(record)
+
+
 logger = logging.getLogger("engine")
 logger.setLevel(logging.INFO)
+
 fh = RotatingFileHandler(LOG_DIR / "engine.log", maxBytes=2_000_000, backupCount=5, encoding="utf-8")
 fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s"))
 logger.addHandler(fh)
+
 sh = logging.StreamHandler(sys.stdout)
-sh.setFormatter(logging.Formatter("%(message)s"))
+sh.setFormatter(ColorFormatter("%(asctime)s %(levelname)s: %(message)s", "%H:%M:%S"))
 logger.addHandler(sh)
 
 # ---------- cli defaults / env ----------
