@@ -129,6 +129,45 @@ def adx(df: pd.DataFrame, length=14) -> pd.Series:
     dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0,np.nan)
     return dx.ewm(alpha=1/length, adjust=False).mean()
 
+def sma(series: pd.Series, window: int) -> pd.Series:
+    return series.rolling(window).mean()
+
+def bollinger(series: pd.Series, length: int = 20, numsd: float = 2.0):
+    mid = series.rolling(length).mean()
+    std = series.rolling(length).std()
+    upper = mid + numsd * std
+    lower = mid - numsd * std
+    return upper, mid, lower
+
+def fibonacci_levels(high: float, low: float) -> Dict[str, float]:
+    diff = high - low
+    return {
+        "236": high - 0.236 * diff,
+        "382": high - 0.382 * diff,
+        "618": high - 0.618 * diff,
+    }
+
+def ichimoku(df: pd.DataFrame):
+    high = df['high']; low = df['low']; close = df['close']
+    tenkan = (high.rolling(9).max() + low.rolling(9).min()) / 2
+    kijun = (high.rolling(26).max() + low.rolling(26).min()) / 2
+    span_a = ((tenkan + kijun) / 2).shift(26)
+    span_b = ((high.rolling(52).max() + low.rolling(52).min()) / 2).shift(26)
+    chikou = close.shift(-26)
+    return tenkan, kijun, span_a, span_b, chikou
+
+def pivot_points(df: pd.DataFrame):
+    daily = df.resample('1D').agg({'high':'max','low':'min','close':'last'})
+    if daily.shape[0] < 2:
+        return float('nan'), float('nan'), float('nan'), float('nan'), float('nan')
+    prev = daily.iloc[-2]
+    pivot = (prev['high'] + prev['low'] + prev['close']) / 3.0
+    r1 = 2 * pivot - prev['low']
+    s1 = 2 * pivot - prev['high']
+    r2 = pivot + (prev['high'] - prev['low'])
+    s2 = pivot - (prev['high'] - prev['low'])
+    return float(pivot), float(r1), float(s1), float(r2), float(s2)
+
 def session_vwap(df: pd.DataFrame) -> float:
     tp = (df['high']+df['low']+df['close'])/3.0
     v = df['volume'].replace(0, np.nan)
@@ -469,6 +508,17 @@ class Snapshot:
     basis: float
     ssd: float
     pdist_pct: float
+    sma20: float
+    ema20: float
+    bb_pos: float
+    ichimoku_trend: float
+    pivot: float
+    fib382: float
+    fib618: float
+    bullish_signals: int
+    bearish_signals: int
+    ce_oi_shift: float
+    pe_oi_shift: float
     scen_probs: Dict[str,float]
     scen_top: str
     trade: Dict
@@ -503,6 +553,7 @@ def score_normalized(
     spot: float, vwap: float, adx5: float,
     oi_flags: Dict[str,bool],
     confirmations: Dict[str,int],
+    techs: Dict[str,float],
 ) -> Tuple[Dict[str,float], Dict[str,Dict[str,bool]]]:
     """
     Returns: (probs_by_scenario, block_flags_by_scenario)
@@ -522,19 +573,26 @@ def score_normalized(
     pe_unw_bel   = confirmed("pe_unwind_below")
     pe_write_abv = confirmed("pe_write_above")
     ce_unw_bel   = confirmed("ce_unwind_below")
+    ce_oi_down   = oi_flags.get("ce_oi_down", False)
+    pe_oi_down   = oi_flags.get("pe_oi_down", False)
+    short_cover  = oi_flags.get("short_covering", False)
+    fut_up       = techs.get("fut_move_up", False)
+    bullish_bias = techs.get("bullish",0) > techs.get("bearish",0)
+    bearish_bias = techs.get("bearish",0) > techs.get("bullish",0)
+    bb_pos       = techs.get("bb_pos",0.0)
 
     # Price/Trend flags
-    price_block["reversion"] = (VND >= REV_NORM and D < 0 and (above_vwap or macd_up))
-    price_block["bear"]      = (below_vwap and adx5 >= 18)
-    price_block["bull"]      = (above_vwap and adx5 >= 18)
+    price_block["reversion"] = (VND >= REV_NORM and D < 0 and (above_vwap or macd_up)) or abs(bb_pos) >= 1.0
+    price_block["bear"]      = (below_vwap and adx5 >= 18) or bearish_bias or (not fut_up)
+    price_block["bull"]      = (above_vwap and adx5 >= 18) or bullish_bias or fut_up
     price_block["pin"]       = (VND < PIN_NORM and adx5 < ADX_LOW)
     price_block["squeeze"]   = (VND >= SQUEEZE_NORM and adx5 >= 20 and (above_vwap or below_vwap))
     price_block["event"]     = (abs(div) > 0 and abs(iv_z) >= 2.0)
 
     # Options Flow flags
-    flow_block["reversion"] = (ce_unw_bel and pe_write_abv)
-    flow_block["bear"]      = (ce_write_abv and pe_unw_bel and mph_norm <= -MPH_NORM_THR)
-    flow_block["bull"]      = (pe_write_abv and ce_unw_bel and mph_norm >= MPH_NORM_THR)
+    flow_block["reversion"] = (ce_unw_bel and pe_write_abv) or short_cover
+    flow_block["bear"]      = ((ce_write_abv and pe_unw_bel and mph_norm <= -MPH_NORM_THR) or (pe_oi_down and not above_vwap))
+    flow_block["bull"]      = ((pe_write_abv and ce_unw_bel and mph_norm >= MPH_NORM_THR) or (ce_oi_down and above_vwap))
     flow_block["pin"]       = (oi_flags.get("two_sided_adjacent", False))
     flow_block["squeeze"]   = (oi_flags.get("same_side_add", False) and not oi_flags.get("unwind_present", False))
     flow_block["event"]     = ( (pe_write_abv and ce_unw_bel) or (ce_write_abv and pe_unw_bel) ) and (abs(dpcr_z) < 0.5)
@@ -624,6 +682,14 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     adx5 = float(adx(spot_5m, 14).iloc[-1])
     vwap_spot = session_vwap(spot_1m); vwap_fut = session_vwap(fut_1m)
     vp = volume_profile(spot_1m); poc = vp["POC"]
+    sma20 = float(sma(spot_5m["close"], 20).iloc[-1])
+    ema20 = float(ema(spot_5m["close"], 20).iloc[-1])
+    bb_u, bb_m, bb_l = bollinger(spot_5m["close"], 20, 2)
+    bb_u = float(bb_u.iloc[-1]); bb_m = float(bb_m.iloc[-1]); bb_l = float(bb_l.iloc[-1])
+    tenkan, kijun, span_a, span_b, _ = ichimoku(spot_5m)
+    tenkan_last = float(tenkan.iloc[-1]); kijun_last = float(kijun.iloc[-1])
+    span_a_last = float(span_a.iloc[-1]); span_b_last = float(span_b.iloc[-1])
+    pivot, r1_p, s1_p, r2_p, s2_p = pivot_points(spot_5m)
 
     # Snapshot index & chain
     idx_snap = provider.get_indices_snapshot([symbol]); spot_now = float(idx_snap[symbol])
@@ -645,6 +711,34 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     step = 100 if "BANK" in symbol.upper() else 50
     SSD  = abs(D) / step
     PD   = 100.0 * abs(D) / max(1.0, spot_now)
+
+    fibs = fibonacci_levels(session_hi, session_lo)
+    bb_pos = (spot_now - bb_m) / (bb_u - bb_m) if (bb_u > bb_m) else 0.0
+    ich_trend = 1 if spot_now > max(span_a_last, span_b_last) else (-1 if spot_now < min(span_a_last, span_b_last) else 0)
+    above_sma = spot_now > sma20
+    above_ema = spot_now > ema20
+    above_pivot = spot_now > pivot if pivot == pivot else False
+    bullish_count = sum([
+        rsi5 > 60,
+        macd_last > macd_sig_last,
+        above_sma,
+        above_ema,
+        ich_trend > 0,
+        bb_pos > 0,
+        above_pivot,
+        spot_now > fibs['382']
+    ])
+    bearish_count = sum([
+        rsi5 < 40,
+        macd_last < macd_sig_last,
+        not above_sma,
+        not above_ema,
+        ich_trend < 0,
+        bb_pos < 0,
+        (spot_now < pivot if pivot == pivot else False),
+        spot_now < fibs['618']
+    ])
+    fut_move_up = fut_5m['close'].iloc[-1] > fut_5m['close'].iloc[-2] if len(fut_5m) >= 2 else False
 
     # Basis & VWAP relation
     basis = float(fut_1m["close"].iloc[-1] - spot_1m["close"].iloc[-1])
@@ -719,6 +813,7 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     d_oi_ce=[]; d_oi_pe=[]
     ce_write_above=False; pe_unwind_below=False; pe_write_above=False; ce_unwind_below=False
     same_side_add=False; unwind_present=False; two_sided_adjacent=False
+    ce_shift = 0.0; pe_shift = 0.0
     if prev_chain and chain["strikes"]:
         atm = atm_k
         above = set([k for k in chain["strikes"] if k>atm and k<=atm+3*(100 if "BANK" in symbol.upper() else 50)])
@@ -737,6 +832,12 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
                 pe_deltas[k] = p_now["oi"] - int(p_prev.get("oi",0))
                 d_oi_pe.append(pe_deltas[k])
         ce_m = mad(d_oi_ce); pe_m = mad(d_oi_pe)
+        total_ce_oi = sum(v["oi"] for v in chain["calls"].values())
+        total_pe_oi = sum(v["oi"] for v in chain["puts"].values())
+        prev_total_ce = sum(v.get("oi",0) for v in prev_chain.get("calls",{}).values())
+        prev_total_pe = sum(v.get("oi",0) for v in prev_chain.get("puts",{}).values())
+        ce_shift = float(total_ce_oi - prev_total_ce)
+        pe_shift = float(total_pe_oi - prev_total_pe)
         # flags
         ce_write_above = any( (k in above) and (ce_deltas.get(k,0) > MAD_K*max(1,ce_m)) for k in above )
         pe_unwind_below = any( (k in below) and (pe_deltas.get(k,0) < -MAD_K*max(1,pe_m)) for k in below )
@@ -761,6 +862,9 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
     bump("pe_write_above", pe_write_above)
     bump("ce_unwind_below", ce_unwind_below)
 
+    short_covering = (ce_shift < 0 and spot_now > vwap_spot)
+    pe_short_cover = (pe_shift < 0 and spot_now < vwap_spot)
+
     oi_flags = {
         "ce_write_above": ce_write_above,
         "pe_unwind_below": pe_unwind_below,
@@ -769,13 +873,23 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
         "same_side_add": same_side_add,
         "unwind_present": unwind_present,
         "two_sided_adjacent": two_sided_adjacent,
+        "ce_oi_down": ce_shift < 0,
+        "pe_oi_down": pe_shift < 0,
+        "short_covering": short_covering or pe_short_cover,
+    }
+
+    techs = {
+        "bullish": float(bullish_count),
+        "bearish": float(bearish_count),
+        "bb_pos": bb_pos,
+        "fut_move_up": float(fut_move_up),
     }
 
     # Normalized scoring
     probs, blocks_ok = score_normalized(
         symbol, D, ATR_D, VND, SSD, PD, pcr, dpcr, dpcr_z,
         mph_pts_hr, mph_norm, atm_iv, div, iv_z, iv_pct_hint,
-        spot_now, vwap_spot, adx5, oi_flags, conf
+        spot_now, vwap_spot, adx5, oi_flags, conf, techs
     )
     # Scenario flip gating
     last_probs = state.get("last_probs", {})
@@ -853,6 +967,17 @@ def run_once(provider: MarketDataProvider, symbol: str, poll_secs: int, use_tele
         iv_pct_hint=float(iv_pct_hint if iv_pct_hint==iv_pct_hint else float('nan')),
         basis=float(round(basis,1)) if basis==basis else float('nan'),
         ssd=float(round(SSD,2)), pdist_pct=float(round(PD,2)),
+        sma20=float(round(sma20,2)) if sma20==sma20 else float('nan'),
+        ema20=float(round(ema20,2)) if ema20==ema20 else float('nan'),
+        bb_pos=float(round(bb_pos,2)),
+        ichimoku_trend=float(ich_trend),
+        pivot=float(round(pivot,2)) if pivot==pivot else float('nan'),
+        fib382=float(round(fibs['382'],2)),
+        fib618=float(round(fibs['618'],2)),
+        bullish_signals=int(bullish_count),
+        bearish_signals=int(bearish_count),
+        ce_oi_shift=float(round(ce_shift,1)),
+        pe_oi_shift=float(round(pe_shift,1)),
         scen_probs=probs, scen_top=top, trade=tp, eq_line=eq_line
     )
 
