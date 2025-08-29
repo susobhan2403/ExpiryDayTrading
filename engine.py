@@ -1747,18 +1747,26 @@ def main():
         if market_open_now():
             for i, sym in enumerate(symbols):
                 try:
-                    run_once(provider, sym, args.poll_seconds, args.use_telegram, args.slack_webhook, args.mode)
+                    run_once(
+                        provider,
+                        sym,
+                        args.poll_seconds,
+                        args.use_telegram,
+                        args.slack_webhook,
+                        args.mode,
+                    )
                 except Exception as e:
                     logger.exception(f"Run error for {sym}: {e}")
                 # blank line between different indexes
                 if i < len(symbols) - 1:
                     logger.info("")
+            # one line break between cycles in continuous mode
+            logger.info("")
+            slp = max(10, args.poll_seconds - int(time.time() - start))
+            time.sleep(slp)
         else:
-            logger.info("Market closed (IST). Sleeping until next poll...")
-        # one line break between cycles in continuous mode
-        logger.info("")
-        slp = max(10, args.poll_seconds - int(time.time()-start))
-        time.sleep(slp)
+            logger.info("Market closed (IST). Stopping engine.")
+            break
 
 if __name__ == "__main__":
     try:
