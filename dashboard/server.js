@@ -3,18 +3,23 @@ import fs from 'fs';
 import path from 'path';
 import url from 'url';
 import readline from 'readline';
+import { fileURLToPath } from 'url';
 
-const ROOT = path.resolve(process.cwd());
+// Resolve paths relative to the location of this file so that the server works
+// regardless of the current working directory (e.g. when launched via npm
+// scripts from within the "dashboard" folder).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '..');
 const LOG_FILE = path.join(ROOT, 'logs', 'engine.log');
 
 // Determine the directory to serve static assets from. In production the
 // dashboard is built into "dashboard/dist". When running locally, or if the
 // build output is missing, fall back to serving the source "dashboard" folder
 // so that an index page is still available.
-const DIST_DIR = path.join(ROOT, 'dashboard', 'dist');
+const DIST_DIR = path.join(__dirname, 'dist');
 const STATIC_DIR = fs.existsSync(DIST_DIR)
   ? DIST_DIR
-  : path.join(ROOT, 'dashboard');
+  : __dirname;
 
 const server = http.createServer((req, res) => {
   const parsed = url.parse(req.url, true);
