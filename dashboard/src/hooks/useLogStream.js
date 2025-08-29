@@ -24,9 +24,14 @@ export default function useLogStream(symbol) {
       try {
         const { line } = JSON.parse(e.data);
         const indicator = indicatorForLine(line);
+        const colored = colorize(line);
+
+        // Only keep the most recent line for each indicator and ignore
+        // duplicates so that stale/noisy data doesn't accumulate.
         setLines((prev) => {
-          const arr = prev[indicator] ? [...prev[indicator], colorize(line)] : [colorize(line)];
-          return { ...prev, [indicator]: arr.slice(-50) };
+          const prevLine = prev[indicator] ? prev[indicator][0] : null;
+          if (prevLine === colored) return prev;
+          return { ...prev, [indicator]: [colored] };
         });
       } catch (err) {
         console.error(err);
