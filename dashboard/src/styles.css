@@ -49,6 +49,7 @@ pre {
 .action-trade {
   color: #64b5f6;
   font-weight: bold;
+  font-size: 13px;
 }
 .decision-hold {
   color: #2e7d32;
@@ -57,6 +58,7 @@ pre {
 .decision-enter {
   color: #4caf50;
   font-weight: bold;
+  font-size: 14px;
 }
 .decision-exit {
   color: #ff5370;
