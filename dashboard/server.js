@@ -32,12 +32,15 @@ const server = http.createServer((req, res) => {
       'Connection': 'keep-alive'
     });
 
-    // Start reading from end-of-file so that a fresh client only
-    // receives new log lines appended after it connects, rather than
-    // replaying the entire history.
+    // Start reading near the end of the log file so that a fresh client
+    // immediately receives the most recent log lines rather than waiting
+    // for new data to arrive.  Read roughly the last 64KB which should
+    // contain plenty of recent entries without replaying the entire
+    // history for large log files.
     let filePos = 0;
     try {
-      filePos = fs.statSync(LOG_FILE).size;
+      const size = fs.statSync(LOG_FILE).size;
+      filePos = Math.max(0, size - 64 * 1024);
     } catch (err) {
       filePos = 0;
     }
