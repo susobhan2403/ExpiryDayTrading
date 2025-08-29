@@ -15,7 +15,7 @@ const indicatorForLine = (line) => {
 const colorize = (line) => {
   const t = line.trim();
   if (t.startsWith('Action:')) {
-    if (t.includes('TRADE')) return `<span class="action-trade">${line}</span>`;
+    if (/Action:\s+TRADE\b/.test(t)) return `<span class="action-trade">${line}</span>`;
     return line;
   }
   if (t.startsWith('Final Verdict')) {
@@ -30,10 +30,23 @@ const colorize = (line) => {
 export default function useLogStream(symbol) {
   const [lines, setLines] = useState({});
   const [spot, setSpot] = useState(null);
+  const [prevClose, setPrevClose] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/prevclose?symbol=${symbol}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setPrevClose(parseFloat(d.close));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
 
   useEffect(() => {
     const es = new EventSource(`/events?symbol=${symbol}`);
-    let prev = null;
     es.onmessage = (e) => {
       try {
         const { line } = JSON.parse(e.data);
@@ -42,9 +55,8 @@ export default function useLogStream(symbol) {
           const m = line.match(/IST \| [A-Z]+\s+(\d+(?:\.\d+)?)/);
           if (m) {
             const price = parseFloat(m[1]);
-            const diff = prev !== null ? price - prev : 0;
-            const pct = prev !== null ? (diff / prev) * 100 : 0;
-            prev = price;
+            const diff = prevClose !== null ? price - prevClose : 0;
+            const pct = prevClose !== null ? (diff / prevClose) * 100 : 0;
             setSpot({ price, diff, pct });
           }
           return;
@@ -63,7 +75,7 @@ export default function useLogStream(symbol) {
       }
     };
     return () => es.close();
-  }, [symbol]);
+  }, [symbol, prevClose]);
 
   return { ...lines, spot };
 }
