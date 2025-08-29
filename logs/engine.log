@@ -12995,3 +12995,6 @@ SCP 89% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | 
 2025-08-29 17:37:46,561 INFO: Market closed (IST). Sleeping until next poll...
 2025-08-29 17:37:46,561 INFO: 
 2025-08-29 17:37:47,783 INFO: Shutting down.
+2025-08-29 18:42:52,817 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-29 18:42:52,818 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-29 18:42:52,818 INFO: Market closed (IST). Stopping engine.
