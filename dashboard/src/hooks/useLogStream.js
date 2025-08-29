@@ -30,20 +30,6 @@ const colorize = (line) => {
 export default function useLogStream(symbol) {
   const [lines, setLines] = useState({});
   const [spot, setSpot] = useState(null);
-  const [prevClose, setPrevClose] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/prevclose?symbol=${symbol}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled) setPrevClose(parseFloat(d.close));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [symbol]);
 
   useEffect(() => {
     const es = new EventSource(`/events?symbol=${symbol}`);
@@ -55,9 +41,21 @@ export default function useLogStream(symbol) {
           const m = line.match(/IST \| [A-Z]+\s+(\d+(?:\.\d+)?)/);
           if (m) {
             const price = parseFloat(m[1]);
-            const diff = prevClose !== null ? price - prevClose : 0;
-            const pct = prevClose !== null ? (diff / prevClose) * 100 : 0;
-            setSpot({ price, diff, pct });
+            fetch(`/spotdiff?symbol=${symbol}`)
+              .then((r) => r.json())
+              .then((d) => {
+                if (
+                  typeof d.diff === 'number' &&
+                  isFinite(d.diff) &&
+                  typeof d.pct === 'number' &&
+                  isFinite(d.pct)
+                ) {
+                  setSpot({ price, diff: d.diff, pct: d.pct });
+                } else {
+                  setSpot({ price, diff: 0, pct: 0 });
+                }
+              })
+              .catch(() => setSpot({ price, diff: 0, pct: 0 }));
           }
           return;
         }
@@ -75,7 +73,7 @@ export default function useLogStream(symbol) {
       }
     };
     return () => es.close();
-  }, [symbol, prevClose]);
+  }, [symbol]);
 
   return { ...lines, spot };
 }
