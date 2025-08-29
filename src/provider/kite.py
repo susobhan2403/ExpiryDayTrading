@@ -80,10 +80,17 @@ class KiteProvider(MarketDataProvider):
         return "NSE:NIFTY 50"
 
     def _resolve_index_token(self, symbol: str) -> Optional[int]:
+        sym = symbol.upper()
+        if sym == "SENSEX":
+            df = self._instruments("BSE")
+            m = df[df["tradingsymbol"].str.upper()=="SENSEX"]
+            if not m.empty:
+                return int(m.iloc[0]["instrument_token"])
+            return None
         df = self._instruments("NSE")
         name_map = {"NIFTY":"NIFTY 50", "BANKNIFTY":"NIFTY BANK",
                     "FINNIFTY":"NIFTY FIN SERVICE", "MIDCPNIFTY":"NIFTY MID SELECT"}
-        ts = name_map.get(symbol.upper(), "NIFTY 50")
+        ts = name_map.get(sym, "NIFTY 50")
         m = df[df["tradingsymbol"].str.upper()==ts.upper()]
         if not m.empty:
             return int(m.iloc[0]["instrument_token"])
