@@ -12,6 +12,39 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const LOG_FILE = path.join(ROOT, 'logs', 'engine.log');
 
+// Initialize Kite client for prev-close queries
+async function initKite() {
+  let apiKey = process.env.KITE_API_KEY;
+  if (!apiKey) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'settings.json'), 'utf8'));
+      apiKey = cfg.KITE_API_KEY || '';
+    } catch {}
+  }
+  if (!apiKey) return null;
+  try {
+    const { KiteConnect } = await import('kiteconnect');
+    const sess = JSON.parse(fs.readFileSync(path.join(ROOT, '.kite_session.json'), 'utf8'));
+    const kc = new KiteConnect({ api_key: apiKey });
+    kc.setAccessToken(sess.access_token);
+    return kc;
+  } catch {
+    return null;
+  }
+}
+
+function indexQuoteKey(symbol) {
+  const s = symbol.toUpperCase();
+  if (s === 'BANKNIFTY') return 'NSE:NIFTY BANK';
+  if (s === 'NIFTY') return 'NSE:NIFTY 50';
+  if (s === 'FINNIFTY') return 'NSE:NIFTY FIN SERVICE';
+  if (s === 'MIDCPNIFTY') return 'NSE:NIFTY MID SELECT';
+  if (s === 'SENSEX') return 'BSE:SENSEX';
+  return 'NSE:NIFTY 50';
+}
+
+const kite = await initKite();
+
 // Determine the directory to serve static assets from. In production the
 // dashboard is built into "dashboard/dist". When running locally, or if the
 // build output is missing, fall back to serving the source "dashboard" folder
@@ -21,8 +54,28 @@ const STATIC_DIR = fs.existsSync(DIST_DIR)
   ? DIST_DIR
   : __dirname;
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const parsed = url.parse(req.url, true);
+
+  if (parsed.pathname === '/prevclose') {
+    const symbol = (parsed.query.symbol || '').toUpperCase();
+    if (!kite) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'kite not initialized' }));
+      return;
+    }
+    try {
+      const key = indexQuoteKey(symbol);
+      const q = await kite.quote([key]);
+      const close = q[key]?.ohlc?.close;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ close }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
 
   if (parsed.pathname === '/events') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
