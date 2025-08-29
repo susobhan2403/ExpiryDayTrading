@@ -42,6 +42,7 @@ class Orchestrator:
                  run_stream: bool = True,
                  run_aggregator: bool = True,
                  aggregate_interval: int = 60,
+                 engine_run_once: bool = False,
                  eod_train_time: Optional[str] = None,
                  eod_symbols: Optional[List[str]] = None,
                  eod_k_atr: float = 1.0,
@@ -57,6 +58,7 @@ class Orchestrator:
         self.run_stream = run_stream
         self.run_aggregator = run_aggregator
         self.aggregate_interval = int(aggregate_interval)
+        self.engine_run_once = bool(engine_run_once)
         self.proc_stream: Optional[subprocess.Popen] = None
         self.proc_engine: Optional[subprocess.Popen] = None
         self.stop_event = threading.Event()
@@ -105,6 +107,8 @@ class Orchestrator:
             cmd.append('--use-telegram')
         if self.slack_webhook:
             cmd += ['--slack-webhook', self.slack_webhook]
+        if self.engine_run_once:
+            cmd.append('--run-once')
         self.proc_engine = subprocess.Popen(cmd, cwd=str(ROOT))
         print('[orchestrate] started engine:', cmd)
 
@@ -247,6 +251,7 @@ def main():
     ap.add_argument('--no-stream', action='store_true', help='Disable orderbook stream')
     ap.add_argument('--no-aggregator', action='store_true', help='Disable 1m aggregator')
     ap.add_argument('--aggregate-interval', type=int, default=int(orch_cfg.get('AGGREGATE_INTERVAL', 60)))
+    ap.add_argument('--engine-run-once', action='store_true', help='Forward --run-once to engine for off-hours debug')
     ap.add_argument('--eod-train', default=orch_cfg.get('EOD_TRAIN_TIME', ''), help="HH:MM IST time for EOD training (e.g., 16:05)")
     ap.add_argument('--eod-k-atr', type=float, default=float(orch_cfg.get('EOD_K_ATR', 1.0)))
     ap.add_argument('--eod-time-barrier', type=int, default=int(orch_cfg.get('EOD_TIME_BARRIER', 15)))
@@ -267,6 +272,7 @@ def main():
         run_stream=not args.no_stream,
         run_aggregator=not args.no_aggregator,
         aggregate_interval=args.aggregate_interval,
+        engine_run_once=bool(args.engine_run_once),
         eod_train_time=(args.eod_train or None),
         eod_symbols=symbols,
         eod_k_atr=args.eod_k_atr,
