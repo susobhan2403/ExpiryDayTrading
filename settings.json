@@ -13,7 +13,7 @@
   "PRESETS": {},
   "price_trend": 0.35,
   "options_flow ": 0.45,
-  "volatility": 0.20,
+  "volatility": 0.2,
   "ORCHESTRATE": {
     "SYMBOLS": "NIFTY,BANKNIFTY,SENSEX,MIDCPNIFTY",
     "MODE": "auto",
