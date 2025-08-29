@@ -69,7 +69,8 @@ const server = http.createServer((req, res) => {
             if (header) {
               currentSymbol = header[1];
             }
-            const indicator = /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(upper.trim());
+            const isHeader = /IST \| [A-Z]+/.test(upper);
+            const indicator = isHeader || /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(upper.trim());
             const match = (!symbol || currentSymbol === symbol) && indicator;
             if (match) {
               res.write(`data: ${JSON.stringify({ line: plain })}\n\n`);

@@ -15,6 +15,18 @@ body {
 .symbol-board .symbol {
   color: #80cbc4;
 }
+.spot-price {
+  color: #e6e6e6;
+}
+.spot-change {
+  font-weight: bold;
+}
+.spot-change.up {
+  color: #4caf50;
+}
+.spot-change.down {
+  color: #ff5252;
+}
 .panel {
   border: 1px solid #333;
   padding: 8px;
@@ -31,6 +43,22 @@ pre {
   font-size: 12px;
 }
 .exit {
+  color: #ff5370;
+  font-weight: bold;
+}
+.action-trade {
+  color: #64b5f6;
+  font-weight: bold;
+}
+.decision-hold {
+  color: #2e7d32;
+  font-weight: bold;
+}
+.decision-enter {
+  color: #4caf50;
+  font-weight: bold;
+}
+.decision-exit {
   color: #ff5370;
   font-weight: bold;
 }
