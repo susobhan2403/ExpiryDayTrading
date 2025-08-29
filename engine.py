@@ -85,7 +85,21 @@ DEFAULT_POLL_SECS = 240
 RISK_FREE = float(os.getenv("RISK_FREE_RATE", "0.066"))
 
 # Scenario weighting and gates
-WEIGHTS = {"price_trend": 0.35, "options_flow": 0.45, "volatility": 0.20}
+# Allow override via settings.json -> { "WEIGHTS": { "price_trend": 0.35, ... } }
+DEFAULT_WEIGHTS = {"price_trend": 0.35, "options_flow": 0.45, "volatility": 0.20}
+try:
+    _cfg = load_settings()
+    _w = (_cfg or {}).get("WEIGHTS") if isinstance(_cfg, dict) else None
+    if isinstance(_w, dict):
+        WEIGHTS = {
+            "price_trend": float(_w.get("price_trend", DEFAULT_WEIGHTS["price_trend"])),
+            "options_flow": float(_w.get("options_flow", DEFAULT_WEIGHTS["options_flow"])),
+            "volatility": float(_w.get("volatility", DEFAULT_WEIGHTS["volatility"]))
+        }
+    else:
+        WEIGHTS = DEFAULT_WEIGHTS
+except Exception:
+    WEIGHTS = DEFAULT_WEIGHTS
 GATE_MIN_BLOCKS = {"price_trend": 1, "options_flow": 1, "volatility": 1}
 SCENARIO_FLIP_DELTA = 0.15
 CONFIRM_SNAPSHOTS = 2         # require consecutive confirmations for OI/drift regimes
@@ -1326,6 +1340,14 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     bear_flow = oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)
     ai_p = ai_predict_probs(symbol, avw, bvw, macd_up, macd_dn, bull_flow, bear_flow, bool(breakout_up), bool(breakdown), adx5, dpcr_z, iv_z, mph_norm, VND)
     probs = blend_probs(probs, ai_p, adx5, dpcr_z, iv_z, mph_norm)
+    # Persist block-gating effect after AI blend: penalize scenarios lacking
+    # at least one signal from each block to avoid unrealistic flips.
+    try:
+        pen = {k: (v*0.5 if not blocks_ok.get(k, True) else v) for k,v in probs.items()}
+        s = sum(pen.values()) or 1.0
+        probs = {k: round(v/s,3) for k,v in pen.items()}
+    except Exception:
+        pass
     # Scenario flip gating
     last_probs = state.get("last_probs", {})
     last_top = state.get("last_top", "")

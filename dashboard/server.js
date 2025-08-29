@@ -59,18 +59,59 @@ const server = http.createServer(async (req, res) => {
 
   if (parsed.pathname === '/prevclose') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
-    if (!kite) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'kite not initialized' }));
-      return;
-    }
+
+    // Helper: CSV fallback from engine rollup when Kite is unavailable
+    const csvFallback = () => {
+      try {
+        const f = path.join(ROOT, 'out', `${symbol}_rollup.csv`);
+        if (!fs.existsSync(f)) return null;
+        const txt = fs.readFileSync(f, 'utf8').trim();
+        const lines = txt.split(/\r?\n/);
+        if (lines.length <= 1) return null; // header only
+        let lastDay = null;
+        for (let i = lines.length - 1; i >= 1; i--) { // skip header at 0
+          const arr = lines[i].split(',');
+          if (arr.length < 2) continue;
+          const ts = arr[0];
+          const day = ts.slice(0, 10);
+          if (!lastDay) { lastDay = day; continue; }
+          if (day !== lastDay) {
+            const spot = parseFloat(arr[1]);
+            return Number.isFinite(spot) ? spot : null;
+          }
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Primary: Kite quote ohlc.close
     try {
+      if (!kite) throw new Error('kite not initialized');
       const key = indexQuoteKey(symbol);
       const q = await kite.quote([key]);
       const close = q[key]?.ohlc?.close;
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ close }));
+      if (typeof close === 'number' && isFinite(close)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ close }));
+        return;
+      }
+      // fallback if close missing
+      const fb = csvFallback();
+      if (fb !== null) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ close: fb }));
+        return;
+      }
+      throw new Error('close unavailable');
     } catch (err) {
+      const fb = csvFallback();
+      if (fb !== null) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ close: fb, note: 'csv_fallback' }));
+        return;
+      }
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(err) }));
     }

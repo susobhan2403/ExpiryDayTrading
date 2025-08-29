@@ -8,7 +8,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/events': 'http://localhost:3000'
+      '/events': 'http://localhost:3000',
+      '/prevclose': 'http://localhost:3000'
     }
   },
   build: {
