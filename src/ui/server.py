@@ -23,23 +23,23 @@ TEMPLATE = """
     .symbol { color: #80cbc4; }
     .exit { color: #ff5370; font-weight: bold; }
   </style>
-  <script>
-    const symbols = JSON.parse('{{ symbols|tojson|safe }}');
-    async function fetchLines(sym) {
-      try{
-        const res = await fetch('/api/lines?symbol=' + encodeURIComponent(sym));
-        const js = await res.json();
-        const el = document.getElementById('panel_' + sym);
-        const lines = js.lines.join('\n');
-        // simple highlight
-        const html = lines.replace(/EXIT NOW/g, '<span class="exit">EXIT NOW</span>');
-        el.innerHTML = html;
-      } catch(e){ console.error(e); }
-    }
-    function tick(){ symbols.forEach(fetchLines); }
-    setInterval(tick, 3000);
-    window.onload = tick;
-  </script>
+    <script>
+      const symbols = {{ symbols|tojson }};
+      async function fetchLines(sym) {
+        try {
+          const res = await fetch('/api/lines?symbol=' + encodeURIComponent(sym));
+          const js = await res.json();
+          const el = document.getElementById('panel_' + sym);
+          const lines = js.lines.join('\n');
+          // simple highlight
+          const html = lines.replace(/EXIT NOW/g, '<span class="exit">EXIT NOW</span>');
+          el.innerHTML = html;
+        } catch (e) { console.error(e); }
+      }
+      function tick() { symbols.forEach(fetchLines); }
+      window.addEventListener('load', tick);
+      setInterval(tick, 3000);
+    </script>
   </head>
   <body>
     <h2>Index Monitor</h2>
