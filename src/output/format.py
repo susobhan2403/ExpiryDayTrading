@@ -108,7 +108,12 @@ def format_output_line(
     for idx, (name, ok) in enumerate(conds, start=1):
         cond_lines.append(f"{idx}. {name} - {tick(ok)}")
 
-    spot_print = int(spot_now) if not math.isnan(spot_now) else "NA"
+    # Preserve index spot precision rather than truncating to integer. The
+    # dashboard relies on the exact spot value to compute the day-over-day
+    # change. Casting to ``int`` caused the displayed spot to drop the
+    # fractional part (e.g. ``24426.85`` became ``24426``) which in turn led to
+    # incorrect difference calculations.  Format to two decimals instead.
+    spot_print = f"{spot_now:.2f}" if not math.isnan(spot_now) else "NA"
     vwap_fut_print = int(vwap_fut) if not math.isnan(vwap_fut) else "NA"
     header = f"{now.strftime('%H:%M')} IST | {symbol} {spot_print} | VWAP(fut) {vwap_fut_print}"
     l1 = f"D={int(D)} | ATR_D={int(ATR_D)} | VND={snap.get('vnd')} | SSD={snap.get('ssd')} | PD={snap.get('pdist_pct')}%"

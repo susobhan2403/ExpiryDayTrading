@@ -74,8 +74,13 @@ const server = http.createServer(async (req, res) => {
           if (arr.length < 2) continue;
           const ts = arr[0];
           const day = ts.slice(0, 10);
+          const hour = parseInt(ts.slice(11, 13), 10);
           if (!lastDay) { lastDay = day; continue; }
-          if (day !== lastDay) {
+          if (day !== lastDay && hour < 16) {
+            // Use the last spot from the previous trading session before the
+            // market close (roughly 16:00 IST). Some rollup files contain
+            // after-hours entries which previously caused the fallback to
+            // return near-current prices, yielding tiny or zero differences.
             const spot = parseFloat(arr[1]);
             return Number.isFinite(spot) ? spot : null;
           }
