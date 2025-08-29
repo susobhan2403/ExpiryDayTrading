@@ -123,6 +123,31 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (parsed.pathname === '/spotdiff') {
+    const symbol = (parsed.query.symbol || '').toUpperCase();
+    try {
+      if (!kite) throw new Error('kite not initialized');
+      const key = indexQuoteKey(symbol);
+      const q = await kite.quote([key]);
+      const node = q[key] || {};
+      const diff = node.net_change;
+      const pct = node.change;
+      if (
+        typeof diff === 'number' && isFinite(diff) &&
+        typeof pct === 'number' && isFinite(pct)
+      ) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ diff, pct }));
+        return;
+      }
+      throw new Error('diff unavailable');
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
   if (parsed.pathname === '/events') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
     res.writeHead(200, {
