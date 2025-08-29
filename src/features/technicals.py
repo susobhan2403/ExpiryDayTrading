@@ -107,3 +107,27 @@ def volume_profile(df: pd.DataFrame, bins: int = 50) -> Dict[str,float]:
                 right = right_cand; cum += vol_bins[right]
     return {"POC": float(centers[poc_idx]), "VAL": float(centers[left]), "VAH": float(centers[right])}
 
+# --- Additional features ---
+def cpr_from_daily(prev_high: float, prev_low: float, prev_close: float):
+    pp = (prev_high + prev_low + prev_close)/3.0
+    bc = (prev_high + prev_low)/2.0
+    tc = 2*pp - bc
+    return float(pp), float(bc), float(tc)
+
+def donchian(series: pd.Series, window: int = 20):
+    high = series.rolling(window).max()
+    low = series.rolling(window).min()
+    return high, low
+
+def keltner(df: pd.DataFrame, ema_len: int = 20, atr_len: int = 14, mult: float = 1.5):
+    mid = ema(df['close'], ema_len)
+    tr = (pd.concat([
+        df['high'] - df['low'],
+        (df['high'] - df['close'].shift(1)).abs(),
+        (df['low'] - df['close'].shift(1)).abs()
+    ], axis=1).max(axis=1))
+    atr = tr.ewm(alpha=1/atr_len, adjust=False).mean()
+    upper = mid + mult*atr
+    lower = mid - mult*atr
+    return upper, mid, lower
+

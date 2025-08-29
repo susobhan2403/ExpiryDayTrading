@@ -26,6 +26,57 @@ def implied_vol(price,S,K,r,T,call=True):
         else: lo = mid
     return mid
 
+def bs_delta(S: float, K: float, r: float, T: float, sig: float, call: bool = True) -> float:
+    if S<=0 or K<=0 or T<=0 or sig<=0:
+        return 0.0
+    d1 = (math.log(S/K) + (r+0.5*sig*sig)*T)/(sig*math.sqrt(T))
+    if call:
+        # N(d1)
+        return 0.5*(1+math.erf(d1/math.sqrt(2)))
+    else:
+        # N(d1)-1
+        return 0.5*(1+math.erf(d1/math.sqrt(2))) - 1.0
+
+def risk_reversal_25(chain: Dict, spot: float, minutes_to_exp: float, r: float, atm_iv: float) -> Dict[str, float]:
+    """
+    Approximate 25-delta risk reversal: RR = IV_call(25d) - IV_put(25d)
+    Uses ATM IV to select strikes with delta≈±0.25, then backs out IV from market prices.
+    Returns { 'rr': float, 'k_call': int, 'k_put': int, 'iv_call': float, 'iv_put': float }
+    """
+    out = {"rr": float('nan'), "k_call": 0, "k_put": 0, "iv_call": float('nan'), "iv_put": float('nan')}
+    strikes = sorted(chain.get('strikes') or [])
+    if not strikes:
+        return out
+    T = max(1e-9, minutes_to_exp)/(365*24*60)
+    sig = atm_iv if atm_iv==atm_iv and atm_iv>0 else 0.2
+    # select strikes by delta closeness
+    best_call = None; best_call_diff = 9e9
+    best_put = None; best_put_diff = 9e9
+    for K in strikes:
+        dc = abs(bs_delta(spot, K, r, T, sig, call=True) - 0.25)
+        if dc < best_call_diff:
+            best_call_diff = dc; best_call = K
+        dp = abs(abs(bs_delta(spot, K, r, T, sig, call=False)) - 0.25)
+        if dp < best_put_diff:
+            best_put_diff = dp; best_put = K
+    if best_call is None or best_put is None:
+        return out
+    # compute IVs from market mids
+    def mid_price(node, K):
+        bid = node.get('bid',0.0); ask = node.get('ask',0.0); ltp = node.get('ltp',0.0)
+        if bid>0 and ask>0 and (ask-bid)/max(1.0,K) <= 0.03:
+            return 0.5*(bid+ask)
+        return ltp if ltp>0 else None
+    call_node = chain['calls'].get(best_call, {})
+    put_node = chain['puts'].get(best_put, {})
+    m_c = mid_price(call_node, best_call)
+    m_p = mid_price(put_node, best_put)
+    iv_c = implied_vol(m_c, spot, best_call, r, T, call=True) if m_c else float('nan')
+    iv_p = implied_vol(m_p, spot, best_put, r, T, call=False) if m_p else float('nan')
+    if iv_c==iv_c and iv_p==iv_p and iv_c>0 and iv_p>0:
+        out.update({"rr": float(iv_c - iv_p), "k_call": int(best_call), "k_put": int(best_put), "iv_call": float(iv_c), "iv_put": float(iv_p)})
+    return out
+
 def nearest_weekly_expiry(now_ist: dt.datetime, symbol: str) -> str:
     """
     Dynamic weekly expiry by symbol with rule changes from Sep 2025:

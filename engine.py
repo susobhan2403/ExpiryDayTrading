@@ -674,9 +674,17 @@ def score_normalized(
     bb_pos       = techs.get("bb_pos",0.0)
 
     # Price/Trend flags
+    cpr_tc = techs.get("cpr_tc", float('nan'))
+    cpr_bc = techs.get("cpr_bc", float('nan'))
+    cpr_bull = (spot > cpr_tc) if (cpr_tc==cpr_tc) else False
+    cpr_bear = (spot < cpr_bc) if (cpr_bc==cpr_bc) else False
     price_block["reversion"] = (VND >= REV_NORM and D < 0 and (above_vwap or macd_up)) or abs(bb_pos) >= 1.0
-    price_block["bear"]      = (below_vwap and adx5 >= 18) or bearish_bias or (not fut_up)
-    price_block["bull"]      = (above_vwap and adx5 >= 18) or bullish_bias or fut_up
+    price_block["bear"]      = (below_vwap and adx5 >= 18) or bearish_bias or (not fut_up) or cpr_bear \
+                               or techs.get("micro_bear", False) or techs.get("orb_down", False) \
+                               or techs.get("inst_bear", False)
+    price_block["bull"]      = (above_vwap and adx5 >= 18) or bullish_bias or fut_up or cpr_bull \
+                               or techs.get("micro_bull", False) or techs.get("orb_up", False) \
+                               or techs.get("inst_bull", False)
     price_block["pin"]       = (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= pin_distance_points)
     price_block["squeeze"]   = (VND >= SQUEEZE_NORM and adx5 >= 20 and (above_vwap or below_vwap))
     price_block["event"]     = (abs(div) > 0 and abs(iv_z) >= 2.0)
@@ -767,11 +775,11 @@ def score_intraday(
     Produce probabilities for the same SCENARIOS set, but using multi-timeframe trend/flow
     appropriate for non-expiry days. Keeps block gating logic identical for consistency.
     """
-    # Price/Trend block
+    # Price/Trend block (intraday)
     price_block = {
         "reversion": short_covering and above_vwap,
-        "bear": (trending_down_mtf or (below_vwap and adx5 >= 18)),
-        "bull": (trending_up_mtf or (above_vwap and adx5 >= 18)),
+        "bear": (trending_down_mtf or (below_vwap and adx5 >= 18) or breakdown),
+        "bull": (trending_up_mtf or (above_vwap and adx5 >= 18) or breakout_up),
         "pin": (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= pin_distance_points),
         "squeeze": (breakout_up or breakdown),
         "event": (iv_z >= 2.0),
@@ -905,6 +913,8 @@ def blend_probs(rule_probs: Dict[str,float], ai_probs: Dict[str,float], adx5: fl
 # ---------- main cycle ----------
 def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: int, use_telegram: bool, slack_webhook: str, mode: str = "auto") -> Optional[Snapshot]:
     now = dt.datetime.now(IST)
+    # ensure position variable exists across code paths
+    pos = None
     # Use provider-selected earliest expiry to avoid calendar mismatches (weekly/monthly + symbol-specific rules)
     try:
         expiry = provider.get_current_expiry_date(symbol)
@@ -945,6 +955,21 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     tenkan_last = float(tenkan.iloc[-1]); kijun_last = float(kijun.iloc[-1])
     span_a_last = float(span_a.iloc[-1]); span_b_last = float(span_b.iloc[-1])
     pivot, r1_p, s1_p, r2_p, s2_p = tech.pivot_points(spot_5m)
+    # CPR from previous daily
+    daily = spot_1m.resample('1D').agg({'high':'max','low':'min','close':'last'})
+    if daily.shape[0] >= 2:
+        prev = daily.iloc[-2]
+        cpr_pp, cpr_bc, cpr_tc = tech.cpr_from_daily(prev['high'], prev['low'], prev['close'])
+    else:
+        cpr_pp = cpr_bc = cpr_tc = float('nan')
+    # Donchian and Keltner
+    don_hi20, don_lo20 = tech.donchian(spot_5m['close'], 20)
+    don_hi55, don_lo55 = tech.donchian(spot_5m['close'], 55)
+    kel_u, kel_m, kel_l = tech.keltner(spot_5m, 20, 14, 1.5)
+    don_hi20_l = float(don_hi20.iloc[-1]) if len(don_hi20) else float('nan')
+    don_lo20_l = float(don_lo20.iloc[-1]) if len(don_lo20) else float('nan')
+    kel_u_l = float(kel_u.iloc[-1]) if len(kel_u) else float('nan')
+    kel_l_l = float(kel_l.iloc[-1]) if len(kel_l) else float('nan')
     # Multi-timeframe aggregates
     def resamp(df, mins):
         return df.resample(f"{mins}min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
@@ -968,6 +993,67 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     close_5m = float(spot_5m["close"].iloc[-1])
     breakout_up = (close_5m > bb_u) and (close_5m > (r1_p if r1_p==r1_p else bb_u)) and (adx5_delta >= adx_rise_min) and (price_now > vwap_spot)
     breakdown  = (close_5m < bb_l) and (close_5m < (s1_p if s1_p==s1_p else bb_l)) and (adx5_delta >= adx_rise_min) and (price_now < vwap_spot)
+
+    # Microstructure features (best-effort): read aggregates if available else raw
+    micro_bull = micro_bear = orb_up = orb_down = False
+    micro_imb = micro_cvd_slope = 0.0
+    thrust_up = thrust_down = False
+    try:
+        date_tag_stream = now.strftime('%Y%m%d')
+        stream_1m_file = OUT_DIR / 'stream' / '1m' / f'{date_tag_stream}.csv'
+        if stream_1m_file.exists():
+            dfm = pd.read_csv(stream_1m_file, parse_dates=['ts_min'])
+            dfm = dfm[dfm['symbol'].str.upper() == symbol.upper()].tail(5)
+            if not dfm.empty:
+                micro_imb = float(dfm['imb'].mean()) if 'imb' in dfm.columns else 0.0
+                if 'cvd' in dfm.columns:
+                    vals = dfm['cvd'].values
+                    micro_cvd_slope = float(vals[-1] - vals[0]) if len(vals) >= 2 else 0.0
+                thrust_up = bool(dfm['thrust_up'].iloc[-1]) if 'thrust_up' in dfm.columns else False
+                thrust_down = bool(dfm['thrust_down'].iloc[-1]) if 'thrust_down' in dfm.columns else False
+                orb_up = bool(dfm['orb_up'].iloc[-1]) if 'orb_up' in dfm.columns else False
+                orb_down = bool(dfm['orb_down'].iloc[-1]) if 'orb_down' in dfm.columns else False
+        else:
+            stream_file = OUT_DIR / 'stream' / f'{date_tag_stream}.csv'
+            if stream_file.exists():
+                dfm = pd.read_csv(stream_file)
+                dfm = dfm[dfm['symbol'].str.upper() == symbol.upper()].tail(120)
+                if not dfm.empty:
+                    micro_imb = float(dfm['imb'].tail(60).mean()) if 'imb' in dfm.columns else 0.0
+                    cvd_series = dfm['cvd'].tail(60) if 'cvd' in dfm.columns else pd.Series([0])
+                    micro_cvd_slope = float(cvd_series.iloc[-1] - cvd_series.iloc[0]) if len(cvd_series) >= 2 else 0.0
+        # ORB (first 15 mins 9:15-9:30)
+        try:
+            day_str = now.astimezone(IST).strftime('%Y-%m-%d')
+            day_start = pd.Timestamp(f"{day_str} 09:15:00", tz=IST)
+            day_15 = day_start + pd.Timedelta(minutes=15)
+            orb = spot_1m[(spot_1m.index >= day_start) & (spot_1m.index < day_15)]
+            if len(orb) >= 5:
+                orb_hi = float(orb['high'].max()); orb_lo = float(orb['low'].min())
+                orb_up = orb_up or (price_now > orb_hi)
+                orb_down = orb_down or (price_now < orb_lo)
+        except Exception:
+            pass
+        micro_bull = (micro_imb > 0.10 and micro_cvd_slope > 0) or orb_up or thrust_up
+        micro_bear = (micro_imb < -0.10 and micro_cvd_slope < 0) or orb_down or thrust_down
+    except Exception:
+        pass
+
+    # FII/DII clients bias (optional) → integrate as micro bias
+    inst_bull = inst_bear = False
+    try:
+        from src.features.clients import load_clients_features
+        cli_path = ROOT / 'data' / 'clients.csv'
+        if cli_path.exists():
+            feats = load_clients_features(str(cli_path), now.date())
+            fii_z = feats.get('fii_net_d1_z', 0.0)
+            dii_z = feats.get('dii_net_d1_z', 0.0)
+            inst_bull = (fii_z > 0.5) or (dii_z > 0.5)
+            inst_bear = (fii_z < -0.5) or (dii_z < -0.5)
+    except Exception:
+        pass
+    if inst_bull: micro_bull = True
+    if inst_bear: micro_bear = True
 
     # Snapshot index & chain
     idx_snap = provider.get_indices_snapshot([symbol]); spot_now = float(idx_snap[symbol])
@@ -1180,6 +1266,22 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "trending_down_mtf": bool(trending_down_mtf),
         "breakout_up": bool(breakout_up),
         "breakdown": bool(breakdown),
+        "cpr_tc": float(cpr_tc),
+        "cpr_bc": float(cpr_bc),
+        "don_hi20": float(don_hi20_l),
+        "don_lo20": float(don_lo20_l),
+        "kel_u": float(kel_u_l),
+        "kel_l": float(kel_l_l),
+        "micro_bull": bool(micro_bull),
+        "micro_bear": bool(micro_bear),
+        "orb_up": bool(orb_up),
+        "orb_down": bool(orb_down),
+        "micro_imb": float(micro_imb),
+        "micro_cvd_slope": float(micro_cvd_slope),
+        "inst_bull": bool(inst_bull),
+        "inst_bear": bool(inst_bear),
+        "thrust_up": bool(thrust_up),
+        "thrust_down": bool(thrust_down),
     }
 
     # Scoring: expiry vs non-expiry (mode override)
@@ -1207,8 +1309,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             iv_pct_hint,
             above_vwap=(spot_now > vwap_spot),
             below_vwap=(spot_now < vwap_spot),
-            breakout_up=bool(breakout_up),
-            breakdown=bool(breakdown),
+            breakout_up=bool(breakout_up or techs.get('micro_bull', False) or techs.get('orb_up', False)),
+            breakdown=bool(breakdown or techs.get('micro_bear', False) or techs.get('orb_down', False)),
             trending_up_mtf=bool(trending_up_mtf),
             trending_down_mtf=bool(trending_down_mtf),
             short_covering=bool(oi_flags.get("short_covering", False)),
@@ -1330,7 +1432,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     state = {
         "pcr": pcr, "atm_iv": atm_iv, "dpcr_series": dpcr_series, "div_series": div_series,
         "chain": {"calls": chain["calls"], "puts": chain["puts"]},
-        "last_probs": probs, "last_top": top, "confirmations": conf
+        "last_probs": probs, "last_top": top, "confirmations": conf,
+        "position": pos
     }
     state_file.write_text(json.dumps(state))
     drift_file.write_text(json.dumps(mp_hist))
@@ -1468,6 +1571,136 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         probs, top, tp, oi_flags, vwap_spot, adx5, div, iv_pct_hint,
         macd_last, macd_sig_last, VND, PIN_NORM, MPH_NORM_THR
     )
+    # Track assumed positions and exit signals between ticks
+    try:
+        pos = state.get('position') if isinstance(state, dict) else None
+    except Exception:
+        pos = None
+    action = (tp.get('action') or '').upper()
+    # Entry: assume user enters if verdict says Enter Now and action is BUY_*
+    if action.startswith('BUY_') and 'Final Verdict: Enter Now' in line:
+        if not pos:
+            pos = {
+                'action': action,
+                'instrument': tp.get('instrument',''),
+                'opened_at': now.isoformat()
+            }
+    # Exit: if pos open, fire exit when any exit cond satisfies
+    exit_now = False
+    if pos and isinstance(pos, dict):
+        macd_dn = macd_last < macd_sig_last
+        macd_up = macd_last > macd_sig_last
+        trend_weak = adx5 < 16
+        bear_flow = oi_flags.get('ce_write_above', False) and oi_flags.get('pe_unwind_below', False)
+        bull_flow = oi_flags.get('pe_write_above', False) and oi_flags.get('ce_unwind_below', False)
+        bear_pcr = dpcr_z <= -0.5
+        bull_pcr = dpcr_z >= 0.5
+        bear_drift = (mph_norm == mph_norm) and (mph_norm <= -MPH_NORM_THR)
+        bull_drift = (mph_norm == mph_norm) and (mph_norm >= MPH_NORM_THR)
+        if pos.get('action') == 'BUY_CE':
+            exit_now = (spot_now < vwap_spot) or trend_weak or bear_flow or bear_pcr or macd_dn or bear_drift
+        elif pos.get('action') == 'BUY_PE':
+            exit_now = (spot_now > vwap_spot) or trend_weak or bull_flow or bull_pcr or macd_up or bull_drift
+        if exit_now:
+            line = line + "\n" + (Style.BRIGHT + Fore.RED + "EXIT NOW: Exit open position (" + pos.get('action','') + ")" + Style.RESET_ALL)
+            pos = None
+    # Optional: risk and strategy hints appended to output
+    try:
+        from src.models.prob import scp_probability, erp_probability
+        from src.features.oi import compute_voi, pin_density
+        from src.features.greeks import gex_from_chain, zero_gamma_level
+        from src.strategy.select import select_strategy
+        from src.risk.sizing import vol_target_size, capped_kelly
+        # IV term structure (near/next expiries)
+        term_near = term_next = float('nan')
+        try:
+            exps = provider.get_upcoming_expiries(symbol, n=2)
+            if exps:
+                chains_map = provider.get_option_chains(symbol, exps)
+                ivs = []
+                for e in exps:
+                    ch = chains_map.get(e)
+                    if ch and ch.get('strikes'):
+                        iv_e = opt.atm_iv_from_chain(ch, spot_now, opt.minutes_to_expiry(e), RISK_FREE)
+                        if iv_e==iv_e and iv_e>0:
+                            ivs.append((e, iv_e))
+                if ivs:
+                    term_near = ivs[0][1]
+                    if len(ivs) > 1:
+                        term_next = ivs[1][1]
+        except Exception:
+            pass
+        dt_minutes = max(1.0, poll_secs/60.0)
+        prev_chain_state = state.get("chain") if isinstance(state, dict) else None
+        voi = compute_voi(prev_chain_state or {"calls":{}, "puts":{}}, {"calls": chain["calls"], "puts": chain["puts"]}, dt_minutes, atm_k or 0, 100 if "BANK" in symbol.upper() else 50)
+        pin_d = pin_density(chain, atm_k or 0, 100 if "BANK" in symbol.upper() else 50, n=3)
+        gex = gex_from_chain(chain, spot_now, mins_to_exp, RISK_FREE, atm_iv or 0.2)
+        zg = zero_gamma_level(chain, spot_now, mins_to_exp, RISK_FREE, atm_iv or 0.2, 100 if "BANK" in symbol.upper() else 50)
+        prev_gex = (state or {}).get("gex", float('nan')) if isinstance(state, dict) else float('nan')
+        d_gex_toward_zero = (abs(prev_gex) - abs(gex)) if (prev_gex==prev_gex and gex==gex) else 0.0
+        macd_hist = (macd_line - macd_sig)
+        macd_hist_slope = float(macd_hist.iloc[-1] - macd_hist.iloc[-2]) if len(macd_hist) >= 2 else 0.0
+        rsi_series_tmp = rsi(spot_5m["close"], 14)
+        rsi_slope = float(rsi_series_tmp.iloc[-1] - rsi_series_tmp.iloc[-2]) if len(rsi_series_tmp) >= 2 else 0.0
+        scp = scp_probability({
+            "dbasis": (basis - ((state or {}).get("basis", basis))) if basis==basis else 0.0,
+            "voi_ce_atm": voi.get("voi_ce_atm", 0.0),
+            "voi_pe_atm": voi.get("voi_pe_atm", 0.0),
+            "rsi_slope": rsi_slope/10.0,
+            "macd_hist_slope": macd_hist_slope,
+            "price_above_avwap": spot_now > vwap_spot,
+            "d_gex_toward_zero": d_gex_toward_zero/(abs(prev_gex)+1e-6) if prev_gex==prev_gex else 0.0,
+            "adx": adx5,
+        })
+        dist_to_pin = abs((atm_k or 0) - (zg if zg==zg else atm_k or 0))
+        erp = erp_probability({
+            "pin_density": 0 if pin_d!=pin_d else pin_d,
+            "dist_to_pin": dist_to_pin / (100 if "BANK" in symbol.upper() else 50),
+            "ivp_low": iv_pct_hint==iv_pct_hint and iv_pct_hint < 33,
+            "gex_small": abs(gex) < 1e6,
+            "oi_conc_at_atm": 0.0,
+        })
+        strategy_hint = select_strategy(scp, erp, iv_pct_hint if iv_pct_hint==iv_pct_hint else 50.0, mins_to_exp, (spot_now - (zg if zg==zg else spot_now)))
+        realized_vol = (ATR_D / max(1.0, spot_now))
+        target_vol = 0.02
+        size_vol = vol_target_size(target_vol, max(1e-6, realized_vol))
+        kelly = capped_kelly(max(scp, 1.0 - erp), cap=0.1)
+        # Update IV rolling history and compute IVP/IVR
+        from src.features.ivterm import update_iv_history, ivp_ivr
+        term_note = ""
+        if term_near==term_near:
+            term_note = f" | Term near {term_near*100:.2f}%"
+            try:
+                update_iv_history(symbol, 'near', term_near, now)
+            except Exception:
+                pass
+        if term_next==term_next:
+            term_note += f" / next {term_next*100:.2f}%"
+            try:
+                update_iv_history(symbol, 'next', term_next, now)
+            except Exception:
+                pass
+        ivpx = ivp_ivr(symbol, 'near')
+        ivp_val = ivpx.get('ivp', float('nan'))
+        ivr_val = ivpx.get('ivr', float('nan'))
+        if ivp_val==ivp_val:
+            term_note += f" | IVP {ivp_val:.1f}%"
+        if ivr_val==ivr_val:
+            term_note += f" IVR {ivr_val:.1f}%"
+        line = line + "\n" + f"SCP {int(scp*100)}% | ERP {int(erp*100)}% | Strategy: {strategy_hint} | Size(vol) {size_vol:.2f} | Kelly {kelly:.2f}{term_note}"
+        # refresh state file with added metrics
+        try:
+            state_extra = {
+                "pcr": pcr, "atm_iv": atm_iv, "dpcr_series": dpcr_series, "div_series": div_series,
+                "chain": {"calls": chain["calls"], "puts": chain["puts"]},
+                "last_probs": probs, "last_top": top, "confirmations": conf,
+                "basis": basis, "gex": gex, "zero_gamma": zg
+            }
+            state_file.write_text(json.dumps(state_extra))
+        except Exception:
+            pass
+    except Exception:
+        pass
     logger.info(line)
 
     if use_telegram and TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:

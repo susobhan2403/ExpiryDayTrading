@@ -244,7 +244,93 @@ class KiteProvider(MarketDataProvider):
                 except: out[s] = float('nan')
         return out
 
+    def get_option_chains(self, symbol: str, expiries: List[str]) -> Dict[str, Dict]:
+        """Throttle-friendly multi-expiry option chains.
+        Returns mapping expiry->chain dict (same schema as get_option_chain).
+        """
+        chains: Dict[str, Dict] = {}
+        if not expiries:
+            return chains
+        sym = symbol.upper()
+        # choose exchange segment by symbol
+        ex = "BFO" if sym=="SENSEX" else "NFO"
+        seg = f"{ex}-OPT"
+        inst = self._instruments(ex).copy()
+        df = inst[(inst["name"] == sym) & (inst["segment"] == seg)].copy()
+        if df.empty:
+            return chains
+        df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
+        exp_dates = set()
+        for e in expiries:
+            try:
+                exp_dates.add(pd.to_datetime(e).date())
+            except Exception:
+                pass
+        by_exp = {e: df[df["expiry"]==e].copy() for e in exp_dates}
+        # Build a combined symbol list and quote in batches
+        syms_all: List[str] = []
+        exp_for_ts: Dict[str, dt.date] = {}
+        for e, dfe in by_exp.items():
+            dfe["strike"] = dfe["strike"].astype(int)
+            for ts in dfe["tradingsymbol"].tolist():
+                syms_all.append(f"{ex}:{ts}")
+                exp_for_ts[ts] = e
+        # quote in chunks
+        q_all: Dict[str, Dict] = {}
+        for i in range(0, len(syms_all), 400):
+            try:
+                q = self.kite.quote(syms_all[i:i+400])
+                q_all.update(q)
+            except Exception:
+                continue
+        # Build chains per expiry
+        for e, dfe in by_exp.items():
+            chain = {"symbol": symbol, "expiry": e.isoformat(), "strikes": sorted(dfe["strike"].unique()),
+                     "calls": {}, "puts": {}}
+            for sym_key, v in q_all.items():
+                ts = sym_key.split(":",1)[1] if ":" in sym_key else sym_key
+                # map ts -> row
+                row = dfe[dfe["tradingsymbol"] == ts]
+                if row.empty: continue
+                strike = int(row.iloc[0]["strike"])
+                typ = row.iloc[0]["instrument_type"]
+                bid=ask=ltp=0.0
+                dep = v.get("depth")
+                if dep and dep.get("buy") and dep.get("sell"):
+                    try:
+                        bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
+                    except: pass
+                ltp = float(v.get("last_price") or 0.0)
+                oi  = int(v.get("oi") or v.get("open_interest") or 0)
+                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask}
+                if typ=="CE": chain["calls"][strike]=node
+                else: chain["puts"][strike]=node
+            # ensure all strikes have nodes
+            for k in chain["strikes"]:
+                chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0})
+                chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0})
+            chains[e.isoformat()] = chain
+        return chains
+
     # Public helper: earliest upcoming expiry used by option chain selection
     def get_current_expiry_date(self, symbol: str) -> str:
         _, exp_sel = self._nearest_weekly_chain_df(symbol)
         return exp_sel
+
+    # Public helper: first N upcoming expiries (weekly+monthly), string ISO dates
+    def get_upcoming_expiries(self, symbol: str, n: int = 3) -> list[str]:
+        sym = symbol.upper()
+        if sym=="SENSEX":
+            ex = "BFO"; seg = "BFO-OPT"
+        else:
+            ex = "NFO"; seg = "NFO-OPT"
+        inst = self._instruments(ex).copy()
+        if inst.empty:
+            return []
+        df = inst[(inst["name"] == sym) & (inst["segment"] == seg)].copy()
+        if df.empty:
+            return []
+        df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
+        today = dt.datetime.now(IST).date()
+        exps = sorted([e for e in df["expiry"].unique() if e >= today])
+        return [e.isoformat() for e in exps[:max(1,n)]]
