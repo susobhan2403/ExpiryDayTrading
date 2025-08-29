@@ -1,9 +1,9 @@
-import express from 'express';
+import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import url from 'url';
 import readline from 'readline';
 
-const app = express();
 const ROOT = path.resolve(process.cwd());
 const LOG_FILE = path.join(ROOT, 'logs', 'engine.log');
 
@@ -16,43 +16,63 @@ const STATIC_DIR = fs.existsSync(DIST_DIR)
   ? DIST_DIR
   : path.join(ROOT, 'dashboard');
 
-app.get('/events', (req, res) => {
-  const symbol = (req.query.symbol || '').toUpperCase();
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
+const server = http.createServer((req, res) => {
+  const parsed = url.parse(req.url, true);
 
-  let filePos = 0;
-
-  const sendNewLines = () => {
-    fs.stat(LOG_FILE, (err, stats) => {
-      if (err) return;
-      if (stats.size > filePos) {
-        const stream = fs.createReadStream(LOG_FILE, { start: filePos, end: stats.size });
-        const rl = readline.createInterface({ input: stream });
-        rl.on('line', (line) => {
-          const upper = line.toUpperCase();
-          const match = !symbol || upper.includes(`| ${symbol} `) ||
-            /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(line.trim());
-          if (match) {
-            res.write(`data: ${JSON.stringify({ line })}\n\n`);
-          }
-        });
-        filePos = stats.size;
-      }
+  if (parsed.pathname === '/events') {
+    const symbol = (parsed.query.symbol || '').toUpperCase();
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
     });
-  };
 
-  const interval = setInterval(sendNewLines, 1000);
-  sendNewLines();
+    let filePos = 0;
+    const sendNewLines = () => {
+      fs.stat(LOG_FILE, (err, stats) => {
+        if (err) return;
+        if (stats.size > filePos) {
+          const stream = fs.createReadStream(LOG_FILE, { start: filePos, end: stats.size });
+          const rl = readline.createInterface({ input: stream });
+          rl.on('line', (line) => {
+            const upper = line.toUpperCase();
+            const match = !symbol || upper.includes(`| ${symbol} `) ||
+              /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(line.trim());
+            if (match) {
+              res.write(`data: ${JSON.stringify({ line })}\n\n`);
+            }
+          });
+          filePos = stats.size;
+        }
+      });
+    };
+    const interval = setInterval(sendNewLines, 1000);
+    sendNewLines();
+    req.on('close', () => clearInterval(interval));
+    return;
+  }
 
-  req.on('close', () => clearInterval(interval));
+  // Serve static assets
+  let pathname = parsed.pathname || '/';
+  if (pathname === '/') pathname = '/index.html';
+  const filePath = path.join(STATIC_DIR, pathname);
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+    const ext = path.extname(filePath).toLowerCase();
+    const type = ext === '.html' ? 'text/html' :
+                 ext === '.js' ? 'text/javascript' :
+                 ext === '.css' ? 'text/css' :
+                 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': type });
+    res.end(data);
+  });
 });
 
-app.use(express.static(STATIC_DIR));
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Dashboard server listening on port ${PORT}`);
 });
