@@ -1,0 +1,36 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #0f111a;
+  color: #e6e6e6;
+  margin: 0;
+}
+.app {
+  padding: 16px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.symbol-board .symbol {
+  color: #80cbc4;
+}
+.panel {
+  border: 1px solid #333;
+  padding: 8px;
+  border-radius: 6px;
+  background: #1b1e28;
+}
+.title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  text-transform: capitalize;
+}
+pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+}
+.exit {
+  color: #ff5370;
+  font-weight: bold;
+}

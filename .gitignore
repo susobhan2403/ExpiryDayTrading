@@ -1,0 +1,10 @@
+# Node build artifacts
+/dashboard/node_modules/
+/dashboard/dist/
+
+# Python cache
+__pycache__/
+
+# Logs and output
+logs/
+out/
