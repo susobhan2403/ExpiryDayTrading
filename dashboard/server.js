@@ -28,21 +28,31 @@ const server = http.createServer((req, res) => {
     });
 
     let filePos = 0;
+    let currentSymbol = null;
     const sendNewLines = () => {
       fs.stat(LOG_FILE, (err, stats) => {
         if (err) return;
         if (stats.size > filePos) {
           const stream = fs.createReadStream(LOG_FILE, { start: filePos, end: stats.size });
+          filePos = stats.size;
           const rl = readline.createInterface({ input: stream });
           rl.on('line', (line) => {
-            const upper = line.toUpperCase();
-            const match = !symbol || upper.includes(`| ${symbol} `) ||
-              /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(line.trim());
+            // Remove ANSI color codes before processing so that pattern
+            // matching works even if the log writer included escape
+            // sequences for styling (e.g. "\x1b[31m").
+            const plain = line.replace(/\x1b\[[0-9;]*m/g, '');
+            const upper = plain.toUpperCase();
+            const header = upper.match(/IST \| ([A-Z]+)/);
+            if (header) {
+              currentSymbol = header[1];
+            }
+            const indicator = /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(upper.trim());
+            const match = (!symbol || currentSymbol === symbol) && indicator;
             if (match) {
-              res.write(`data: ${JSON.stringify({ line })}\n\n`);
+              res.write(`data: ${JSON.stringify({ line: plain })}\n\n`);
             }
           });
-          filePos = stats.size;
+          rl.on('close', () => {});
         }
       });
     };
