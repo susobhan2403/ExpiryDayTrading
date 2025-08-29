@@ -6,7 +6,7 @@ export default function IndicatorPanel({ title, lines }) {
       <div className="title">{title}</div>
       <pre>
         {lines.map((ln, i) => (
-          <span key={i} dangerouslySetInnerHTML={{ __html: ln }} />
+          <span key={i} dangerouslySetInnerHTML={{ __html: ln + '\n' }} />
         ))}
       </pre>
     </div>
