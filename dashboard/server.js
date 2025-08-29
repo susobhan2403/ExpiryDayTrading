@@ -27,20 +27,35 @@ const server = http.createServer((req, res) => {
       'Connection': 'keep-alive'
     });
 
+    // Start reading from end-of-file so that a fresh client only
+    // receives new log lines appended after it connects, rather than
+    // replaying the entire history.
     let filePos = 0;
+    try {
+      filePos = fs.statSync(LOG_FILE).size;
+    } catch (err) {
+      filePos = 0;
+    }
     let currentSymbol = null;
     const sendNewLines = () => {
       fs.stat(LOG_FILE, (err, stats) => {
         if (err) return;
         if (stats.size > filePos) {
-          const stream = fs.createReadStream(LOG_FILE, { start: filePos, end: stats.size });
+          // Read only the newly appended portion of the log file. The `end`
+          // option is inclusive, so subtract one to avoid re-reading the last
+          // byte which would otherwise cause duplicate lines to be emitted.
+          const stream = fs.createReadStream(LOG_FILE, { start: filePos, end: stats.size - 1 });
           filePos = stats.size;
           const rl = readline.createInterface({ input: stream });
           rl.on('line', (line) => {
             // Remove ANSI color codes before processing so that pattern
             // matching works even if the log writer included escape
-            // sequences for styling (e.g. "\x1b[31m").
-            const plain = line.replace(/\x1b\[[0-9;]*m/g, '');
+            // sequences for styling (e.g. "\x1b[31m"). Also strip any
+            // carriage returns so that the same line isn't displayed twice
+            // in the dashboard.
+            const plain = line
+              .replace(/\x1b\[[0-9;]*m/g, '')
+              .replace(/\r/g, '');
             const upper = plain.toUpperCase();
             const header = upper.match(/IST \| ([A-Z]+)/);
             if (header) {
