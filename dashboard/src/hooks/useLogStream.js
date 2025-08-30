@@ -14,12 +14,16 @@ const indicatorForLine = (line) => {
 
 const colorize = (line) => {
   const t = line.trim();
+  if (t.startsWith('Scenario:')) {
+    return line.replace(/^Scenario:\s*/, '');
+  }
   if (t.startsWith('Action:')) {
-    if (/Action:\s+TRADE\b/.test(t)) return `<span class="action-trade">${line}</span>`;
-    return line;
+    const l = line.replace(/^Action:\s*/, '');
+    if (/^TRADE\b/.test(l.trim())) return `<span class="action-trade">${l}</span>`;
+    return l;
   }
   if (t.startsWith('Final Verdict')) {
-    let l = line.replace('Final Verdict', 'Decision');
+    const l = line.replace(/^Final Verdict:\s*/, '');
     if (l.includes('Enter Now')) return `<span class="decision-enter">${l}</span>`;
     if (l.includes('Exit Now')) return `<span class="decision-exit">${l}</span>`;
     return `<span class="decision-hold">${l}</span>`;
