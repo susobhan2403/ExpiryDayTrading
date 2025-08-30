@@ -78,6 +78,22 @@ sh = logging.StreamHandler(sys.stdout)
 sh.setFormatter(ColorFormatter("%(asctime)s %(levelname)s: %(message)s", "%H:%M:%S"))
 logger.addHandler(sh)
 
+# ---------- helpers ----------
+def to_native(obj):
+    """Recursively convert numpy types and non-serializable keys/values to
+    builtin Python types so they can be JSON serialized."""
+    if isinstance(obj, dict):
+        return {str(k): to_native(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set)):
+        return [to_native(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return to_native(obj.tolist())
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+    return obj
+
 # ---------- cli defaults / env ----------
 DEFAULT_SYMBOLS = ["BANKNIFTY"]
 DEFAULT_PROVIDER = "KITE"   # ← use Kite by default per your request
@@ -1452,13 +1468,18 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     # Save state
     state = {
-        "pcr": pcr, "atm_iv": atm_iv, "dpcr_series": dpcr_series, "div_series": div_series,
+        "pcr": pcr,
+        "atm_iv": atm_iv,
+        "dpcr_series": dpcr_series,
+        "div_series": div_series,
         "chain": {"calls": chain["calls"], "puts": chain["puts"]},
-        "last_probs": probs, "last_top": top, "confirmations": conf,
-        "position": pos
+        "last_probs": probs,
+        "last_top": top,
+        "confirmations": conf,
+        "position": pos,
     }
-    state_file.write_text(json.dumps(state))
-    drift_file.write_text(json.dumps(mp_hist))
+    state_file.write_text(json.dumps(to_native(state)))
+    drift_file.write_text(json.dumps(to_native(mp_hist)))
 
     # Print/alerts
     probs_sorted = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
