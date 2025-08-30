@@ -43,6 +43,36 @@ function indexQuoteKey(symbol) {
   return 'NSE:NIFTY 50';
 }
 
+// Extract the previous trading session's closing spot from the rollup CSV
+// emitted by the engine.  This mirrors the fallback logic used by the
+// /prevclose endpoint so that the spot difference can still be computed when
+// Kite quotes are unavailable or incomplete.
+function prevCloseCsv(symbol) {
+  try {
+    const f = path.join(ROOT, 'out', `${symbol}_rollup.csv`);
+    if (!fs.existsSync(f)) return null;
+    const txt = fs.readFileSync(f, 'utf8').trim();
+    const lines = txt.split(/\r?\n/);
+    if (lines.length <= 1) return null; // header only
+    let lastDay = null;
+    for (let i = lines.length - 1; i >= 1; i--) {
+      const arr = lines[i].split(',');
+      if (arr.length < 2) continue;
+      const ts = arr[0];
+      const day = ts.slice(0, 10);
+      const hour = parseInt(ts.slice(11, 13), 10);
+      if (!lastDay) { lastDay = day; continue; }
+      if (day !== lastDay && hour < 16) {
+        const spot = parseFloat(arr[1]);
+        return Number.isFinite(spot) ? spot : null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const kite = await initKite();
 
 // Determine the directory to serve static assets from. In production the
@@ -130,25 +160,41 @@ const server = http.createServer(async (req, res) => {
       const key = indexQuoteKey(symbol);
       const q = await kite.quote([key]);
       const node = q[key] || {};
-      let diff = node.net_change;
-      let pct = node.change;
-      // Some index quotes may omit net_change/change.  When that happens,
-      // derive the values from the latest price and the previous close that
-      // are both provided by Kite.
+
+      // Prefer computing the difference from ``last_price`` and the
+      // previous close as those fields are always provided for indices.
+      // Earlier logic relied on ``net_change``/``change`` which are often
+      // omitted by the API, causing the dashboard to show 0.00 (0.00%).
+      let last = node.last_price;
+      let close = node.ohlc?.close;
+
+      // If the previous close is missing (e.g., when Kite is unavailable),
+      // fall back to the rollup CSV produced by the engine.
+      if (!(typeof close === 'number' && isFinite(close))) {
+        const fb = prevCloseCsv(symbol);
+        if (typeof fb === 'number' && isFinite(fb)) close = fb;
+      }
+
+      let diff =
+        typeof last === 'number' && isFinite(last) &&
+        typeof close === 'number' && isFinite(close)
+          ? last - close
+          : undefined;
+      let pct =
+        typeof diff === 'number' && typeof close === 'number'
+          ? (diff / close) * 100
+          : undefined;
+
+      // As a final fallback, use Kite's ``net_change``/``change`` fields if
+      // they exist.
       if (
         !(typeof diff === 'number' && isFinite(diff) &&
           typeof pct === 'number' && isFinite(pct))
       ) {
-        const last = node.last_price;
-        const close = node.ohlc?.close;
-        if (
-          typeof last === 'number' && isFinite(last) &&
-          typeof close === 'number' && isFinite(close)
-        ) {
-          diff = last - close;
-          pct = (diff / close) * 100;
-        }
+        diff = node.net_change;
+        pct = node.change;
       }
+
       if (
         typeof diff === 'number' && isFinite(diff) &&
         typeof pct === 'number' && isFinite(pct)
