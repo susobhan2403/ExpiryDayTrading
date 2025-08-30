@@ -2,7 +2,14 @@ import React from 'react';
 import IndicatorPanel from './IndicatorPanel';
 import useLogStream from '../hooks/useLogStream';
 
-const INDICATORS = ['distance','pcr','atm','scenario','action','decision'];
+const INDICATORS = [
+  { key: 'distance', title: 'Distance' },
+  { key: 'pcr', title: 'PCR' },
+  { key: 'atm', title: 'ATM' },
+  { key: 'scenario', title: 'Scenario' },
+  { key: 'action', title: 'Action' },
+  { key: 'decision', title: 'Decision' },
+];
 
 export default function SymbolBoard({ symbol }) {
   const data = useLogStream(symbol);
@@ -23,8 +30,8 @@ export default function SymbolBoard({ symbol }) {
         )}
       </h3>
       <div className="indicators">
-        {INDICATORS.map(ind => (
-          <IndicatorPanel key={ind} title={ind} lines={data[ind] || []} />
+        {INDICATORS.map(({ key, title }) => (
+          <IndicatorPanel key={key} title={title} lines={data[key] || []} />
         ))}
       </div>
     </div>
