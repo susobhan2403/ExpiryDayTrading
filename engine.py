@@ -120,6 +120,7 @@ GATE_MIN_BLOCKS = {"price_trend": 1, "options_flow": 1, "volatility": 1}
 SCENARIO_FLIP_DELTA = 0.15
 CONFIRM_SNAPSHOTS = 2         # require consecutive confirmations for OI/drift regimes
 MAD_K = float(os.getenv("OI_DELTA_K", "1.5"))
+TURNOVER_MIN = float(os.getenv("TURNOVER_MIN", "100000"))
 
 ADX_LOW = int(os.getenv("ADX_THRESHOLD_LOW", "15"))
 # Min ADX increase to qualify as rising trend for breakout conditions (can be overridden via settings.json)
@@ -1280,15 +1281,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     if state_file.exists():
         try: state = json.loads(state_file.read_text())
         except: state = {}
-    prev_pcr = state.get("pcr", float('nan'))
-    dpcr = (pcr - prev_pcr) if (pcr==pcr and prev_pcr==prev_pcr) else float('nan')
     dpcr_series = state.get("dpcr_series", [])
-    if dpcr==dpcr: dpcr_series.append(dpcr)
-    dpcr_series = dpcr_series[-20:]
-    if len(dpcr_series)>=5 and statistics.pstdev(dpcr_series)>0:
-        dpcr_z = (dpcr - statistics.mean(dpcr_series))/ (statistics.pstdev(dpcr_series)+1e-9) if dpcr==dpcr else 0.0
-    else:
-        dpcr_z = 0.0
 
     prev_iv = state.get("atm_iv", float('nan'))
     div = (atm_iv - prev_iv) if (atm_iv==atm_iv and prev_iv==prev_iv) else float('nan')
@@ -1341,6 +1334,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     ce_write_above=False; pe_unwind_below=False; pe_write_above=False; ce_unwind_below=False
     same_side_add=False; unwind_present=False; two_sided_adjacent=False
     ce_shift = 0.0; pe_shift = 0.0
+    w_ce = 0.0; w_pe = 0.0
+    dpcr = 0.0
     if prev_chain and chain["strikes"]:
         atm = atm_k
         band_limit = step * 8
@@ -1370,9 +1365,19 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
                 if liq_c:
                     ce_deltas[k] = c_now["oi"] - int(c_prev.get("oi",0))
                     d_oi_ce.append(ce_deltas[k])
+                    mid_c = (c_now.get("bid",0) + c_now.get("ask",0)) / 2.0 if (c_now.get("bid",0)>0 and c_now.get("ask",0)>0) else c_now.get("ltp",0)
+                    vol_c = min(c_now.get("bid_qty",0), c_now.get("ask_qty",0))
+                    turn_c = mid_c * vol_c
+                    if turn_c >= TURNOVER_MIN:
+                        w_ce += ce_deltas[k] * turn_c
                 if liq_p:
                     pe_deltas[k] = p_now["oi"] - int(p_prev.get("oi",0))
                     d_oi_pe.append(pe_deltas[k])
+                    mid_p = (p_now.get("bid",0) + p_now.get("ask",0)) / 2.0 if (p_now.get("bid",0)>0 and p_now.get("ask",0)>0) else p_now.get("ltp",0)
+                    vol_p = min(p_now.get("bid_qty",0), p_now.get("ask_qty",0))
+                    turn_p = mid_p * vol_p
+                    if turn_p >= TURNOVER_MIN:
+                        w_pe += pe_deltas[k] * turn_p
         ce_m = mad(d_oi_ce); pe_m = mad(d_oi_pe)
         total_ce_oi = sum(v["oi"] for v in chain["calls"].values())
         total_pe_oi = sum(v["oi"] for v in chain["puts"].values())
@@ -1393,6 +1398,15 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             step = 100 if "BANK" in symbol.upper() else 50
             s1, s2 = atm-step, atm+step
             two_sided_adjacent = ( (ce_deltas.get(s2,0)>mad_k*max(1,ce_m)) and (pe_deltas.get(s1,0)>mad_k*max(1,pe_m)) )
+        total_turn = abs(w_pe) + abs(w_ce)
+        dpcr = (w_pe - w_ce) / total_turn if total_turn > 0 else 0.0
+    if dpcr==dpcr:
+        dpcr_series.append(dpcr)
+    dpcr_series = dpcr_series[-20:]
+    if len(dpcr_series) >= 5 and statistics.pstdev(dpcr_series) > 0:
+        dpcr_z = (dpcr - statistics.mean(dpcr_series)) / (statistics.pstdev(dpcr_series) + 1e-9)
+    else:
+        dpcr_z = 0.0
 
     # consecutive confirmations
     conf = state.get("confirmations", {})
