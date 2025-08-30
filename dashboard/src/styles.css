@@ -1,6 +1,6 @@
 body {
   font-family: Arial, sans-serif;
-  background: #0f111a;
+  background: #3d3e41;
   color: #e6e6e6;
   margin: 0;
 }
@@ -39,10 +39,10 @@ body {
 }
 pre {
   white-space: pre-wrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 .exit {
-  color: #ff5370;
+  color: #ed1c1c;
   font-weight: bold;
 }
 .action-trade {
@@ -51,17 +51,17 @@ pre {
   font-size: 14px;
 }
 .decision-hold {
-  color: #2e7d32;
+  color: #165b19;
   font-weight: bold;
-  font-size: 15px;
+  font-size: 16px;
 }
 .decision-enter {
-  color: #4caf50;
+  color: #30c434;
   font-weight: bold;
-  font-size: 15px;
+  font-size: 16px;
 }
 .decision-exit {
-  color: #ff5370;
+  color: #ed1c1c;
   font-weight: bold;
-  font-size: 15px;
+  font-size: 16px;
 }
