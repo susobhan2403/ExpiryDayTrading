@@ -212,20 +212,29 @@ class KiteProvider(MarketDataProvider):
                 if row.empty: continue
                 strike = int(row.iloc[0]["strike"])
                 typ = row.iloc[0]["instrument_type"]
-                bid=ask=ltp=0.0
+                bid=ask=ltp=bid_q=ask_q=0.0
                 dep = v.get("depth")
                 if dep and dep.get("buy") and dep.get("sell"):
                     try:
                         bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
-                    except: pass
+                        bid_q = float(dep["buy"][0].get("quantity",0)); ask_q = float(dep["sell"][0].get("quantity",0))
+                    except Exception:
+                        pass
                 ltp = float(v.get("last_price") or 0.0)
+                ltt = v.get("last_trade_time")
+                try:
+                    ltt = pd.to_datetime(ltt).tz_localize(dt.timezone.utc).tz_convert(IST)
+                except Exception:
+                    ltt = None
                 oi  = int(v.get("oi") or v.get("open_interest") or 0)
-                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask}
+                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask,
+                        "bid_qty": bid_q, "ask_qty": ask_q,
+                        "ltp_ts": ltt.isoformat() if ltt else None}
                 if typ=="CE": chain["calls"][strike]=node
                 else: chain["puts"][strike]=node
         for k in chain["strikes"]:
-            chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0})
-            chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0})
+            chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
+            chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
         return chain
 
     def get_indices_snapshot(self, symbols: List[str]) -> Dict[str, float]:
@@ -301,21 +310,30 @@ class KiteProvider(MarketDataProvider):
                 if row.empty: continue
                 strike = int(row.iloc[0]["strike"])
                 typ = row.iloc[0]["instrument_type"]
-                bid=ask=ltp=0.0
+                bid=ask=ltp=bid_q=ask_q=0.0
                 dep = v.get("depth")
                 if dep and dep.get("buy") and dep.get("sell"):
                     try:
                         bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
-                    except: pass
+                        bid_q = float(dep["buy"][0].get("quantity",0)); ask_q = float(dep["sell"][0].get("quantity",0))
+                    except Exception:
+                        pass
                 ltp = float(v.get("last_price") or 0.0)
+                ltt = v.get("last_trade_time")
+                try:
+                    ltt = pd.to_datetime(ltt).tz_localize(dt.timezone.utc).tz_convert(IST)
+                except Exception:
+                    ltt = None
                 oi  = int(v.get("oi") or v.get("open_interest") or 0)
-                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask}
+                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask,
+                        "bid_qty": bid_q, "ask_qty": ask_q,
+                        "ltp_ts": ltt.isoformat() if ltt else None}
                 if typ=="CE": chain["calls"][strike]=node
                 else: chain["puts"][strike]=node
             # ensure all strikes have nodes
             for k in chain["strikes"]:
-                chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0})
-                chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0})
+                chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
+                chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
             chains[e.isoformat()] = chain
         return chains
 

@@ -37,6 +37,12 @@ def bs_delta(S: float, K: float, r: float, T: float, sig: float, call: bool = Tr
         # N(d1)-1
         return 0.5*(1+math.erf(d1/math.sqrt(2))) - 1.0
 
+def bs_gamma(S: float, K: float, r: float, T: float, sig: float) -> float:
+    if S<=0 or K<=0 or T<=0 or sig<=0:
+        return 0.0
+    d1 = (math.log(S/K) + (r+0.5*sig*sig)*T) / (sig*math.sqrt(T))
+    return math.exp(-0.5*d1*d1) / (S*sig*math.sqrt(2*math.pi*T))
+
 def risk_reversal_25(chain: Dict, spot: float, minutes_to_exp: float, r: float, atm_iv: float) -> Dict[str, float]:
     """
     Approximate 25-delta risk reversal: RR = IV_call(25d) - IV_put(25d)
@@ -118,6 +124,31 @@ def pcr_from_chain(chain: Dict) -> float:
     pe = sum(v['oi'] for v in chain['puts'].values())
     return (pe/ce) if ce>0 else float('nan')
 
+def gamma_exposure(chain: Dict, spot: float, minutes_to_exp: float, atm_iv: float, r: float = 0.0) -> tuple[float, Dict[int,float]]:
+    strikes = chain.get('strikes') or []
+    if not strikes:
+        return float('nan'), {}
+    T = max(1e-9, minutes_to_exp) / (365*24*60)
+    sig = atm_iv if atm_iv==atm_iv and atm_iv>0 else 0.2
+    gex_map: Dict[int,float] = {}
+    for k in strikes:
+        ce = chain['calls'].get(k, {})
+        pe = chain['puts'].get(k, {})
+        oi_tot = float(ce.get('oi',0) + pe.get('oi',0))
+        skew = 1.0 if ce.get('oi',0) >= pe.get('oi',0) else -1.0
+        gamma = bs_gamma(spot, k, r, T, sig)
+        gex_map[int(k)] = oi_tot * gamma * skew
+    zg = float('nan')
+    if gex_map:
+        ks = sorted(gex_map.keys())
+        cum = 0.0
+        for i,k in enumerate(ks[:-1]):
+            cum += gex_map[k]
+            if cum <= 0 and cum + gex_map[ks[i+1]] >= 0:
+                zg = float(ks[i+1])
+                break
+    return zg, gex_map
+
 def max_pain(chain: Dict) -> int:
     strikes = sorted(chain['strikes'])
     ce_oi = {k: chain['calls'][k]['oi'] for k in strikes}
@@ -138,12 +169,24 @@ def atm_iv_from_chain(chain: Dict, spot: float, minutes_to_exp: float, risk_free
     ce = chain['calls'].get(K); pe = chain['puts'].get(K)
     T = max(1e-9, minutes_to_exp) / (365*24*60)
     ivs=[]
+    now = dt.datetime.now(IST)
     for row, is_call in [(ce, True), (pe, False)]:
-        if not row: continue
-        bid, ask, ltp = row.get("bid",0), row.get("ask",0), row.get("ltp",0)
-        mid = 0.5*(bid+ask) if (bid>0 and ask>0 and (ask-bid)/max(1,K) <= 0.006) else (ltp if ltp>0 else None)
-        if mid:
-            ivs.append(implied_vol(mid, spot, K, risk_free_rate, T, call=is_call))
+        if not row:
+            continue
+        bid = row.get("bid", 0.0); ask = row.get("ask", 0.0)
+        bq = row.get("bid_qty", 0.0); aq = row.get("ask_qty", 0.0)
+        ltp = row.get("ltp", 0.0)
+        ts_str = row.get("ltp_ts")
+        ltt = pd.to_datetime(ts_str) if ts_str else None
+        price = None
+        if bid>0 and ask>0 and bq>0 and aq>0:
+            price = (ask*bq + bid*aq) / (bq + aq)
+        elif bid>0 and ask>0 and (ask-bid)/max(1,K) <= 0.006 and bq>0 and aq>0:
+            price = 0.5*(bid+ask)
+        elif ltp>0 and ltt is not None and abs((now - ltt).total_seconds()) <= 60:
+            price = ltp
+        if price:
+            ivs.append(implied_vol(price, spot, K, risk_free_rate, T, call=is_call))
     ivs=[v for v in ivs if v==v and v>0]
     if not ivs: return float('nan')
     return min(ivs) if len(ivs)==2 else ivs[0]

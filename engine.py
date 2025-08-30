@@ -674,6 +674,7 @@ class Snapshot:
     iv_z: float
     iv_pct_hint: float
     basis: float
+    basis_slope: float
     ssd: float
     pdist_pct: float
     sma20: float
@@ -687,6 +688,7 @@ class Snapshot:
     bearish_signals: int
     ce_oi_shift: float
     pe_oi_shift: float
+    zero_gamma: float
     scen_probs: Dict[str,float]
     scen_top: str
     trade: Dict
@@ -1092,7 +1094,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     breakdown  = (close_5m < bb_l) and (close_5m < (s1_p if s1_p==s1_p else bb_l)) and (adx5_delta >= adx_rise_min) and (price_now < vwap_spot)
 
     # Microstructure features (best-effort): read aggregates if available else raw
-    micro_bull = micro_bear = orb_up = orb_down = False
+    micro_bull = micro_bear = orb_up = orb_down = orb_thrust = False
     micro_imb = micro_cvd_slope = 0.0
     thrust_up = thrust_down = False
     try:
@@ -1127,10 +1129,27 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             orb = spot_1m[(spot_1m.index >= day_start) & (spot_1m.index < day_15)]
             if len(orb) >= 5:
                 orb_hi = float(orb['high'].max()); orb_lo = float(orb['low'].min())
+                orb_range = orb_hi - orb_lo
                 orb_up = orb_up or (price_now > orb_hi)
                 orb_down = orb_down or (price_now < orb_lo)
+                orb_hist_file = OUT_DIR / "orb_history.json"
+                orb_hist = {}
+                if orb_hist_file.exists():
+                    try:
+                        orb_hist = json.loads(orb_hist_file.read_text())
+                    except Exception:
+                        orb_hist = {}
+                arr = orb_hist.get(symbol, [])
+                arr.append({"date": day_str, "range": orb_range})
+                arr = arr[-40:]
+                orb_hist[symbol] = arr
+                orb_hist_file.write_text(json.dumps(orb_hist))
+                med = statistics.median([r["range"] for r in arr[-20:]]) if arr else float('nan')
+                orb_thrust = (med==med) and (orb_range > 1.25*med) and adx5_up
+            else:
+                orb_thrust = False
         except Exception:
-            pass
+            orb_thrust = False
         micro_bull = (micro_imb > 0.10 and micro_cvd_slope > 0) or orb_up or thrust_up
         micro_bear = (micro_imb < -0.10 and micro_cvd_slope < 0) or orb_down or thrust_down
     except Exception:
@@ -1171,7 +1190,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     mp  = opt.max_pain(chain)
     D   = float(spot_now - mp)
     session_hi, session_lo = float(spot_1m["high"].max()), float(spot_1m["low"].min())
-    ATR_D = max(1.0, session_hi - session_lo)  # session-range proxy (robust intraday)
+    atr1 = float(tech.wilder_atr(spot_1m, 14)) if len(spot_1m) else 0.0
+    atr5 = float(tech.wilder_atr(spot_5m, 14)) if len(spot_5m) else 0.0
+    ATR_D = max(1.0, atr1, atr5)
     VND = abs(D) / ATR_D
     step = 100 if "BANK" in symbol.upper() else 50
     SSD  = abs(D) / step
@@ -1211,6 +1232,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     # Basis & VWAP relation
     basis = float(fut_1m["close"].iloc[-1] - spot_1m["close"].iloc[-1])
+    basis_series = state.get("basis_series", [])
+    basis_series.append(basis)
+    basis_series = basis_series[-20:]
+    state["basis_series"] = basis_series
+    basis_slope = basis - basis_series[-2] if len(basis_series) >= 2 else 0.0
 
     # Max Pain drift per hour & MPH_norm (keep last 20 in file)
     drift_file = OUT_DIR / f"maxpain_hist_{symbol}.json"
@@ -1233,6 +1259,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # ATM IV + deltas for z-scores
     mins_to_exp = opt.minutes_to_expiry(expiry)
     atm_iv = opt.atm_iv_from_chain(chain, spot_now, mins_to_exp, RISK_FREE)  # fraction (e.g., 0.12)
+    zg, gex_map = opt.gamma_exposure(chain, spot_now, mins_to_exp, atm_iv, RISK_FREE)
     far_pcr = far_atm_iv = term_iv_slope = float('nan')
     far_bull = far_bear = False
     if far_chain:
@@ -1273,18 +1300,22 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     else:
         iv_z = 0.0
 
-    # IV percentile hint (intraday estimate)
-    iv_hist_file = OUT_DIR / "iv_intraday.json"
+    # IV percentile based on last 60 EOD observations
+    iv_hist_file = OUT_DIR / "iv_eod_history.json"
     iv_hist = {}
     if iv_hist_file.exists():
-        try: iv_hist = json.loads(iv_hist_file.read_text())
-        except: iv_hist = {}
+        try:
+            iv_hist = json.loads(iv_hist_file.read_text())
+        except Exception:
+            iv_hist = {}
     arr = iv_hist.get(symbol, [])
-    if atm_iv==atm_iv: 
-        arr.append(atm_iv); iv_hist[symbol]=arr[-1500:]
+    if atm_iv==atm_iv:
+        arr.append(atm_iv)
+        iv_hist[symbol] = arr[-60:]
         iv_hist_file.write_text(json.dumps(iv_hist))
-    vals = sorted([x for x in arr if x==x and x>0])
+    vals = [x for x in arr[-60:] if x==x and x>0]
     iv_pct_hint = round(100.0 * (sum(1 for x in vals if x<=atm_iv)/len(vals)),1) if (vals and atm_iv==atm_iv) else float('nan')
+    iv_obs = len(vals)
 
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
@@ -1312,23 +1343,36 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     ce_shift = 0.0; pe_shift = 0.0
     if prev_chain and chain["strikes"]:
         atm = atm_k
-        # Limit to near-ATM band and ignore far OTM strikes based on dynamic points
-        considered = [k for k in chain["strikes"] if (atm - dm_far) <= k <= (atm + dm_far)]
+        band_limit = step * 8
+        considered = [k for k in chain["strikes"] if abs(k - atm) <= band_limit]
         above = set([k for k in considered if (k > atm and k <= atm + dm_above*step)])
         below = set([k for k in considered if (k < atm and k >= atm - dm_below*step)])
-        # collect deltas where quotes liquid
         ce_deltas={}; pe_deltas={}
-        for k in chain["strikes"]:
-            c_now, p_now = chain["calls"][k], chain["puts"][k]
-            c_prev = prev_chain.get("calls",{}).get(str(k), prev_chain.get("calls",{}).get(k, {"oi":0}))
-            p_prev = prev_chain.get("puts",{}).get(str(k),  prev_chain.get("puts",{}).get(k, {"oi":0}))
-            # liquidity: have bid & ask (both >0)
-            if c_now.get("bid",0)>0 and c_now.get("ask",0)>0:
-                ce_deltas[k] = c_now["oi"] - int(c_prev.get("oi",0))
-                d_oi_ce.append(ce_deltas[k])
-            if p_now.get("bid",0)>0 and p_now.get("ask",0)>0:
-                pe_deltas[k] = p_now["oi"] - int(p_prev.get("oi",0))
-                d_oi_pe.append(pe_deltas[k])
+        now_time = now.time()
+        if dt.time(9,20) <= now_time <= dt.time(15,5):
+            min_qty = 100 if "BANK" in symbol.upper() else 250
+            for k in considered:
+                c_now, p_now = chain["calls"][k], chain["puts"][k]
+                c_prev = prev_chain.get("calls",{}).get(str(k), prev_chain.get("calls",{}).get(k, {"oi":0}))
+                p_prev = prev_chain.get("puts",{}).get(str(k),  prev_chain.get("puts",{}).get(k, {"oi":0}))
+                spread_c = (c_now.get("ask",0)-c_now.get("bid",0))/max(1.0,k)
+                spread_p = (p_now.get("ask",0)-p_now.get("bid",0))/max(1.0,k)
+                liq_c = (
+                    c_now.get("bid",0)>0 and c_now.get("ask",0)>0 and
+                    c_now.get("bid_qty",0)>=min_qty and c_now.get("ask_qty",0)>=min_qty and
+                    spread_c <= 0.01
+                )
+                liq_p = (
+                    p_now.get("bid",0)>0 and p_now.get("ask",0)>0 and
+                    p_now.get("bid_qty",0)>=min_qty and p_now.get("ask_qty",0)>=min_qty and
+                    spread_p <= 0.01
+                )
+                if liq_c:
+                    ce_deltas[k] = c_now["oi"] - int(c_prev.get("oi",0))
+                    d_oi_ce.append(ce_deltas[k])
+                if liq_p:
+                    pe_deltas[k] = p_now["oi"] - int(p_prev.get("oi",0))
+                    d_oi_pe.append(pe_deltas[k])
         ce_m = mad(d_oi_ce); pe_m = mad(d_oi_pe)
         total_ce_oi = sum(v["oi"] for v in chain["calls"].values())
         total_pe_oi = sum(v["oi"] for v in chain["puts"].values())
@@ -1456,6 +1500,15 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     bear_flow = oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)
     ai_p = ai_predict_probs(symbol, avw, bvw, macd_up, macd_dn, bull_flow, bear_flow, bool(breakout_up), bool(breakdown), adx5, dpcr_z, iv_z, mph_norm, VND)
     probs = blend_probs(probs, ai_p, adx5, dpcr_z, iv_z, mph_norm)
+    if orb_thrust:
+        probs[SCENARIOS[4]] = probs.get(SCENARIOS[4],0) + 0.05
+        probs[SCENARIOS[3]] = max(0.0, probs.get(SCENARIOS[3],0) - 0.05)
+    if zg==zg and abs(spot_now - zg) <= step*2 and iv_z >= 0:
+        probs[SCENARIOS[4]] = probs.get(SCENARIOS[4],0) + 0.05  # Squeeze
+    if basis_slope > 0 and iv_z >= 0:
+        probs[SCENARIOS[2]] = probs.get(SCENARIOS[2],0) + 0.05
+    if basis_slope < 0 and iv_z >= 0:
+        probs[SCENARIOS[1]] = probs.get(SCENARIOS[1],0) + 0.05
     # Persist block-gating effect after AI blend: penalize scenarios lacking
     # at least one signal from each block to avoid unrealistic flips.
     try:
@@ -1539,6 +1592,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         iv_z=float(round(iv_z,2)),
         iv_pct_hint=float(iv_pct_hint if iv_pct_hint==iv_pct_hint else float('nan')),
         basis=float(round(basis,1)) if basis==basis else float('nan'),
+        basis_slope=float(round(basis_slope,3)),
         ssd=float(round(SSD,2)), pdist_pct=float(round(PD,2)),
         sma20=float(round(sma20,2)) if sma20==sma20 else float('nan'),
         ema20=float(round(ema20,2)) if ema20==ema20 else float('nan'),
@@ -1551,6 +1605,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         bearish_signals=int(bearish_count),
         ce_oi_shift=float(round(ce_shift,1)),
         pe_oi_shift=float(round(pe_shift,1)),
+        zero_gamma=float(zg if zg==zg else float('nan')),
         scen_probs=probs, scen_top=top, trade=tp, eq_line=eq_line
     )
 
@@ -1577,6 +1632,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "last_top": top,
         "confirmations": conf,
         "position": pos,
+        "basis_series": basis_series,
     }
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))
