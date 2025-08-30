@@ -133,6 +133,53 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK", "")
 
+# ---------- dynamic weighting & thresholds ----------
+def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: float = 0.0):
+    """Return (weights, gate_cap) adjusted for volatility, time of day and
+    institutional bias."""
+    weights = WEIGHTS.copy()
+    base_range = 300 if "BANK" in symbol.upper() else 150
+    # Volatility regime – emphasise volatility block when range expands
+    vol_factor = max(-0.1, min(0.1, (atr_d - base_range) / max(1.0, base_range)))
+    weights["volatility"] += 0.2 * vol_factor
+    weights["price_trend"] -= 0.1 * vol_factor
+    weights["options_flow"] -= 0.1 * vol_factor
+    # Time of day – midday relies more on options flow, edges on volatility
+    hr = now.astimezone(IST).hour + now.astimezone(IST).minute/60.0
+    if 10 <= hr <= 14.5:
+        weights["options_flow"] += 0.05
+        weights["price_trend"] -= 0.025
+        weights["volatility"] -= 0.025
+    else:
+        weights["volatility"] += 0.05
+        weights["price_trend"] -= 0.025
+        weights["options_flow"] -= 0.025
+    # Institutional bias tilts towards trend weight
+    if inst_bias > 0:
+        weights["price_trend"] += 0.05
+        weights["volatility"] -= 0.05
+    elif inst_bias < 0:
+        weights["price_trend"] += 0.05
+        weights["volatility"] -= 0.05
+    tot = sum(max(v,0.0) for v in weights.values()) or 1.0
+    weights = {k: max(v,0.0)/tot for k,v in weights.items()}
+    gate = 0.49 + 0.1 * min(1.0, max(0.0, atr_d/(base_range*1.5)))
+    return weights, gate
+
+def dynamic_thresholds(symbol: str, atr_d: float, avg_oi: float) -> Tuple[float, float]:
+    """Return (MAD multiplier, mph_norm threshold) adjusted for liquidity and
+    session range."""
+    base_liq = 20000 if "BANK" in symbol.upper() else 10000
+    liq_factor = 1.0
+    if avg_oi < 0.5 * base_liq:
+        liq_factor = 1.3
+    elif avg_oi > 1.5 * base_liq:
+        liq_factor = 0.8
+    mad_k = MAD_K * liq_factor
+    base_range = 300 if "BANK" in symbol.upper() else 150
+    mph_thr = MPH_NORM_THR * max(0.5, min(1.5, atr_d / max(1.0, base_range)))
+    return mad_k, mph_thr
+
 # ---------- indicators ----------
 def ema(s: pd.Series, span: int) -> pd.Series:
     return s.ewm(span=span, adjust=False).mean()
@@ -676,6 +723,9 @@ def score_normalized(
     confirmations: Dict[str,int],
     techs: Dict[str,float],
     pin_distance_points: int,
+    weights: Optional[Dict[str,float]] = None,
+    gate_cap: float = 0.49,
+    mph_norm_thr: float = MPH_NORM_THR,
 ) -> Tuple[Dict[str,float], Dict[str,Dict[str,bool]]]:
     """
     Returns: (probs_by_scenario, block_flags_by_scenario)
@@ -687,6 +737,8 @@ def score_normalized(
     price_block = {}
     flow_block = {}
     vol_block = {}
+    if weights is None:
+        weights = WEIGHTS
 
     # OI regime confirmations (two snapshots)
     def confirmed(flag_name): return confirmations.get(flag_name,0) >= CONFIRM_SNAPSHOTS
@@ -702,6 +754,10 @@ def score_normalized(
     bullish_bias = techs.get("bullish",0) > techs.get("bearish",0)
     bearish_bias = techs.get("bearish",0) > techs.get("bullish",0)
     bb_pos       = techs.get("bb_pos",0.0)
+    vol_pressure = techs.get("vol_pressure", 0.0)
+    far_bull     = bool(techs.get("far_bull", False))
+    far_bear     = bool(techs.get("far_bear", False))
+    term_iv_slope= float(techs.get("term_iv_slope", 0.0))
 
     # Price/Trend flags
     cpr_tc = techs.get("cpr_tc", float('nan'))
@@ -711,18 +767,18 @@ def score_normalized(
     price_block["reversion"] = (VND >= REV_NORM and D < 0 and (above_vwap or macd_up)) or abs(bb_pos) >= 1.0
     price_block["bear"]      = (below_vwap and adx5 >= 18) or bearish_bias or (not fut_up) or cpr_bear \
                                or techs.get("micro_bear", False) or techs.get("orb_down", False) \
-                               or techs.get("inst_bear", False)
+                               or techs.get("inst_bear", False) or (vol_pressure < -0.5)
     price_block["bull"]      = (above_vwap and adx5 >= 18) or bullish_bias or fut_up or cpr_bull \
                                or techs.get("micro_bull", False) or techs.get("orb_up", False) \
-                               or techs.get("inst_bull", False)
+                               or techs.get("inst_bull", False) or (vol_pressure > 0.5)
     price_block["pin"]       = (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= pin_distance_points)
     price_block["squeeze"]   = (VND >= SQUEEZE_NORM and adx5 >= 20 and (above_vwap or below_vwap))
     price_block["event"]     = (abs(div) > 0 and abs(iv_z) >= 2.0)
 
     # Options Flow flags
     flow_block["reversion"] = (ce_unw_bel and pe_write_abv) or short_cover
-    flow_block["bear"]      = ((ce_write_abv and pe_unw_bel and mph_norm <= -MPH_NORM_THR) or (pe_oi_down and not above_vwap))
-    flow_block["bull"]      = ((pe_write_abv and ce_unw_bel and mph_norm >= MPH_NORM_THR) or (ce_oi_down and above_vwap))
+    flow_block["bear"]      = ((ce_write_abv and pe_unw_bel and mph_norm <= -mph_norm_thr) or (pe_oi_down and not above_vwap) or far_bear)
+    flow_block["bull"]      = ((pe_write_abv and ce_unw_bel and mph_norm >= mph_norm_thr) or (ce_oi_down and above_vwap) or far_bull)
     flow_block["pin"]       = (oi_flags.get("two_sided_adjacent", False))
     flow_block["squeeze"]   = (oi_flags.get("same_side_add", False) and not oi_flags.get("unwind_present", False))
     flow_block["event"]     = ( (pe_write_abv and ce_unw_bel) or (ce_write_abv and pe_unw_bel) ) and (abs(dpcr_z) < 0.5)
@@ -733,31 +789,31 @@ def score_normalized(
     vol_block["bull"]      = (dpcr_z >= +1.0)
     vol_block["pin"]       = (iv_pct_hint < 25 and div <= 0)
     vol_block["squeeze"]   = (iv_z >= +0.5)   # IV rising
-    vol_block["event"]     = (iv_z >= +2.0 and div < 0)  # spike then cools (neg div)
+    vol_block["event"]     = ( (iv_z >= +2.0 and div < 0) or abs(term_iv_slope) > 0.03 )
 
     # scoring per scenario (sum normalized evidences within blocks)
     def block_score(flags: Dict[str,bool], keys: List[str]) -> float:
         return sum(1.0 for k in keys if flags.get(k, False)) / max(1,len(keys))
 
     scores = {
-        "Short-cover reversion up": WEIGHTS["price_trend"]*float(price_block["reversion"])
-                                    + WEIGHTS["options_flow"]*float(flow_block["reversion"])
-                                    + WEIGHTS["volatility"]*float(vol_block["reversion"]),
-        "Bear migration": WEIGHTS["price_trend"]*float(price_block["bear"])
-                                    + WEIGHTS["options_flow"]*float(flow_block["bear"])
-                                    + WEIGHTS["volatility"]*float(vol_block["bear"]),
-        "Bull migration / gamma carry": WEIGHTS["price_trend"]*float(price_block["bull"])
-                                    + WEIGHTS["options_flow"]*float(flow_block["bull"])
-                                    + WEIGHTS["volatility"]*float(vol_block["bull"]),
-        "Pin & decay day (IV crush)": WEIGHTS["price_trend"]*float(price_block["pin"])
-                                    + WEIGHTS["options_flow"]*float(flow_block["pin"])
-                                    + WEIGHTS["volatility"]*float(vol_block["pin"]),
-        "Squeeze continuation (one-way)": WEIGHTS["price_trend"]*float(price_block["squeeze"])
-                                    + WEIGHTS["options_flow"]*float(flow_block["squeeze"])
-                                    + WEIGHTS["volatility"]*float(vol_block["squeeze"]),
-        "Event knee-jerk then revert": WEIGHTS["price_trend"]*float(price_block["event"])
-                                    + WEIGHTS["options_flow"]*float(flow_block["event"])
-                                    + WEIGHTS["volatility"]*float(vol_block["event"]),
+        "Short-cover reversion up": weights["price_trend"]*float(price_block["reversion"])
+                                    + weights["options_flow"]*float(flow_block["reversion"])
+                                    + weights["volatility"]*float(vol_block["reversion"]),
+        "Bear migration": weights["price_trend"]*float(price_block["bear"])
+                                    + weights["options_flow"]*float(flow_block["bear"])
+                                    + weights["volatility"]*float(vol_block["bear"]),
+        "Bull migration / gamma carry": weights["price_trend"]*float(price_block["bull"])
+                                    + weights["options_flow"]*float(flow_block["bull"])
+                                    + weights["volatility"]*float(vol_block["bull"]),
+        "Pin & decay day (IV crush)": weights["price_trend"]*float(price_block["pin"])
+                                    + weights["options_flow"]*float(flow_block["pin"])
+                                    + weights["volatility"]*float(vol_block["pin"]),
+        "Squeeze continuation (one-way)": weights["price_trend"]*float(price_block["squeeze"])
+                                    + weights["options_flow"]*float(flow_block["squeeze"])
+                                    + weights["volatility"]*float(vol_block["squeeze"]),
+        "Event knee-jerk then revert": weights["price_trend"]*float(price_block["event"])
+                                    + weights["options_flow"]*float(flow_block["event"])
+                                    + weights["volatility"]*float(vol_block["event"]),
     }
 
     # block gating: require at least one signal from each block → else cap at 0.49
@@ -777,7 +833,7 @@ def score_normalized(
             ok = price_block["event"] and flow_block["event"] and vol_block["event"]
         block_ok[name] = ok
         if not ok:
-            scores[name] = min(scores[name], 0.49)
+            scores[name] = min(scores[name], gate_cap)
 
     probs = softmax(list(scores.values()))
     return ({k: round(v,3) for k,v in zip(scores.keys(), probs)}, block_ok)
@@ -800,16 +856,27 @@ def score_intraday(
     short_covering: bool,
     oi_flags: Dict[str,bool],
     pin_distance_points: int,
+    techs: Dict[str,float],
+    weights: Optional[Dict[str,float]] = None,
+    gate_cap: float = 0.49,
+    mph_norm_thr: float = MPH_NORM_THR,
 ) -> Tuple[Dict[str,float], Dict[str,Dict[str,bool]]]:
     """
     Produce probabilities for the same SCENARIOS set, but using multi-timeframe trend/flow
     appropriate for non-expiry days. Keeps block gating logic identical for consistency.
     """
+    if weights is None:
+        weights = WEIGHTS
+    vol_pressure = techs.get("vol_pressure", 0.0)
+    far_bull = bool(techs.get("far_bull", False))
+    far_bear = bool(techs.get("far_bear", False))
+    term_iv_slope = float(techs.get("term_iv_slope", 0.0))
+
     # Price/Trend block (intraday)
     price_block = {
         "reversion": short_covering and above_vwap,
-        "bear": (trending_down_mtf or (below_vwap and adx5 >= 18) or breakdown),
-        "bull": (trending_up_mtf or (above_vwap and adx5 >= 18) or breakout_up),
+        "bear": (trending_down_mtf or (below_vwap and adx5 >= 18) or breakdown or (vol_pressure < -0.5)),
+        "bull": (trending_up_mtf or (above_vwap and adx5 >= 18) or breakout_up or (vol_pressure > 0.5)),
         "pin": (VND < PIN_NORM and adx5 < ADX_LOW and abs(D) <= pin_distance_points),
         "squeeze": (breakout_up or breakdown),
         "event": (iv_z >= 2.0),
@@ -818,8 +885,8 @@ def score_intraday(
     # Options Flow block (aggregate stance)
     flow_block = {
         "reversion": short_covering,
-        "bear": (oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)) or oi_flags.get("pe_oi_down", False),
-        "bull": (oi_flags.get("pe_write_above", False) and oi_flags.get("ce_unwind_below", False)) or oi_flags.get("ce_oi_down", False),
+        "bear": (oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)) or oi_flags.get("pe_oi_down", False) or far_bear,
+        "bull": (oi_flags.get("pe_write_above", False) and oi_flags.get("ce_unwind_below", False)) or oi_flags.get("ce_oi_down", False) or far_bull,
         "pin": oi_flags.get("two_sided_adjacent", False),
         "squeeze": oi_flags.get("same_side_add", False) and not oi_flags.get("unwind_present", False),
         "event": abs(dpcr_z) < 0.5,
@@ -832,17 +899,17 @@ def score_intraday(
         "bull": (dpcr_z >= +1.0),
         "pin": (iv_pct_hint < 30 and iv_z <= 0.0),
         "squeeze": (iv_z >= +0.5),
-        "event": (iv_z >= +2.0),
+        "event": (iv_z >= +2.0) or abs(term_iv_slope) > 0.03,
     }
 
     # Scores with same weights
     scores = {
-        "Short-cover reversion up": WEIGHTS["price_trend"]*float(price_block["reversion"]) + WEIGHTS["options_flow"]*float(flow_block["reversion"]) + WEIGHTS["volatility"]*float(vol_block["reversion"]),
-        "Bear migration": WEIGHTS["price_trend"]*float(price_block["bear"]) + WEIGHTS["options_flow"]*float(flow_block["bear"]) + WEIGHTS["volatility"]*float(vol_block["bear"]),
-        "Bull migration / gamma carry": WEIGHTS["price_trend"]*float(price_block["bull"]) + WEIGHTS["options_flow"]*float(flow_block["bull"]) + WEIGHTS["volatility"]*float(vol_block["bull"]),
-        "Pin & decay day (IV crush)": WEIGHTS["price_trend"]*float(price_block["pin"]) + WEIGHTS["options_flow"]*float(flow_block["pin"]) + WEIGHTS["volatility"]*float(vol_block["pin"]),
-        "Squeeze continuation (one-way)": WEIGHTS["price_trend"]*float(price_block["squeeze"]) + WEIGHTS["options_flow"]*float(flow_block["squeeze"]) + WEIGHTS["volatility"]*float(vol_block["squeeze"]),
-        "Event knee-jerk then revert": WEIGHTS["price_trend"]*float(price_block["event"]) + WEIGHTS["options_flow"]*float(flow_block["event"]) + WEIGHTS["volatility"]*float(vol_block["event"]),
+        "Short-cover reversion up": weights["price_trend"]*float(price_block["reversion"]) + weights["options_flow"]*float(flow_block["reversion"]) + weights["volatility"]*float(vol_block["reversion"]),
+        "Bear migration": weights["price_trend"]*float(price_block["bear"]) + weights["options_flow"]*float(flow_block["bear"]) + weights["volatility"]*float(vol_block["bear"]),
+        "Bull migration / gamma carry": weights["price_trend"]*float(price_block["bull"]) + weights["options_flow"]*float(flow_block["bull"]) + weights["volatility"]*float(vol_block["bull"]),
+        "Pin & decay day (IV crush)": weights["price_trend"]*float(price_block["pin"]) + weights["options_flow"]*float(flow_block["pin"]) + weights["volatility"]*float(vol_block["pin"]),
+        "Squeeze continuation (one-way)": weights["price_trend"]*float(price_block["squeeze"]) + weights["options_flow"]*float(flow_block["squeeze"]) + weights["volatility"]*float(vol_block["squeeze"]),
+        "Event knee-jerk then revert": weights["price_trend"]*float(price_block["event"]) + weights["options_flow"]*float(flow_block["event"]) + weights["volatility"]*float(vol_block["event"]),
     }
 
     # Gating: require at least one flag in each block else cap 0.49
@@ -862,7 +929,7 @@ def score_intraday(
             ok = price_block["event"] and flow_block["event"] and vol_block["event"]
         block_ok[name] = ok
         if not ok:
-            scores[name] = min(scores[name], 0.49)
+            scores[name] = min(scores[name], gate_cap)
 
     probs = softmax(list(scores.values()))
     return ({k: round(v,3) for k,v in zip(scores.keys(), probs)}, block_ok)
@@ -1085,9 +1152,13 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     if inst_bull: micro_bull = True
     if inst_bear: micro_bear = True
 
-    # Snapshot index & chain
+    # Snapshot index & option chains (near + far for term structure)
     idx_snap = provider.get_indices_snapshot([symbol]); spot_now = float(idx_snap[symbol])
-    chain = provider.get_option_chain(symbol, expiry)
+    exps = provider.get_upcoming_expiries(symbol, n=2)
+    chains_map = provider.get_option_chains(symbol, exps[:2]) if exps else {}
+    chain = chains_map.get(expiry) or provider.get_option_chain(symbol, expiry)
+    far_chain = chains_map.get(exps[1]) if len(exps) > 1 else None
+    far_exp = exps[1] if len(exps) > 1 else ""
 
     # Expiry sanity
     if chain["expiry"] != expiry:
@@ -1105,6 +1176,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     step = 100 if "BANK" in symbol.upper() else 50
     SSD  = abs(D) / step
     PD   = 100.0 * abs(D) / max(1.0, spot_now)
+
+    volume_pressure = (spot_now - poc) / max(1.0, ATR_D)
+    avg_oi = float(np.mean([chain["calls"][k]["oi"] + chain["puts"][k]["oi"] for k in chain["strikes"]])) if chain["strikes"] else 0.0
+    mad_k, mph_thr = dynamic_thresholds(symbol, ATR_D, avg_oi)
 
     fibs = tech.fibonacci_levels(session_hi, session_lo)
     bb_pos = (spot_now - bb_m) / (bb_u - bb_m) if (bb_u > bb_m) else 0.0
@@ -1158,6 +1233,20 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # ATM IV + deltas for z-scores
     mins_to_exp = opt.minutes_to_expiry(expiry)
     atm_iv = opt.atm_iv_from_chain(chain, spot_now, mins_to_exp, RISK_FREE)  # fraction (e.g., 0.12)
+    far_pcr = far_atm_iv = term_iv_slope = float('nan')
+    far_bull = far_bear = False
+    if far_chain:
+        try:
+            far_pcr = opt.pcr_from_chain(far_chain)
+            minutes_far = opt.minutes_to_expiry(far_exp) if far_exp else 0.0
+            far_atm_iv = opt.atm_iv_from_chain(far_chain, spot_now, minutes_far, RISK_FREE)
+            if atm_iv==atm_iv and far_atm_iv==far_atm_iv:
+                term_iv_slope = atm_iv - far_atm_iv
+            if far_pcr==far_pcr:
+                far_bull = (far_pcr < pcr - 0.1)
+                far_bear = (far_pcr > pcr + 0.1)
+        except Exception:
+            pass
     # Rolling z-scores (20)
     state_file = OUT_DIR / f"state_{symbol}.json"
     state = {}
@@ -1248,18 +1337,18 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         ce_shift = float(total_ce_oi - prev_total_ce)
         pe_shift = float(total_pe_oi - prev_total_pe)
         # flags
-        ce_write_above = any( (k in above) and (ce_deltas.get(k,0) > MAD_K*max(1,ce_m)) for k in above )
-        pe_unwind_below = any( (k in below) and (pe_deltas.get(k,0) < -MAD_K*max(1,pe_m)) for k in below )
-        pe_write_above = any( (k in above) and (pe_deltas.get(k,0) > MAD_K*max(1,pe_m)) for k in above )
-        ce_unwind_below = any( (k in below) and (ce_deltas.get(k,0) < -MAD_K*max(1,ce_m)) for k in below )
-        same_side_add = ( (spot_now>vwap_spot and any(ce_deltas.get(k,0)>MAD_K*max(1,ce_m) for k in above)) or
-                          (spot_now<vwap_spot and any(pe_deltas.get(k,0)>MAD_K*max(1,pe_m) for k in below)) )
-        unwind_present = any( x < -MAD_K*max(1,ce_m) for x in ce_deltas.values() ) or any( x < -MAD_K*max(1,pe_m) for x in pe_deltas.values() )
+        ce_write_above = any( (k in above) and (ce_deltas.get(k,0) > mad_k*max(1,ce_m)) for k in above )
+        pe_unwind_below = any( (k in below) and (pe_deltas.get(k,0) < -mad_k*max(1,pe_m)) for k in below )
+        pe_write_above = any( (k in above) and (pe_deltas.get(k,0) > mad_k*max(1,pe_m)) for k in above )
+        ce_unwind_below = any( (k in below) and (ce_deltas.get(k,0) < -mad_k*max(1,ce_m)) for k in below )
+        same_side_add = ( (spot_now>vwap_spot and any(ce_deltas.get(k,0)>mad_k*max(1,ce_m) for k in above)) or
+                          (spot_now<vwap_spot and any(pe_deltas.get(k,0)>mad_k*max(1,pe_m) for k in below)) )
+        unwind_present = any( x < -mad_k*max(1,ce_m) for x in ce_deltas.values() ) or any( x < -mad_k*max(1,pe_m) for x in pe_deltas.values() )
         # adjacent two-sided
         if atm in chain["strikes"]:
             step = 100 if "BANK" in symbol.upper() else 50
             s1, s2 = atm-step, atm+step
-            two_sided_adjacent = ( (ce_deltas.get(s2,0)>MAD_K*max(1,ce_m)) and (pe_deltas.get(s1,0)>MAD_K*max(1,pe_m)) )
+            two_sided_adjacent = ( (ce_deltas.get(s2,0)>mad_k*max(1,ce_m)) and (pe_deltas.get(s1,0)>mad_k*max(1,pe_m)) )
 
     # consecutive confirmations
     conf = state.get("confirmations", {})
@@ -1312,7 +1401,14 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "inst_bear": bool(inst_bear),
         "thrust_up": bool(thrust_up),
         "thrust_down": bool(thrust_down),
+        "far_bull": bool(far_bull),
+        "far_bear": bool(far_bear),
+        "term_iv_slope": float(term_iv_slope),
+        "vol_pressure": float(volume_pressure),
     }
+
+    inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
+    dyn_weights, gate_cap = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
 
     # Scoring: expiry vs non-expiry (mode override)
     if mode == "expiry":
@@ -1326,7 +1422,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             symbol, D, ATR_D, VND, SSD, PD, pcr, dpcr, dpcr_z,
             mph_pts_hr, mph_norm, atm_iv, div, iv_z, iv_pct_hint,
             spot_now, vwap_spot, adx5, oi_flags, conf, techs,
-            dm_pin
+            dm_pin, dyn_weights, gate_cap, mph_thr
         )
     else:
         probs, blocks_ok = score_intraday(
@@ -1346,6 +1442,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             short_covering=bool(oi_flags.get("short_covering", False)),
             oi_flags=oi_flags,
             pin_distance_points=dm_pin,
+            techs=techs,
+            weights=dyn_weights,
+            gate_cap=gate_cap,
+            mph_norm_thr=mph_thr,
         )
     # AI ensemble blending
     avw = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now > vwap_spot)
@@ -1533,8 +1633,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     bear_flow = oi_flags.get("ce_write_above", False) and oi_flags.get("pe_unwind_below", False)
     bull_pcr = dpcr_z >= 0.5
     bear_pcr = dpcr_z <= -0.5
-    bull_drift = (mph_norm == mph_norm) and (mph_norm >= MPH_NORM_THR)
-    bear_drift = (mph_norm == mph_norm) and (mph_norm <= -MPH_NORM_THR)
+    bull_drift = (mph_norm == mph_norm) and (mph_norm >= mph_thr)
+    bear_drift = (mph_norm == mph_norm) and (mph_norm <= -mph_thr)
 
     conds = []
     if side == "BUY":
@@ -1612,7 +1712,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     line = format_output_line(
         now, symbol, spot_now, vwap_fut, D, ATR_D, snap_dict, mp, atm_k,
         probs, top, tp, oi_flags, vwap_spot, adx5, div, iv_pct_hint,
-        macd_last, macd_sig_last, VND, PIN_NORM, MPH_NORM_THR
+        macd_last, macd_sig_last, VND, PIN_NORM, mph_thr
     )
     # Track assumed positions and exit signals between ticks
     try:
@@ -1638,8 +1738,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         bull_flow = oi_flags.get('pe_write_above', False) and oi_flags.get('ce_unwind_below', False)
         bear_pcr = dpcr_z <= -0.5
         bull_pcr = dpcr_z >= 0.5
-        bear_drift = (mph_norm == mph_norm) and (mph_norm <= -MPH_NORM_THR)
-        bull_drift = (mph_norm == mph_norm) and (mph_norm >= MPH_NORM_THR)
+        bear_drift = (mph_norm == mph_norm) and (mph_norm <= -mph_thr)
+        bull_drift = (mph_norm == mph_norm) and (mph_norm >= mph_thr)
         if pos.get('action') == 'BUY_CE':
             exit_now = (spot_now < vwap_spot) or trend_weak or bear_flow or bear_pcr or macd_dn or bear_drift
         elif pos.get('action') == 'BUY_PE':
