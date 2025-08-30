@@ -130,8 +130,25 @@ const server = http.createServer(async (req, res) => {
       const key = indexQuoteKey(symbol);
       const q = await kite.quote([key]);
       const node = q[key] || {};
-      const diff = node.net_change;
-      const pct = node.change;
+      let diff = node.net_change;
+      let pct = node.change;
+      // Some index quotes may omit net_change/change.  When that happens,
+      // derive the values from the latest price and the previous close that
+      // are both provided by Kite.
+      if (
+        !(typeof diff === 'number' && isFinite(diff) &&
+          typeof pct === 'number' && isFinite(pct))
+      ) {
+        const last = node.last_price;
+        const close = node.ohlc?.close;
+        if (
+          typeof last === 'number' && isFinite(last) &&
+          typeof close === 'number' && isFinite(close)
+        ) {
+          diff = last - close;
+          pct = (diff / close) * 100;
+        }
+      }
       if (
         typeof diff === 'number' && isFinite(diff) &&
         typeof pct === 'number' && isFinite(pct)
