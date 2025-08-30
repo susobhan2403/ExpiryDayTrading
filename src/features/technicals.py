@@ -9,6 +9,17 @@ import pandas as pd
 def ema(s: pd.Series, span: int) -> pd.Series:
     return s.ewm(span=span, adjust=False).mean()
 
+def wilder_atr(df: pd.DataFrame, length: int = 14) -> float:
+    if df.empty:
+        return float('nan')
+    tr = pd.concat([
+        df['high'] - df['low'],
+        (df['high'] - df['close'].shift(1)).abs(),
+        (df['low'] - df['close'].shift(1)).abs()
+    ], axis=1).max(axis=1)
+    atr = tr.ewm(alpha=1/length, adjust=False).mean()
+    return float(atr.iloc[-1]) if len(atr) else float('nan')
+
 def rsi(series: pd.Series, length: int = 14) -> pd.Series:
     d = series.diff()
     up = d.clip(lower=0.0)
