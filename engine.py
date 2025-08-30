@@ -34,6 +34,7 @@ import src.features.technicals as tech
 import src.features.options as opt
 from src.config import load_settings, save_settings, compute_dynamic_bands
 from src.ai.ensemble import ai_predict_probs, blend_probs
+from src.features.headlines import headline_active
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -1282,6 +1283,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         try: state = json.loads(state_file.read_text())
         except: state = {}
     dpcr_series = state.get("dpcr_series", [])
+    block_counts_prev = state.get("block_counts", {})
 
     prev_iv = state.get("atm_iv", float('nan'))
     div = (atm_iv - prev_iv) if (atm_iv==atm_iv and prev_iv==prev_iv) else float('nan')
@@ -1468,6 +1470,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
     dyn_weights, gate_cap = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
 
+    # Headline / macro trigger guard
+    headline_flag = headline_active(iv_z=iv_z)
+
     # Scoring: expiry vs non-expiry (mode override)
     if mode == "expiry":
         expiry_today = True
@@ -1505,6 +1510,14 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             gate_cap=gate_cap,
             mph_norm_thr=mph_thr,
         )
+
+    # Consecutive confirmations for block gating
+    block_counts = {}
+    for name, ok in blocks_ok.items():
+        c = block_counts_prev.get(name, 0)
+        block_counts[name] = c + 1 if ok else 0
+        if headline_flag and block_counts[name] < 2:
+            blocks_ok[name] = False
     # AI ensemble blending
     avw = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now > vwap_spot)
     bvw = (spot_now == spot_now) and (vwap_spot == vwap_spot) and (spot_now < vwap_spot)
@@ -1532,12 +1545,13 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     except Exception:
         pass
     # Scenario flip gating
+    flip_delta = 0.25 if headline_flag else SCENARIO_FLIP_DELTA
     last_probs = state.get("last_probs", {})
     last_top = state.get("last_top", "")
     top = max(probs, key=probs.get)
     if last_top and top != last_top:
         gain = probs[top] - last_probs.get(last_top, 0.0)
-        if gain < SCENARIO_FLIP_DELTA:
+        if gain < flip_delta:
             # keep old
             top = last_top
 
@@ -1645,6 +1659,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "last_probs": probs,
         "last_top": top,
         "confirmations": conf,
+        "block_counts": block_counts,
         "position": pos,
         "basis_series": basis_series,
     }
