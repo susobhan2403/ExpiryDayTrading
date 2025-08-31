@@ -40,10 +40,30 @@ def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: f
     try:
         cfg = load_settings()
         presets = (cfg.get("PRESETS") or {}).get(symbol.upper()) or {}
-        base_above = int(presets.get("BAND_MAX_STRIKES_ABOVE", base_above))
-        base_below = int(presets.get("BAND_MAX_STRIKES_BELOW", base_below))
-        base_far = int(presets.get("FAR_OTM_FILTER_POINTS", base_far))
-        base_pin = int(presets.get("PIN_DISTANCE_POINTS", base_pin))
+        base_above = int(
+            presets.get(
+                "BAND_MAX_STRIKES_ABOVE",
+                cfg.get("BAND_MAX_STRIKES_ABOVE", base_above),
+            )
+        )
+        base_below = int(
+            presets.get(
+                "BAND_MAX_STRIKES_BELOW",
+                cfg.get("BAND_MAX_STRIKES_BELOW", base_below),
+            )
+        )
+        base_far = int(
+            presets.get(
+                "FAR_OTM_FILTER_POINTS",
+                cfg.get("FAR_OTM_FILTER_POINTS", base_far),
+            )
+        )
+        base_pin = int(
+            presets.get(
+                "PIN_DISTANCE_POINTS",
+                cfg.get("PIN_DISTANCE_POINTS", base_pin),
+            )
+        )
     except Exception:
         pass
 
