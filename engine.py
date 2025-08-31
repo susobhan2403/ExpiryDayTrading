@@ -1276,9 +1276,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     mp  = opt.max_pain(chain)
     D   = float(spot_now - mp)
     session_hi, session_lo = float(spot_1m["high"].max()), float(spot_1m["low"].min())
-    atr1 = float(tech.wilder_atr(spot_1m, 14)) if len(spot_1m) else 0.0
-    atr5 = float(tech.wilder_atr(spot_5m, 14)) if len(spot_5m) else 0.0
-    ATR_D = max(1.0, atr1, atr5)
+    atr = float(tech.atr(spot_1m, 14)) if len(spot_1m) else 0.0
+    ATR_D = max(1.0, atr)
     VND = abs(D) / ATR_D
     step = 100 if "BANK" in symbol.upper() else 50
     SSD  = abs(D) / step
@@ -1649,39 +1648,45 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             top = last_top
 
     # Trade plan (mechanical)
-    def trade_plan(top: str) -> Dict:
+    def trade_plan(top: str, atr_val: float, atr_mult: float) -> Dict:
         if top == "Bear migration":
-            return {"action":"BUY_PE","instrument":f"PE {atm_k-200}",
+            plan = {"action":"BUY_PE","instrument":f"PE {atm_k-200}",
                     "entry":"VWAP fail + 5m close below VWAP",
-                    "sl":"Above VWAP or last LH","targets":[f"{poc:.0f}", f"{mp-100}"],
                     "invalidate":"VWAP reclaim + ΔPCR z ≥ +0.5"}
-        if top == "Bull migration / gamma carry":
-            return {"action":"BUY_CE","instrument":f"CE {atm_k+200}",
+        elif top == "Bull migration / gamma carry":
+            plan = {"action":"BUY_CE","instrument":f"CE {atm_k+200}",
                     "entry":"VWAP reclaim + MACD(5m) cross up",
-                    "sl":"Below VWAP or last HL","targets":[f"{poc:.0f}", f"{mp+100}"],
                     "invalidate":"VWAP loss + ΔPCR z ≤ -0.5"}
-        if top == "Short-cover reversion up":
-            return {"action":"BUY_CE","instrument":f"CE {atm_k+100}",
+        elif top == "Short-cover reversion up":
+            plan = {"action":"BUY_CE","instrument":f"CE {atm_k+100}",
                     "entry":"VWAP reclaim + RSI(5m) > 50",
-                    "sl":"VWAP - 0.15×ATR_D","targets":[f"{poc:.0f}", f"{mp-50}"],
                     "invalidate":"VWAP loss + CE write above spot"}
-        if top == "Squeeze continuation (one-way)":
+        elif top == "Squeeze continuation (one-way)":
             side = "CE" if spot_now>vwap_spot else "PE"; k = atm_k+100 if side=="CE" else atm_k-100
-            return {"action":f"BUY_{side}","instrument":f"{side} {k}",
+            plan = {"action":f"BUY_{side}","instrument":f"{side} {k}",
                     "entry":"Pullback to 9-EMA(5m) with trend intact",
-                    "sl":"21-EMA break or opposite VWAP","targets":[f"{poc:.0f}", f"{(spot_now + (D>0)*100 - (D<0)*100):.0f}"],
                     "invalidate":"ADX flattens + opposite OI flip"}
-        if top == "Pin & decay day (IV crush)":
-            return {"action":"NO-TRADE","why":"Pin & decay: prefer credits / tiny scalps"}
-        if top == "Event knee-jerk then revert":
+        elif top == "Pin & decay day (IV crush)":
+            plan = {"action":"NO-TRADE","why":"Pin & decay: prefer credits / tiny scalps"}
+        elif top == "Event knee-jerk then revert":
             side="PE" if spot_now>mp else "CE"; k = atm_k-100 if side=="PE" else atm_k+100
-            return {"action":f"BUY_{side}","instrument":f"{side} {k}",
+            plan = {"action":f"BUY_{side}","instrument":f"{side} {k}",
                     "entry":"After 15–30m OI flip + IV cools (div<0)",
-                    "sl":"Beyond spike high/low","targets":[f"{mp}","VWAP"],
                     "invalidate":"IV stays elevated + same-side OI persists"}
-        return {"action":"NO-TRADE","why":"signals conflicted"}
+        else:
+            plan = {"action":"NO-TRADE","why":"signals conflicted"}
 
-    tp = trade_plan(top)
+        if plan.get("action") in ("BUY_CE", "BUY_PE") and atr_val > 0:
+            direction = 1 if plan["action"] == "BUY_CE" else -1
+            sl_price = spot_now - direction * atr_mult * atr_val
+            tgt1 = spot_now + direction * atr_mult * atr_val
+            tgt2 = spot_now + direction * atr_mult * 2 * atr_val
+            plan["sl"] = f"{sl_price:.0f}"
+            plan["targets"] = [f"{tgt1:.0f}", f"{tgt2:.0f}"]
+        return plan
+
+    atr_mult = 1.5 if inst_bias > 0 else 1.0
+    tp = trade_plan(top, atr, atr_mult)
 
     # Microstructure guardrail: require strong queue imbalance and quote stability
     if tp.get("action") in ("BUY_CE", "BUY_PE"):
