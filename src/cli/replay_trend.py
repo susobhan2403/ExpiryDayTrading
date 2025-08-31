@@ -19,6 +19,7 @@ def replay(
     weights: Optional[Dict[int, float]] = None,
     threshold: float = 0.6,
     confirm: int = 3,
+    alpha: float = 0.3,
 ) -> Dict[str, float]:
     """Replay historical 1m bars through TrendConsensus.
 
@@ -27,7 +28,7 @@ def replay(
     csv_path: path to CSV file with columns ts, open, high, low, close, volume
     metrics_out: path to CSV file where metrics will be written
     prom_port: if provided, start an HTTP server to expose Prometheus metrics
-    weights, threshold, confirm: parameters for TrendConsensus
+    weights, threshold, confirm, alpha: parameters for TrendConsensus
 
     Returns
     -------
@@ -38,7 +39,7 @@ def replay(
         df["volume"] = 0.0
     df = df.set_index("ts").sort_index()
 
-    tc = TrendConsensus(weights=weights, threshold=threshold, confirm=confirm)
+    tc = TrendConsensus(weights=weights, threshold=threshold, confirm=confirm, alpha=alpha)
 
     registry = CollectorRegistry()
     flip_counter = Counter("trend_flip_total", "Number of trend direction flips", registry=registry)
@@ -95,6 +96,7 @@ def main() -> None:
     ap.add_argument("--prom-port", type=int, default=0, help="Expose Prometheus metrics on port")
     ap.add_argument("--confirm", type=int, default=3, help="TrendConsensus confirm parameter")
     ap.add_argument("--threshold", type=float, default=0.6, help="TrendConsensus threshold")
+    ap.add_argument("--alpha", type=float, default=0.3, help="TrendConsensus smoothing factor")
     ap.add_argument("--weights", help="Comma separated timeframe:weight pairs, e.g. '1:1,5:0.5'")
     args = ap.parse_args()
 
@@ -107,7 +109,8 @@ def main() -> None:
 
     port = args.prom_port if args.prom_port > 0 else None
     logging.basicConfig(level=logging.INFO, format="[replay] %(message)s")
-    replay(args.csv, args.metrics_out, prom_port=port, weights=weights, threshold=args.threshold, confirm=args.confirm)
+    replay(args.csv, args.metrics_out, prom_port=port, weights=weights,
+           threshold=args.threshold, confirm=args.confirm, alpha=args.alpha)
 
 
 if __name__ == "__main__":
