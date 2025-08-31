@@ -2560,6 +2560,12 @@ def main():
             slp = max(10, args.poll_seconds - int(time.time() - start))
             time.sleep(slp)
         else:
+            now = dt.datetime.now(IST)
+            if now.time() < dt.time(9, 15) and now.weekday() < 5:
+                open_dt = now.replace(hour=9, minute=15, second=0, microsecond=0)
+                wait = max(1, int((open_dt - now).total_seconds()))
+                time.sleep(wait)
+                continue
             logger.info("Market closed (IST). Stopping engine.")
             break
 
