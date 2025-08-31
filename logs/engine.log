@@ -13600,3 +13600,438 @@ Scenario: Bear Migration 22% (alt: Bear Migration 22%)
 6. MaxPain drift up (norm >= thr)
 [1m[33mFinal Verdict: Hold[0m
 SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 1.26 | Kelly 0.10 | Term near 16.16%
+2025-08-30 12:06:29,054 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-30 12:06:29,055 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-30 12:06:33,443 INFO: 12:06 IST | NIFTY 24426.85 | VWAP(fut) 24644
+D=-73 | ATR_D=167 | VND=0.44 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.25) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV 7.41% (ΔIV_z=0.23) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 23%)
+[1m[36mAction: TRADE | BUY 24500 CE / 24550 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [31m✘[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.91 | Kelly 0.10 | Term near 7.41% / next 9.27%
+2025-08-30 12:06:33,444 INFO: 
+2025-08-30 12:06:36,718 INFO: 12:06 IST | BANKNIFTY 53655.65 | VWAP(fut) 54265
+D=-1344 | ATR_D=479 | VND=2.8 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=0.16) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV 10.37% (ΔIV_z=0.2) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 15% (alt: Pin and Decay 16%)
+[1m[36mAction: TRADE | BUY 53800 CE / 53900 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.24 | Kelly 0.10 | Term near 10.37%
+2025-08-30 12:06:36,720 INFO: 
+2025-08-30 12:06:41,265 INFO: 12:06 IST | SENSEX 79809.65 | VWAP(fut) 80637
+D=-390 | ATR_D=568 | VND=0.69 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift -0.0/hr (norm -0.0)
+ATM 79800 IV 8.92% (ΔIV_z=-0.29) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 21% (alt: Pin and Decay 21%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 2.81 | Kelly 0.10 | Term near 8.92% / next 9.71%
+2025-08-30 12:06:41,267 INFO: 
+2025-08-30 12:06:44,684 INFO: 12:06 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=197 | VND=0.76 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.27) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV 16.17% (ΔIV_z=-0.06) | Basis 71.8
+Scenario: Bear Migration 20% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 12400 PE / 12350 PE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price below VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports down (CE write, PE unwind) - [31m✘[0m
+4. PCR momentum down (Δz <= -0.5) - [31m✘[0m
+5. MACD(5m) cross down - [32m✔[0m
+6. MaxPain drift down (norm <= -thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back above VWAP
+2. ADX weakening (<16)
+3. OI flips bullish (PE write, CE unwind)
+4. PCR momentum up (Δz >= 0.5)
+5. MACD(5m) cross up
+6. MaxPain drift up (norm >= thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 1.26 | Kelly 0.10 | Term near 16.17%
+2025-08-30 12:37:38,083 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-30 12:37:38,084 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-30 12:37:42,649 INFO: 12:37 IST | NIFTY 24426.85 | VWAP(fut) 24644
+D=-73 | ATR_D=167 | VND=0.44 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.28) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV 7.43% (ΔIV_z=0.16) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 22%)
+[1m[36mAction: TRADE | BUY 24500 CE / 24550 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [31m✘[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.91 | Kelly 0.10 | Term near 7.43% / next 9.28%
+2025-08-30 12:37:42,651 INFO: 
+2025-08-30 12:37:45,344 INFO: 12:37 IST | BANKNIFTY 53655.65 | VWAP(fut) 54265
+D=-1344 | ATR_D=479 | VND=2.8 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=0.01) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV 10.37% (ΔIV_z=0.2) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 16% (alt: Event Knee-jerk then Revert 16%)
+[1m[36mAction: TRADE | BUY 53800 CE / 53900 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.24 | Kelly 0.10 | Term near 10.37%
+2025-08-30 12:37:45,345 INFO: 
+2025-08-30 12:37:49,518 INFO: 12:37 IST | SENSEX 79809.65 | VWAP(fut) 80637
+D=-390 | ATR_D=568 | VND=0.69 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift -0.0/hr (norm -0.0)
+ATM 79800 IV 8.94% (ΔIV_z=-0.4) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 21% (alt: Pin and Decay 21%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 2.81 | Kelly 0.10 | Term near 8.94% / next 9.72%
+2025-08-30 12:37:49,524 INFO: 
+2025-08-30 12:37:52,071 INFO: 12:37 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=197 | VND=0.76 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.27) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV 16.18% (ΔIV_z=-0.01) | Basis 71.8
+Scenario: Bear Migration 19% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 12400 PE / 12350 PE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price below VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports down (CE write, PE unwind) - [31m✘[0m
+4. PCR momentum down (Δz <= -0.5) - [31m✘[0m
+5. MACD(5m) cross down - [32m✔[0m
+6. MaxPain drift down (norm <= -thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back above VWAP
+2. ADX weakening (<16)
+3. OI flips bullish (PE write, CE unwind)
+4. PCR momentum up (Δz >= 0.5)
+5. MACD(5m) cross up
+6. MaxPain drift up (norm >= thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 1.26 | Kelly 0.10 | Term near 16.18%
+2025-08-30 12:38:03,043 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-30 12:38:03,044 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-30 12:38:06,340 INFO: 12:38 IST | NIFTY 24426.85 | VWAP(fut) 24644
+D=-73 | ATR_D=167 | VND=0.44 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.27) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV 7.43% (ΔIV_z=-0.03) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 24%)
+[1m[36mAction: TRADE | BUY 24500 CE / 24550 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [31m✘[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.91 | Kelly 0.10 | Term near 7.43% / next 9.28%
+2025-08-30 12:38:06,341 INFO: 
+2025-08-30 12:38:08,770 INFO: 12:38 IST | BANKNIFTY 53655.65 | VWAP(fut) 54265
+D=-1344 | ATR_D=479 | VND=2.8 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=-0.01) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV 10.37% (ΔIV_z=0.17) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 16% (alt: Event Knee-jerk then Revert 16%)
+[1m[36mAction: TRADE | BUY 53800 CE / 53900 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.24 | Kelly 0.10 | Term near 10.37%
+2025-08-30 12:38:08,773 INFO: 
+2025-08-30 12:38:12,949 INFO: 12:38 IST | SENSEX 79809.65 | VWAP(fut) 80637
+D=-390 | ATR_D=568 | VND=0.69 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV 8.94% (ΔIV_z=-0.51) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 21% (alt: Pin and Decay 21%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 2.81 | Kelly 0.10 | Term near 8.94% / next 9.72%
+2025-08-30 12:38:12,951 INFO: 
+2025-08-30 12:38:15,606 INFO: 12:38 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=197 | VND=0.76 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.25) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV 16.18% (ΔIV_z=-0.04) | Basis 71.8
+Scenario: Bear Migration 19% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 12400 PE / 12350 PE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price below VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports down (CE write, PE unwind) - [31m✘[0m
+4. PCR momentum down (Δz <= -0.5) - [31m✘[0m
+5. MACD(5m) cross down - [32m✔[0m
+6. MaxPain drift down (norm <= -thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back above VWAP
+2. ADX weakening (<16)
+3. OI flips bullish (PE write, CE unwind)
+4. PCR momentum up (Δz >= 0.5)
+5. MACD(5m) cross up
+6. MaxPain drift up (norm >= thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 1.26 | Kelly 0.10 | Term near 16.18%
+2025-08-30 12:39:45,315 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-30 12:39:45,316 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-30 12:39:48,515 INFO: 12:39 IST | NIFTY 24426.85 | VWAP(fut) 24644
+D=-73 | ATR_D=167 | VND=0.44 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.27) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV 7.43% (ΔIV_z=0.01) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 17% (alt: Pin and Decay 22%)
+[1m[36mAction: TRADE | BUY 24500 CE / 24550 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [31m✘[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.91 | Kelly 0.10 | Term near 7.43% / next 9.28%
+2025-08-30 12:39:48,517 INFO: 
+2025-08-30 12:39:50,509 INFO: 12:39 IST | BANKNIFTY 53655.65 | VWAP(fut) 54265
+D=-1344 | ATR_D=479 | VND=2.8 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=-0.01) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV 10.37% (ΔIV_z=0.16) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 16% (alt: Event Knee-jerk then Revert 16%)
+[1m[36mAction: TRADE | BUY 53800 CE / 53900 CE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price above VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports up (PE write, CE unwind) - [31m✘[0m
+4. PCR momentum up (Δz >= 0.5) - [31m✘[0m
+5. MACD(5m) cross up - [31m✘[0m
+6. MaxPain drift up (norm >= thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back below VWAP
+2. ADX weakening (<16)
+3. OI flips bearish (CE write, PE unwind)
+4. PCR momentum down (Δz <= -0.5)
+5. MACD(5m) cross down
+6. MaxPain drift down (norm <= -thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Debit verticals (delta 0.25–0.35) | Size(vol) 2.24 | Kelly 0.10 | Term near 10.37%
+2025-08-30 12:39:50,511 INFO: 
+2025-08-30 12:39:53,097 INFO: 12:39 IST | SENSEX 79809.65 | VWAP(fut) 80637
+D=-390 | ATR_D=568 | VND=0.69 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift -0.0/hr (norm -0.0)
+ATM 79800 IV 8.94% (ΔIV_z=-0.46) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 21% (alt: Pin and Decay 21%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 2.81 | Kelly 0.10 | Term near 8.94% / next 9.72%
+2025-08-30 12:39:53,098 INFO: 
+2025-08-30 12:39:54,919 INFO: 12:39 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=197 | VND=0.76 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.14) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV 16.18% (ΔIV_z=-0.04) | Basis 71.8
+Scenario: Bear Migration 20% (alt: Bull Migration 20%)
+[1m[36mAction: TRADE | BUY 12400 PE / 12350 PE[0m
+[1m[35mEnter when atleast 3 of below 6 are satisfied:[0m
+1. Price below VWAP - [31m✘[0m
+2. ADX >= 18 (trend strength) - [32m✔[0m
+3. OI flow supports down (CE write, PE unwind) - [31m✘[0m
+4. PCR momentum down (Δz <= -0.5) - [31m✘[0m
+5. MACD(5m) cross down - [32m✔[0m
+6. MaxPain drift down (norm <= -thr) - [31m✘[0m
+[1m[35mExit when atleast one or more satisfies:[0m
+1. Close back above VWAP
+2. ADX weakening (<16)
+3. OI flips bullish (PE write, CE unwind)
+4. PCR momentum up (Δz >= 0.5)
+5. MACD(5m) cross up
+6. MaxPain drift up (norm >= thr)
+[1m[33mFinal Verdict: Hold[0m
+SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 1.26 | Kelly 0.10 | Term near 16.18%
+2025-08-31 10:54:10,021 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 10:54:10,022 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 10:54:11,870 WARNING: [hist] token=256265 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:11,961 WARNING: [hist-retry] token=256265 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,075 WARNING: [hist] token=13568258 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,214 WARNING: [hist-retry] token=13568258 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,215 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 10:54:12,392 WARNING: [hist] token=13568258 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,528 WARNING: [hist-retry] token=13568258 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,531 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 10:54:12,532 INFO: 
+2025-08-31 10:54:12,677 WARNING: [hist] token=260105 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,811 WARNING: [hist-retry] token=260105 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:12,970 WARNING: [hist] token=13566722 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:13,107 WARNING: [hist-retry] token=13566722 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:13,110 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 10:54:13,216 WARNING: [hist] token=13566722 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:13,305 WARNING: [hist-retry] token=13566722 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:13,307 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 10:54:13,308 INFO: 
+2025-08-31 10:54:13,852 WARNING: [hist] token=265 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:13,983 WARNING: [hist-retry] token=265 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,083 WARNING: [hist] token=215645189 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,191 WARNING: [hist-retry] token=215645189 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,194 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 10:54:14,324 WARNING: [hist] token=215645189 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,463 WARNING: [hist-retry] token=215645189 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,464 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 10:54:14,465 INFO: 
+2025-08-31 10:54:14,601 WARNING: [hist] token=288009 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,778 WARNING: [hist-retry] token=288009 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:14,945 WARNING: [hist] token=13567490 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:15,075 WARNING: [hist-retry] token=13567490 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:15,077 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 10:54:15,220 WARNING: [hist] token=13567490 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:15,349 WARNING: [hist-retry] token=13567490 error: Incorrect `api_key` or `access_token`.
+2025-08-31 10:54:15,351 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 10:56:04,067 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 10:56:04,068 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 11:03:23,513 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 11:03:23,513 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 11:03:26,298 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 11:03:26,610 INFO: 11:03 IST | NIFTY 24426.85 | VWAP(fut) 24628
+D=-73 | ATR_D=22 | VND=3.25 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.24) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 18%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 86% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.70 | Kelly 0.10
+2025-08-31 11:03:26,611 INFO: 
+2025-08-31 11:03:27,970 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 11:03:28,504 INFO: 11:03 IST | BANKNIFTY 53655.65 | VWAP(fut) 54208
+D=-1344 | ATR_D=49 | VND=26.95 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=-0.19) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 15% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.51 | Kelly 0.10
+2025-08-31 11:03:28,505 INFO: 
+2025-08-31 11:03:30,662 INFO: 11:03 IST | SENSEX 79809.65 | VWAP(fut) 80600
+D=-390 | ATR_D=70 | VND=5.51 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift -0.0/hr (norm -0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 16% (alt: Pin and Decay 16%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 22.53 | Kelly 0.10
+2025-08-31 11:03:30,664 INFO: 
+2025-08-31 11:03:31,761 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 11:03:32,232 INFO: 11:03 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12605
+D=-149 | ATR_D=14 | VND=10.46 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.12) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 19% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 17.39 | Kelly 0.10

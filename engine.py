@@ -1237,11 +1237,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     # Basis & VWAP relation
     basis = float(fut_1m["close"].iloc[-1] - spot_1m["close"].iloc[-1])
-    basis_series = state.get("basis_series", [])
-    basis_series.append(basis)
-    basis_series = basis_series[-20:]
-    state["basis_series"] = basis_series
-    basis_slope = basis - basis_series[-2] if len(basis_series) >= 2 else 0.0
+    # basis_series depends on persisted state; initialize after loading state
 
     # Max Pain drift per hour & MPH_norm (keep last 20 in file)
     drift_file = OUT_DIR / f"maxpain_hist_{symbol}.json"
@@ -1286,6 +1282,13 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         try: state = json.loads(state_file.read_text())
         except: state = {}
     dpcr_series = state.get("dpcr_series", [])
+
+    # Basis & VWAP relation (persist rolling series)
+    basis_series = state.get("basis_series", [])
+    basis_series.append(basis)
+    basis_series = basis_series[-20:]
+    state["basis_series"] = basis_series
+    basis_slope = basis - basis_series[-2] if len(basis_series) >= 2 else 0.0
 
     prev_iv = state.get("atm_iv", float('nan'))
     div = (atm_iv - prev_iv) if (atm_iv==atm_iv and prev_iv==prev_iv) else float('nan')
