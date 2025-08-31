@@ -101,21 +101,25 @@ DEFAULT_POLL_SECS = 240
 RISK_FREE = float(os.getenv("RISK_FREE_RATE", "0.066"))
 
 # Scenario weighting and gates
-# Allow override via settings.json -> { "WEIGHTS": { "price_trend": 0.35, ... } }
+# Allow override via settings.json -> {"WEIGHTS": {"price_trend": 0.35, ...}}
 DEFAULT_WEIGHTS = {"price_trend": 0.35, "options_flow": 0.45, "volatility": 0.20}
-try:
-    _cfg = load_settings()
-    _w = (_cfg or {}).get("WEIGHTS") if isinstance(_cfg, dict) else None
-    if isinstance(_w, dict):
-        WEIGHTS = {
-            "price_trend": float(_w.get("price_trend", DEFAULT_WEIGHTS["price_trend"])),
-            "options_flow": float(_w.get("options_flow", DEFAULT_WEIGHTS["options_flow"])),
-            "volatility": float(_w.get("volatility", DEFAULT_WEIGHTS["volatility"]))
-        }
-    else:
-        WEIGHTS = DEFAULT_WEIGHTS
-except Exception:
-    WEIGHTS = DEFAULT_WEIGHTS
+
+def load_weights() -> Dict[str, float]:
+    """Load scenario weights from settings.json with defaults."""
+    try:
+        cfg = load_settings()
+        w = (cfg or {}).get("WEIGHTS") if isinstance(cfg, dict) else None
+        if isinstance(w, dict):
+            return {
+                "price_trend": float(w.get("price_trend", DEFAULT_WEIGHTS["price_trend"])),
+                "options_flow": float(w.get("options_flow", DEFAULT_WEIGHTS["options_flow"])),
+                "volatility": float(w.get("volatility", DEFAULT_WEIGHTS["volatility"]))
+            }
+    except Exception:
+        pass
+    return DEFAULT_WEIGHTS.copy()
+
+WEIGHTS = load_weights()
 GATE_MIN_BLOCKS = {"price_trend": 1, "options_flow": 1, "volatility": 1}
 SCENARIO_FLIP_DELTA = 0.15
 CONFIRM_SNAPSHOTS = 2         # require consecutive confirmations for OI/drift regimes
@@ -1949,6 +1953,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     return snap
 
 def main():
+    global WEIGHTS
+    WEIGHTS = load_weights()
     ap = argparse.ArgumentParser()
     ap.add_argument("--symbols", default=",".join(DEFAULT_SYMBOLS), help="Comma-separated, e.g., BANKNIFTY,NIFTY")
     ap.add_argument("--provider", default=DEFAULT_PROVIDER, help="KITE (default)")
