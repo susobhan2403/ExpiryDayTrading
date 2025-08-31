@@ -650,6 +650,19 @@ class KiteProvider(MarketDataProvider):
                 data = []
 
         if not data:
+            # Weekend/after-hours safety: go back a full week to capture last trading session
+            try:
+                alt_start2 = now - dt.timedelta(days=7)
+                data = self.kite.historical_data(
+                    token, alt_start2, now, "minute",
+                    continuous=False,
+                    oi=False
+                )
+            except Exception as e:
+                logger.warning(f"[hist-retry-wide] token={token} error: {e}")
+                data = []
+
+        if not data:
             return pd.DataFrame(columns=["open","high","low","close","volume"])
 
         df = pd.DataFrame(data)

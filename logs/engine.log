@@ -14215,3 +14215,141 @@ Scenario: Bear Migration 19% (alt: Bull Migration 20%)
 4. IV crushing (div<=0, pctile<33) - [31m✘[0m
 [1m[33mFinal Verdict: Hold[0m
 SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 17.64 | Kelly 0.10
+2025-08-31 13:33:24,578 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 13:33:24,579 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 13:33:26,944 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 13:33:27,255 INFO: 13:33 IST | NIFTY 24426.85 | VWAP(fut) 24598
+D=-73 | ATR_D=9 | VND=7.89 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.23) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 14% (alt: Squeeze Continuation (One-way) 18%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 88% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.71 | Kelly 0.10
+2025-08-31 13:33:27,256 INFO: 
+2025-08-31 13:33:28,607 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 13:33:29,199 INFO: 13:33 IST | BANKNIFTY 53655.65 | VWAP(fut) 54108
+D=-1344 | ATR_D=26 | VND=50.72 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=0.22) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 13% (alt: Squeeze Continuation (One-way) 20%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 95% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 40.49 | Kelly 0.10
+2025-08-31 13:33:29,200 INFO: 
+2025-08-31 13:33:31,873 INFO: 13:33 IST | SENSEX 79809.65 | VWAP(fut) 80496
+D=-390 | ATR_D=30 | VND=12.72 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 9% (alt: Squeeze Continuation (One-way) 19%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.01 | Kelly 0.10
+2025-08-31 13:33:31,874 INFO: 
+2025-08-31 13:33:33,376 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 13:33:33,853 INFO: 13:33 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12540
+D=-149 | ATR_D=6 | VND=22.13 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=-0.06) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 20% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 95% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 36.79 | Kelly 0.10
+2025-08-31 19:22:27,275 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 19:22:27,276 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 19:22:28,535 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 19:22:28,745 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:22:28,746 INFO: 
+2025-08-31 19:22:29,136 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 19:22:29,374 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:22:29,375 INFO: 
+2025-08-31 19:22:30,627 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 19:22:30,858 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:22:30,859 INFO: 
+2025-08-31 19:22:31,410 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 19:22:31,654 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:25:40,422 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 19:25:40,423 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 19:25:41,258 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 19:25:41,389 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:25:41,391 INFO: 
+2025-08-31 19:25:41,647 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 19:25:41,781 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:25:41,782 INFO: 
+2025-08-31 19:25:42,372 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 19:25:42,498 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:25:42,499 INFO: 
+2025-08-31 19:25:42,753 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 19:25:42,892 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:27:09,136 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 19:27:09,137 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 19:27:10,389 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 19:27:10,674 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:27:10,675 INFO: 
+2025-08-31 19:27:11,146 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 19:27:11,380 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:27:11,381 INFO: 
+2025-08-31 19:27:12,396 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 19:27:12,578 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:27:12,579 INFO: 
+2025-08-31 19:27:13,027 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 19:27:13,211 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:30:20,200 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 19:30:20,201 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 19:30:21,582 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 19:30:21,860 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:30:21,861 INFO: 
+2025-08-31 19:30:22,409 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 19:30:22,608 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:30:22,609 INFO: 
+2025-08-31 19:30:23,819 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 19:30:24,112 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 19:30:24,113 INFO: 
+2025-08-31 19:30:24,674 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 19:30:24,898 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:16:35,191 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 20:16:35,192 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 20:16:36,703 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 20:16:36,978 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:16:36,979 INFO: 
+2025-08-31 20:16:37,545 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 20:16:37,843 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:16:37,845 INFO: 
+2025-08-31 20:16:38,996 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 20:16:39,253 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:16:39,254 INFO: 
+2025-08-31 20:16:39,829 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 20:16:40,090 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:17:25,213 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 20:17:25,214 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 20:17:26,832 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 20:17:27,116 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:17:27,117 INFO: 
+2025-08-31 20:17:27,510 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 20:17:27,810 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:17:27,812 INFO: 
+2025-08-31 20:17:28,770 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 20:17:28,993 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 20:17:28,993 INFO: 
+2025-08-31 20:17:29,511 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 20:17:29,814 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
