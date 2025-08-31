@@ -157,6 +157,50 @@ SCENARIO_GAUGE = Gauge("scenario_probability", "Scenario probability", ["scenari
 # Multi-timeframe trend engines per symbol
 TREND_ENGINES: Dict[str, TrendConsensus] = {}
 
+# Persisted trend state
+STATE_PATH = ROOT / "state.json"
+
+
+def hydrate_trend_engines(symbols: List[str]) -> None:
+    """Hydrate TREND_ENGINES from state.json if available."""
+    if not STATE_PATH.exists():
+        return
+    try:
+        data = json.loads(STATE_PATH.read_text())
+    except Exception:
+        return
+    for sym in symbols:
+        st = data.get(sym, {})
+        if not isinstance(st, dict):
+            continue
+        tc = TREND_ENGINES.setdefault(sym, TrendConsensus(score_filter=KalmanFilter1D()))
+        tc.last_decision = st.get("last_decision", tc.last_decision)
+        tc.last_score = st.get("last_score", tc.last_score)
+        tc.smoothed_score = st.get("smoothed_score", tc.smoothed_score)
+        ts = st.get("last_change_ts")
+        if ts:
+            try:
+                tc.last_change_ts = pd.to_datetime(ts)
+            except Exception:
+                pass
+
+
+def persist_trend_engines() -> None:
+    """Persist TREND_ENGINES state to state.json."""
+    try:
+        data = {
+            sym: {
+                "last_decision": tc.last_decision,
+                "last_score": tc.last_score,
+                "smoothed_score": tc.smoothed_score,
+                "last_change_ts": tc.last_change_ts.isoformat() if tc.last_change_ts else None,
+            }
+            for sym, tc in TREND_ENGINES.items()
+        }
+        STATE_PATH.write_text(json.dumps(to_native(data)))
+    except Exception:
+        logger.exception("Failed to persist trend state")
+
 # ---------- dynamic weighting & thresholds ----------
 DEFAULT_TF_WEIGHTS = {1: 0.2, 5: 0.3, 10: 0.25, 15: 0.25}
 DEFAULT_TF_BIAS = {
@@ -1584,7 +1628,14 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     )
     tc.weights = tf_weights
     tc.last_decision = state.get("last_decision", tc.last_decision)
+    tc.last_score = state.get("last_score", tc.last_score)
     tc.smoothed_score = state.get("smoothed_score", tc.smoothed_score)
+    ts = state.get("last_change_ts")
+    if ts:
+        try:
+            tc.last_change_ts = pd.to_datetime(ts)
+        except Exception:
+            pass
     trend = tc.evaluate(spot_1m)
     decision, should_act = evaluate_decision(trend)
 
@@ -1808,10 +1859,13 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "basis_series": basis_series,
         "decision": asdict(decision),
         "last_decision": tc.last_decision,
+        "last_score": tc.last_score,
         "smoothed_score": tc.smoothed_score,
+        "last_change_ts": tc.last_change_ts.isoformat() if tc.last_change_ts else None,
     }
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))
+    persist_trend_engines()
 
     # Print/alerts
     probs_sorted = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
@@ -2195,6 +2249,7 @@ def main():
         return
 
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    hydrate_trend_engines(symbols)
     if args.provider.upper() != "KITE":
         logger.error("Only KITE provider is wired in this build. Use --provider KITE.")
         sys.exit(2)
