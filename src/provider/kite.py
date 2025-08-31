@@ -1,5 +1,5 @@
 from __future__ import annotations
-import os, json
+import os, json, asyncio
 import datetime as dt
 from typing import Dict, List, Tuple, Optional
 
@@ -50,7 +50,19 @@ class KiteProvider(MarketDataProvider):
     def _instruments(self, exch: str) -> pd.DataFrame:
         if exch=="NFO":
             if getattr(self, "_nfo", None) is None:
-                self._nfo = pd.DataFrame(self.kite.instruments("NFO"))
+                cache_file = os.path.join("out", "instruments_cache.pkl")
+                if os.path.exists(cache_file):
+                    try:
+                        self._nfo = pd.read_pickle(cache_file)
+                    except Exception:
+                        self._nfo = None
+                if getattr(self, "_nfo", None) is None:
+                    self._nfo = pd.DataFrame(self.kite.instruments("NFO"))
+                    try:
+                        os.makedirs("out", exist_ok=True)
+                        self._nfo.to_pickle(cache_file)
+                    except Exception as e:
+                        logger.warning(f"Failed to write instruments cache: {e}")
             return self._nfo
         if exch=="BFO":
             if getattr(self, "_bfo", None) is None:
@@ -204,34 +216,51 @@ class KiteProvider(MarketDataProvider):
         syms = [f"{prefix}:{ts}" for ts in chain_df["tradingsymbol"].tolist()]
         chain = {"symbol": symbol, "expiry": expiry, "strikes": sorted(chain_df["strike"].unique()),
                  "calls": {}, "puts": {}}
-        for i in range(0, len(syms), 450):
-            q = self.kite.quote(syms[i:i+450])
-            for v in q.values():
-                tok = v["instrument_token"]
-                row = chain_df[chain_df["instrument_token"]==tok]
-                if row.empty: continue
-                strike = int(row.iloc[0]["strike"])
-                typ = row.iloc[0]["instrument_type"]
-                bid=ask=ltp=bid_q=ask_q=0.0
-                dep = v.get("depth")
-                if dep and dep.get("buy") and dep.get("sell"):
-                    try:
-                        bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
-                        bid_q = float(dep["buy"][0].get("quantity",0)); ask_q = float(dep["sell"][0].get("quantity",0))
-                    except Exception:
-                        pass
-                ltp = float(v.get("last_price") or 0.0)
-                ltt = v.get("last_trade_time")
+
+        batches = [syms[i:i+450] for i in range(0, len(syms), 450)]
+        q: Dict[str, Dict] = {}
+
+        async def gather_quotes() -> None:
+            loop = asyncio.get_running_loop()
+            for j in range(0, len(batches), 3):
+                group = batches[j:j+3]
+                tasks = [loop.run_in_executor(None, self.kite.quote, b) for b in group]
+                res = await asyncio.gather(*tasks, return_exceptions=True)
+                for r in res:
+                    if isinstance(r, dict):
+                        q.update(r)
+                if j + 3 < len(batches):
+                    await asyncio.sleep(1)
+
+        if batches:
+            asyncio.run(gather_quotes())
+
+        for v in q.values():
+            tok = v["instrument_token"]
+            row = chain_df[chain_df["instrument_token"]==tok]
+            if row.empty: continue
+            strike = int(row.iloc[0]["strike"])
+            typ = row.iloc[0]["instrument_type"]
+            bid=ask=ltp=bid_q=ask_q=0.0
+            dep = v.get("depth")
+            if dep and dep.get("buy") and dep.get("sell"):
                 try:
-                    ltt = pd.to_datetime(ltt).tz_localize(dt.timezone.utc).tz_convert(IST)
+                    bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
+                    bid_q = float(dep["buy"][0].get("quantity",0)); ask_q = float(dep["sell"][0].get("quantity",0))
                 except Exception:
-                    ltt = None
-                oi  = int(v.get("oi") or v.get("open_interest") or 0)
-                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask,
-                        "bid_qty": bid_q, "ask_qty": ask_q,
-                        "ltp_ts": ltt.isoformat() if ltt else None}
-                if typ=="CE": chain["calls"][strike]=node
-                else: chain["puts"][strike]=node
+                    pass
+            ltp = float(v.get("last_price") or 0.0)
+            ltt = v.get("last_trade_time")
+            try:
+                ltt = pd.to_datetime(ltt).tz_localize(dt.timezone.utc).tz_convert(IST)
+            except Exception:
+                ltt = None
+            oi  = int(v.get("oi") or v.get("open_interest") or 0)
+            node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask,
+                    "bid_qty": bid_q, "ask_qty": ask_q,
+                    "ltp_ts": ltt.isoformat() if ltt else None}
+            if typ=="CE": chain["calls"][strike]=node
+            else: chain["puts"][strike]=node
         for k in chain["strikes"]:
             chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
             chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
