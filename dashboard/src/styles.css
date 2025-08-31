@@ -65,3 +65,13 @@ pre {
   font-weight: bold;
   font-size: 16px;
 }
+
+.alert-ignore {
+  color: #ff5252;
+  font-weight: bold;
+}
+
+.alert-act {
+  color: #4caf50;
+  font-weight: bold;
+}

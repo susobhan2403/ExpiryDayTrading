@@ -9,6 +9,7 @@ const INDICATORS = [
   { key: 'scenario', title: 'Scenario' },
   { key: 'action', title: 'Action' },
   { key: 'decision', title: 'Decision' },
+  { key: 'alerts', title: 'Alerts' },
 ];
 
 export default function SymbolBoard({ symbol }) {
