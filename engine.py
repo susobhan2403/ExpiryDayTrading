@@ -35,6 +35,7 @@ import src.features.options as opt
 from src.config import load_settings, save_settings, compute_dynamic_bands
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from prometheus_client import Gauge, start_http_server
+from src.strategy.trend_consensus import TrendConsensus
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -150,6 +151,9 @@ PCR_Z_GAUGE = Gauge("pcr_z", "PCR z-score")
 SPREAD_PCT_GAUGE = Gauge("spread_pct", "Bid-ask spread percentage")
 DEPTH_STAB_GAUGE = Gauge("depth_stability", "Quote depth stability")
 SCENARIO_GAUGE = Gauge("scenario_probability", "Scenario probability", ["scenario"])
+
+# Multi-timeframe trend engines per symbol
+TREND_ENGINES: Dict[str, TrendConsensus] = {}
 
 # ---------- dynamic weighting & thresholds ----------
 def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: float = 0.0):
@@ -707,6 +711,9 @@ class Snapshot:
     ce_oi_shift: float
     pe_oi_shift: float
     zero_gamma: float
+    trend_direction: str
+    trend_score: float
+    trend_confidence: float
     scen_probs: Dict[str,float]
     scen_top: str
     trade: Dict
@@ -1077,6 +1084,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         return None
     spot_5m = spot_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
     fut_5m  = fut_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
+
+    # Multi-timeframe trend consensus
+    tc = TREND_ENGINES.setdefault(symbol, TrendConsensus())
+    trend = tc.evaluate(spot_1m)
 
     # Technicals
     rsi5 = float(tech.rsi(spot_5m["close"], 14).iloc[-1])
@@ -1586,8 +1597,21 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     top = max(probs, key=probs.get)
     if last_top and top != last_top:
         gain = probs[top] - last_probs.get(last_top, 0.0)
-        if gain < SCENARIO_FLIP_DELTA:
-            # keep old
+        expected_direction = {
+            "Bear migration": "BEAR",
+            "Bull migration / gamma carry": "BULL",
+            "Short-cover reversion up": "BULL",
+            "Pin & decay day (IV crush)": None,
+            "Squeeze continuation (one-way)": None,
+            "Event knee-jerk then revert": None,
+        }
+        dir_req = expected_direction.get(top)
+        trend_ok = True
+        if dir_req == "BULL":
+            trend_ok = trend.direction == "BULL" and trend.confidence >= tc.threshold
+        elif dir_req == "BEAR":
+            trend_ok = trend.direction == "BEAR" and trend.confidence >= tc.threshold
+        if gain < SCENARIO_FLIP_DELTA or not trend_ok:
             top = last_top
 
     # Trade plan (mechanical)
@@ -1678,6 +1702,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         ce_oi_shift=float(round(ce_shift,1)),
         pe_oi_shift=float(round(pe_shift,1)),
         zero_gamma=float(zg if zg==zg else float('nan')),
+        trend_direction=trend.direction,
+        trend_score=float(round(trend.score,2)),
+        trend_confidence=float(round(trend.confidence,2)),
         scen_probs=probs, scen_top=top, trade=tp, eq_line=eq_line
     )
 
@@ -1707,6 +1734,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "confirmations": conf,
         "position": pos,
         "basis_series": basis_series,
+        "trend": {
+            "direction": trend.direction,
+            "score": trend.score,
+            "confidence": trend.confidence,
+        },
     }
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))
