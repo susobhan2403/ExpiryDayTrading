@@ -992,7 +992,19 @@ def detect_spike_traps(
         orb = spot_1m.between_time("09:15", "09:20")
         orb_lo = float(orb["low"].min()) if not orb.empty else float("nan")
         if abs(gap) > 1.2 * ATR_D and iv_z > 1.5 and price_now < orb_lo == orb_lo:
-            alerts.append(AlertEvent("ACT", "Exhaustion gap failure"))
+            micro_ok = (
+                micro_spread_pct < 0.006
+                and micro_stab >= 3
+                and micro_cvd_slope < -0.1
+            )
+            oi_ok = oi_flags and (
+                oi_flags.get("ce_unwind_below")
+                or oi_flags.get("pe_write_above")
+            )
+            if micro_ok and oi_ok:
+                alerts.append(AlertEvent("ACT", "Exhaustion gap failure"))
+            else:
+                alerts.append(AlertEvent("IGNORE", "Exhaustion gap"))
 
     # ----- 5. Options-data traps -----
     now_t = now.time()
