@@ -9,7 +9,6 @@
   "FAR_OTM_FILTER_POINTS": 800,
   "PIN_DISTANCE_POINTS": 150,
   "ADX_RISE_MIN": 2,
-  "SNAPSHOT_MINUTES": 5,
   "ignore_is_hard_block": true,
   "ignore_cooloff_snaps": 2,
   "PRESETS": {},

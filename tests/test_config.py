@@ -1,5 +1,5 @@
 import pytest
-from src.config import compute_dynamic_bands
+from src.config import compute_dynamic_bands, load_settings
 
 
 def test_dynamic_bands_basic():
@@ -24,4 +24,9 @@ def test_dynamic_bands_midcpnifty():
         symbol="MIDCPNIFTY", expiry_today=True, ATR_D=100.0, adx5=10.0, VND=0.1, D=50.0
     )
     assert (far_pts, pin_pts) == (400, 70)
+
+
+def test_settings_without_snapshot_minutes():
+    cfg = load_settings()
+    assert "SNAPSHOT_MINUTES" not in cfg
 
