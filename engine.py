@@ -808,6 +808,13 @@ class DecisionResult:
     last_change_ts: Optional[str]
 
 
+@dataclass
+class AlertEvent:
+    """Represents a microstructure spike or false signal detection."""
+    action: str  # "ACT" or "IGNORE"
+    message: str
+
+
 def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None:
     """Push values from the latest snapshot to Prometheus gauges."""
     try:
@@ -836,6 +843,203 @@ def market_open_now() -> bool:
 def softmax(x: List[float]) -> List[float]:
     m = max(x); ex = [math.exp(v-m) for v in x]; s=sum(ex) or 1.0
     return [v/s for v in ex]
+
+
+def detect_spike_traps(
+    provider: provider_mod.MarketDataProvider,
+    symbol: str,
+    now: dt.datetime,
+    spot_1m: pd.DataFrame,
+    spot_5m: pd.DataFrame,
+    vwap_spot: float,
+    pcr: float,
+    iv_z: float,
+    iv_pct: float,
+    VND: float,
+    adx5: float,
+    rsi5: float,
+    macd_last: float,
+    macd_sig_last: float,
+    span_a_last: float,
+    span_b_last: float,
+    bb_u: float,
+    bb_l: float,
+    bb_m: float,
+    micro_spread_pct: float,
+    micro_cvd_slope: float,
+    micro_stab: float,
+    don_hi20: float,
+    don_lo20: float,
+    ATR_D: float,
+    D: float,
+    basis: float,
+    basis_slope: float,
+    chain: Dict,
+    atm_iv: float,
+    prev_close: float,
+    vp: Dict[str, float],
+) -> List[AlertEvent]:
+    """Detect sudden spikes or classic false signals and produce alerts."""
+    alerts: List[AlertEvent] = []
+    if spot_1m.empty:
+        return alerts
+
+    price_now = float(spot_1m["close"].iloc[-1])
+    rng = spot_1m["high"] - spot_1m["low"]
+    vol = spot_1m["volume"]
+    rng_mean = rng.rolling(20).mean().iloc[-1]
+    rng_std = rng.rolling(20).std().iloc[-1] or 1e-9
+    vol_mean = vol.rolling(20).mean().iloc[-1]
+    vol_std = vol.rolling(20).std().iloc[-1] or 1e-9
+    range_z = (rng.iloc[-1] - rng_mean) / (rng_std + 1e-9)
+    volume_z = (vol.iloc[-1] - vol_mean) / (vol_std + 1e-9)
+
+    val = vp.get("VAL", float("nan")) if isinstance(vp, dict) else float("nan")
+    vah = vp.get("VAH", float("nan")) if isinstance(vp, dict) else float("nan")
+
+    market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
+    minutes_from_open = (now - market_open).total_seconds() / 60.0
+
+    # ----- 1. Price-action spikes -----
+    # Liquidity vacuum wicks
+    if (
+        (dt.time(9, 15) <= now.time() <= dt.time(9, 20)
+         or dt.time(12, 0) <= now.time() <= dt.time(13, 0)
+         or dt.time(15, 20) <= now.time() <= dt.time(15, 29))
+        and range_z > 2 and volume_z < 0.5
+        and micro_spread_pct > 0.006 and abs(micro_cvd_slope) < 0.1
+    ):
+        alerts.append(AlertEvent("IGNORE", "Liquidity vacuum wick"))
+
+    # Opening auction imbalance head-fake
+    if 5 <= minutes_from_open <= 15:
+        orb = spot_1m.between_time("09:15", "09:20")
+        if not orb.empty:
+            orb_hi = float(orb["high"].max())
+            orb_lo = float(orb["low"].min())
+            cl = float(spot_1m["close"].iloc[-1])
+            hi = float(spot_1m["high"].iloc[-1])
+            lo = float(spot_1m["low"].iloc[-1])
+            if hi > orb_hi and cl < orb_hi and abs(micro_cvd_slope) < 0.1:
+                alerts.append(AlertEvent("IGNORE", "ORB head-fake"))
+            if lo < orb_lo and cl > orb_lo and abs(micro_cvd_slope) < 0.1:
+                alerts.append(AlertEvent("IGNORE", "ORB head-fake"))
+
+    # Closing ramp / MOC spike
+    if dt.time(15, 20) <= now.time() <= dt.time(15, 29):
+        alerts.append(AlertEvent("IGNORE", "MOC spike window"))
+
+    # News knee-jerk
+    if iv_z >= 2 and range_z > 2 and len(spot_1m) >= 2:
+        prev_close1 = float(spot_1m["close"].iloc[-2])
+        if abs(price_now - prev_close1) < ATR_D * 0.3:
+            alerts.append(AlertEvent("IGNORE", "News knee-jerk"))
+
+    # ----- 2. Volume & volatility spikes -----
+    if volume_z > 3 and range_z < 0.3 and abs(micro_cvd_slope) < 0.1:
+        alerts.append(AlertEvent("IGNORE", "Block trade churn"))
+    if iv_z > 2 and val == val and vah == vah and val <= price_now <= vah:
+        alerts.append(AlertEvent("IGNORE", "IV spike no direction"))
+    if iv_pct == iv_pct and iv_pct < 25 and VND < 0.4 and adx5 < ADX_LOW:
+        alerts.append(AlertEvent("IGNORE", "IV crush trap"))
+
+    # ----- 3. Indicator false signals -----
+    if (rsi5 > 70 or rsi5 < 30) and adx5 >= ADX_LOW:
+        if (rsi5 > 70 and price_now > vwap_spot) or (rsi5 < 30 and price_now < vwap_spot):
+            alerts.append(AlertEvent("IGNORE", "RSI extreme in trend"))
+    bb_width = (bb_u - bb_l) / bb_m if bb_m else 0.0
+    prev_width = 0.0
+    if len(spot_5m) >= 21:
+        bb_u_p, bb_m_p, bb_l_p = tech.bollinger(spot_5m["close"].shift(1).dropna(), 20, 2)
+        prev_width = (float(bb_u_p.iloc[-1]) - float(bb_l_p.iloc[-1])) / (float(bb_m_p.iloc[-1]) or 1.0)
+    if abs(macd_last - macd_sig_last) < 0.1 and abs(macd_last) < 0.1 and bb_width <= prev_width and range_z < 1:
+        alerts.append(AlertEvent("IGNORE", "MACD micro cross in chop"))
+    try:
+        span_a_prev = float(spot_5m["close"].iloc[-27])  # proxy for shift
+    except Exception:
+        span_a_prev = span_a_last
+    try:
+        span_b_prev = float(spot_5m["close"].iloc[-27])
+    except Exception:
+        span_b_prev = span_b_last
+    if ((span_a_last > span_b_last) != (span_a_prev > span_b_prev)) and price_now <= max(span_a_last, span_b_last):
+        alerts.append(AlertEvent("IGNORE", "Ichimoku twist head-fake"))
+
+    # ----- 4. Pattern traps -----
+    if don_hi20 == don_hi20 and price_now < don_hi20 and spot_5m["high"].iloc[-1] > don_hi20 and (
+        spot_5m["high"].iloc[-1] - don_hi20) < 0.3 * ATR_D and micro_cvd_slope < 0:
+        alerts.append(AlertEvent("IGNORE", "False breakout"))
+    wick = spot_5m["high"].iloc[-1] - spot_5m["close"].iloc[-1]
+    total_rng = spot_5m["high"].iloc[-1] - spot_5m["low"].iloc[-1]
+    if total_rng > 0 and (wick / total_rng) > 0.6 and volume_z < 1:
+        alerts.append(AlertEvent("IGNORE", "Stop-run wick"))
+    if prev_close == prev_close and minutes_from_open < 60:
+        gap = float(spot_1m["open"].iloc[0]) - prev_close
+        orb = spot_1m.between_time("09:15", "09:20")
+        orb_lo = float(orb["low"].min()) if not orb.empty else float("nan")
+        if abs(gap) > 1.2 * ATR_D and iv_z > 1.5 and price_now < orb_lo == orb_lo:
+            alerts.append(AlertEvent("ACT", "Exhaustion gap failure"))
+
+    # ----- 5. Options-data traps -----
+    now_t = now.time()
+    if now_t < dt.time(9, 20) or now_t > dt.time(15, 5) or micro_spread_pct > 0.01:
+        alerts.append(AlertEvent("IGNORE", "OI change unreliable"))
+    try:
+        strikes = chain.get("strikes", [])
+        atm = strikes[min(range(len(strikes)), key=lambda i: abs(strikes[i] - price_now))] if strikes else None
+        def filt_pcr():
+            if not strikes or atm is None:
+                return float("nan")
+            idx = strikes.index(atm)
+            subset = strikes[max(0, idx-8): idx+9]
+            tot_c = tot_p = 0.0
+            for k in subset:
+                c = chain["calls"].get(k, {})
+                p = chain["puts"].get(k, {})
+                if c.get("bid",0)>0 and c.get("ask",0)>0 and p.get("bid",0)>0 and p.get("ask",0)>0:
+                    tot_c += c.get("oi",0)
+                    tot_p += p.get("oi",0)
+            if tot_c and tot_p:
+                return tot_p / tot_c
+            return float("nan")
+        pcr_star = filt_pcr()
+        if pcr_star == pcr_star and abs(pcr - pcr_star) > 0.5:
+            alerts.append(AlertEvent("IGNORE", "PCR distorted by OTM noise"))
+        liquid = sum(1 for k in strikes if chain["calls"].get(k, {}).get("volume",0) > 0 and chain["puts"].get(k, {}).get("volume",0) > 0)
+        if liquid < 5:
+            alerts.append(AlertEvent("IGNORE", "Max pain unreliable"))
+    except Exception:
+        pass
+    if micro_spread_pct > 0.01:
+        alerts.append(AlertEvent("IGNORE", "ATM IV wide spread"))
+
+    # ----- 6. Futures/basis quirks -----
+    if basis_slope > 0.5 and iv_z > 0 and abs(D) < ATR_D * 0.3:
+        alerts.append(AlertEvent("IGNORE", "Basis squeeze"))
+    if abs(basis_slope) > ATR_D and now.day <= 2:
+        alerts.append(AlertEvent("IGNORE", "Dividend/financing basis shift"))
+
+    # ----- 7. Cross-asset & composition -----
+    try:
+        fx_df = provider.get_spot_ohlcv("USDINR", "1m", 15)
+        if not fx_df.empty:
+            fx_move = fx_df["close"].iloc[-1] / fx_df["close"].iloc[0] - 1.0
+            if abs(fx_move) >= 0.004:
+                alerts.append(AlertEvent("IGNORE", "USD/INR spike"))
+    except Exception:
+        pass
+    if abs(micro_cvd_slope) < 0.1 and range_z > 2:
+        alerts.append(AlertEvent("IGNORE", "Single-stock divergence"))
+
+    # ----- 8. Data-quality artifacts -----
+    if (spot_1m["volume"] < 0).any():
+        alerts.append(AlertEvent("IGNORE", "Bad ticks detected"))
+
+    # ----- 9. Behavioral games -----
+    if micro_stab < 3 and micro_spread_pct > 0.006:
+        alerts.append(AlertEvent("IGNORE", "Quote instability"))
+
+    return alerts
 
 # ---------- normalized evidence & scoring ----------
 SCENARIOS = [
@@ -1182,6 +1386,20 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     if spot_1m.empty and fut_1m.empty:
         logger.warning(f"{symbol}: both spot and futures OHLCV empty. Check Kite Historical addon and access token.")
         return None
+
+    # Data-quality filters: remove negative volume and exclude preopen/MOC seconds
+    if not spot_1m.empty:
+        spot_1m = spot_1m[spot_1m.get("volume", 0) >= 0]
+        try:
+            spot_1m = spot_1m.between_time("09:15:30", "15:29:59")
+        except Exception:
+            pass
+    if not fut_1m.empty:
+        fut_1m = fut_1m[fut_1m.get("volume", 0) >= 0]
+        try:
+            fut_1m = fut_1m.between_time("09:15:30", "15:29:59")
+        except Exception:
+            pass
     spot_5m = spot_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
     fut_5m  = fut_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
 
@@ -1204,8 +1422,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     if daily.shape[0] >= 2:
         prev = daily.iloc[-2]
         cpr_pp, cpr_bc, cpr_tc = tech.cpr_from_daily(prev['high'], prev['low'], prev['close'])
+        prev_close = float(prev['close'])
     else:
         cpr_pp = cpr_bc = cpr_tc = float('nan')
+        prev_close = float('nan')
     # Donchian and Keltner
     don_hi20, don_lo20 = tech.donchian(spot_5m['close'], 20)
     don_hi55, don_lo55 = tech.donchian(spot_5m['close'], 55)
@@ -1462,6 +1682,42 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     vals = [x for x in arr[-60:] if x==x and x>0]
     iv_pct_hint = round(100.0 * (sum(1 for x in vals if x<=atm_iv)/len(vals)),1) if (vals and atm_iv==atm_iv) else float('nan')
     iv_obs = len(vals)
+
+    # Detect microstructure spikes and false signals
+    alerts = detect_spike_traps(
+        provider,
+        symbol,
+        now,
+        spot_1m,
+        spot_5m,
+        vwap_spot,
+        pcr,
+        iv_z,
+        iv_pct_hint,
+        VND,
+        adx5,
+        rsi5,
+        macd_last,
+        macd_sig_last,
+        span_a_last,
+        span_b_last,
+        bb_u,
+        bb_l,
+        bb_m,
+        micro_spread_pct,
+        micro_cvd_slope,
+        micro_stab,
+        don_hi20_l,
+        don_lo20_l,
+        ATR_D,
+        D,
+        basis,
+        basis_slope,
+        chain,
+        atm_iv,
+        prev_close,
+        vp,
+    )
 
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
@@ -1979,7 +2235,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         action_line = Style.BRIGHT + Fore.YELLOW + f"Action: NO-TRADE | {reason}" + Style.RESET_ALL
 
     entry_gate = f"Enter when atleast {threshold} of below {total} are satisfied:"
-    verdict_ok = (side == "BUY") and (met >= threshold)
+    verdict_ok = (side == "BUY") and (met >= threshold) and not any(a.action == "IGNORE" for a in alerts)
     verdict = (Style.BRIGHT + Fore.GREEN + "Final Verdict: Enter Now" + Style.RESET_ALL) if verdict_ok else (Style.BRIGHT + Fore.YELLOW + "Final Verdict: Hold" + Style.RESET_ALL)
 
     from src.output.format import format_output_line
@@ -2131,6 +2387,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     except Exception:
         pass
     logger.info(line)
+
+    for al in alerts:
+        logger.info(f"ALERT: {al.action} {al.message}")
 
     if use_telegram and TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
         try:
