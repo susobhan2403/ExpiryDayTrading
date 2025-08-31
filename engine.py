@@ -2294,6 +2294,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         if header: f.write(",".join(cols)+"\n")
         f.write(",".join(map(str,row))+"\n")
 
+    # Update ignore-block state before persisting so stored state is current
+    ignore_block = update_ignore_block(state, alerts, IGNORE_COOLOFF_SNAPS, IGNORE_IS_HARD_BLOCK)
+    ignore_block_active = state.get("ignore_block_active", False)
+    ignore_cooloff_count = state.get("ignore_cooloff_count", 0)
+
     # Save state (preserve existing keys such as open trade and snap index)
     state.update({
         "pcr": pcr,
@@ -2430,11 +2435,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         action_line = Style.BRIGHT + Fore.YELLOW + f"Action: NO-TRADE | {reason}" + Style.RESET_ALL
 
     entry_gate = f"Enter when atleast {threshold} of below {total} are satisfied:"
-    ignore_block = update_ignore_block(state, alerts, IGNORE_COOLOFF_SNAPS, IGNORE_IS_HARD_BLOCK)
     verdict_ok = (side == "BUY") and (met >= threshold) and not ignore_block
     verdict = (Style.BRIGHT + Fore.GREEN + "Final Verdict: Enter Now" + Style.RESET_ALL) if verdict_ok else (Style.BRIGHT + Fore.YELLOW + "Final Verdict: Hold" + Style.RESET_ALL)
-    ignore_block_active = state.get("ignore_block_active", False)
-    ignore_cooloff_count = state.get("ignore_cooloff_count", 0)
 
     from src.output.format import format_output_line
     snap_dict = {
