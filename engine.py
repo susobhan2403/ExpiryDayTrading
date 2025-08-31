@@ -32,7 +32,7 @@ from colorama import init as colorama_init, Fore, Style
 import src.provider.kite as provider_mod
 import src.features.technicals as tech
 import src.features.options as opt
-from src.config import load_settings, save_settings, compute_dynamic_bands
+from src.config import load_settings, save_settings, STEP_MAP
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from prometheus_client import Gauge, start_http_server
 from src.strategy.trend_consensus import TrendConsensus, TrendResult
@@ -1735,7 +1735,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     atr = float(tech.atr(spot_1m, 14)) if len(spot_1m) else 0.0
     ATR_D = max(1.0, atr)
     VND = abs(D) / ATR_D
-    step = 100 if "BANK" in symbol.upper() else 50
+    step = STEP_MAP.get(symbol.upper(), 50)
     SSD  = abs(D) / step
     PD   = 100.0 * abs(D) / max(1.0, spot_now)
 
@@ -1864,7 +1864,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
     # Dynamic banding and filters for OI analysis
-    step = 100 if "BANK" in symbol.upper() else 50
+    step = STEP_MAP.get(symbol.upper(), 50)
     expiry_today = (dt.date.fromisoformat(expiry) == now.date())
     dm_above, dm_below, dm_far, dm_pin = compute_dynamic_bands(symbol, expiry_today, ATR_D, adx5, VND, D, step)
     # Persist dynamic choices for visibility
@@ -1946,7 +1946,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         unwind_present = any( x < -mad_k*max(1,ce_m) for x in ce_deltas.values() ) or any( x < -mad_k*max(1,pe_m) for x in pe_deltas.values() )
         # adjacent two-sided
         if atm in chain["strikes"]:
-            step = 100 if "BANK" in symbol.upper() else 50
+            step = STEP_MAP.get(symbol.upper(), 50)
             s1, s2 = atm-step, atm+step
             two_sided_adjacent = ( (ce_deltas.get(s2,0)>mad_k*max(1,ce_m)) and (pe_deltas.get(s1,0)>mad_k*max(1,pe_m)) )
         total_turn = abs(w_pe) + abs(w_ce)
@@ -2344,7 +2344,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         return mapping.get(name, name)
 
     iv_crush = (div == div and div <= 0) and (iv_pct_hint == iv_pct_hint and iv_pct_hint < 33)
-    step_sz = 100 if "BANK" in symbol.upper() else 50
+    step_sz = STEP_MAP.get(symbol.upper(), 50)
     def suggest_spread(action: str):
         if action == "BUY_CE":
             return ("BUY", (int(atm_k + step_sz), int(atm_k + 2*step_sz)))
@@ -2515,10 +2515,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             pass
         dt_minutes = max(1.0, poll_secs/60.0)
         prev_chain_state = state.get("chain") if isinstance(state, dict) else None
-        voi = compute_voi(prev_chain_state or {"calls":{}, "puts":{}}, {"calls": chain["calls"], "puts": chain["puts"]}, dt_minutes, atm_k or 0, 100 if "BANK" in symbol.upper() else 50)
-        pin_d = pin_density(chain, atm_k or 0, 100 if "BANK" in symbol.upper() else 50, n=3)
+        step_sz = STEP_MAP.get(symbol.upper(), 50)
+        voi = compute_voi(prev_chain_state or {"calls":{}, "puts":{}}, {"calls": chain["calls"], "puts": chain["puts"]}, dt_minutes, atm_k or 0, step_sz)
+        pin_d = pin_density(chain, atm_k or 0, step_sz, n=3)
         gex = gex_from_chain(chain, spot_now, mins_to_exp, RISK_FREE, atm_iv or 0.2)
-        zg = zero_gamma_level(chain, spot_now, mins_to_exp, RISK_FREE, atm_iv or 0.2, 100 if "BANK" in symbol.upper() else 50)
+        zg = zero_gamma_level(chain, spot_now, mins_to_exp, RISK_FREE, atm_iv or 0.2, step_sz)
         prev_gex = (state or {}).get("gex", float('nan')) if isinstance(state, dict) else float('nan')
         d_gex_toward_zero = (abs(prev_gex) - abs(gex)) if (prev_gex==prev_gex and gex==gex) else 0.0
         macd_hist = (macd_line - macd_sig)
@@ -2538,7 +2539,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         dist_to_pin = abs((atm_k or 0) - (zg if zg==zg else atm_k or 0))
         erp = erp_probability({
             "pin_density": 0 if pin_d!=pin_d else pin_d,
-            "dist_to_pin": dist_to_pin / (100 if "BANK" in symbol.upper() else 50),
+            "dist_to_pin": dist_to_pin / STEP_MAP.get(symbol.upper(), 50),
             "ivp_low": iv_pct_hint==iv_pct_hint and iv_pct_hint < 33,
             "gex_small": abs(gex) < 1e6,
             "oi_conc_at_atm": 0.0,
