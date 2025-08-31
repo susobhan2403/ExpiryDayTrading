@@ -228,6 +228,10 @@ def load_tf_config() -> Tuple[Dict[int, float], Dict[str, Dict[int, float]]]:
 
 TF_BASE_WEIGHTS, TF_BIAS = load_tf_config()
 
+_cfg = load_settings() or {}
+IGNORE_IS_HARD_BLOCK = bool(_cfg.get("ignore_is_hard_block", True))
+IGNORE_COOLOFF_SNAPS = int(_cfg.get("ignore_cooloff_snaps", 2))
+
 def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: float = 0.0):
     """Return (scenario_weights, gate_cap, tf_weights) adjusted for volatility,
     time of day and institutional bias."""
@@ -826,6 +830,28 @@ class AlertEvent:
     """Represents a microstructure spike or false signal detection."""
     action: str  # "ACT" or "IGNORE"
     message: str
+
+
+def update_ignore_block(state: Dict, alerts: List[AlertEvent], cooloff: int, hard_block: bool) -> bool:
+    """Update ignore alert block state and return if trades should be blocked."""
+    if not hard_block:
+        state.pop("ignore_block_active", None)
+        state.pop("ignore_cooloff_count", None)
+        return False
+    active = bool(state.get("ignore_block_active", False))
+    count = int(state.get("ignore_cooloff_count", 0))
+    has_ignore = any(a.action == "IGNORE" for a in alerts)
+    if has_ignore:
+        active = True
+        count = 0
+    elif active:
+        count += 1
+        if count >= cooloff:
+            active = False
+            count = 0
+    state["ignore_block_active"] = active
+    state["ignore_cooloff_count"] = count
+    return active
 
 
 def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None:
@@ -2158,6 +2184,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "last_score": tc.last_score,
         "smoothed_score": tc.smoothed_score,
         "last_change_ts": tc.last_change_ts.isoformat() if tc.last_change_ts else None,
+        "ignore_block_active": ignore_block_active,
+        "ignore_cooloff_count": ignore_cooloff_count,
     }
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))
@@ -2275,8 +2303,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         action_line = Style.BRIGHT + Fore.YELLOW + f"Action: NO-TRADE | {reason}" + Style.RESET_ALL
 
     entry_gate = f"Enter when atleast {threshold} of below {total} are satisfied:"
-    verdict_ok = (side == "BUY") and (met >= threshold) and not any(a.action == "IGNORE" for a in alerts)
+    ignore_block = update_ignore_block(state, alerts, IGNORE_COOLOFF_SNAPS, IGNORE_IS_HARD_BLOCK)
+    verdict_ok = (side == "BUY") and (met >= threshold) and not ignore_block
     verdict = (Style.BRIGHT + Fore.GREEN + "Final Verdict: Enter Now" + Style.RESET_ALL) if verdict_ok else (Style.BRIGHT + Fore.YELLOW + "Final Verdict: Hold" + Style.RESET_ALL)
+    ignore_block_active = state.get("ignore_block_active", False)
+    ignore_cooloff_count = state.get("ignore_cooloff_count", 0)
 
     from src.output.format import format_output_line
     snap_dict = {
