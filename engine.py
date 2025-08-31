@@ -1775,8 +1775,16 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     state_file = OUT_DIR / f"state_{symbol}.json"
     state = {}
     if state_file.exists():
-        try: state = json.loads(state_file.read_text())
-        except: state = {}
+        try:
+            state = json.loads(state_file.read_text())
+        except Exception:
+            state = {}
+
+    # Track snapshot index and any open trade carried in state
+    snap_idx = int(state.get("snap_idx", 0)) + 1
+    state["snap_idx"] = snap_idx
+    open_trade = state.get("open_trade") if isinstance(state.get("open_trade"), dict) else None
+
     dpcr_series = state.get("dpcr_series", [])
 
     # Basis & VWAP relation (persist rolling series)
@@ -2004,6 +2012,17 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         vp,
         oi_flags,
     )
+
+    # If an open trade exists, adjust it based on any IGNORE alerts
+    if open_trade:
+        if len(spot_5m) >= 2:
+            last_swing = float(spot_5m["low"].iloc[-2]) if open_trade.get("direction", 1) > 0 else float(spot_5m["high"].iloc[-2])
+        else:
+            last_swing = vwap_spot
+        exit_frac = manage_trade_on_ignore(state, open_trade, alerts, vwap_spot, last_swing, snap_idx)
+        if exit_frac:
+            logger.info(f"Scale out {exit_frac*100:.0f}% due to consecutive IGNORE alerts")
+        state["open_trade"] = open_trade
 
     inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
     dyn_weights, gate_cap, tf_weights = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
@@ -2234,8 +2253,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         if header: f.write(",".join(cols)+"\n")
         f.write(",".join(map(str,row))+"\n")
 
-    # Save state
-    state = {
+    # Save state (preserve existing keys such as open trade and snap index)
+    state.update({
         "pcr": pcr,
         "atm_iv": atm_iv,
         "dpcr_series": dpcr_series,
@@ -2253,7 +2272,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "last_change_ts": tc.last_change_ts.isoformat() if tc.last_change_ts else None,
         "ignore_block_active": ignore_block_active,
         "ignore_cooloff_count": ignore_cooloff_count,
-    }
+    })
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))
     persist_trend_engines()
