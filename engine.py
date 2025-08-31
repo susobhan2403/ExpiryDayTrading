@@ -20,7 +20,7 @@ Expiry Day Engine (Kite provider + Normalized Framework)
 from __future__ import annotations
 import os, sys, json, time, math, argparse, logging, pathlib, itertools, statistics, glob
 import datetime as dt
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, asdict
 
 import numpy as np
@@ -985,6 +985,7 @@ def detect_spike_traps(
     prev_close: float,
     vp: Dict[str, float],
     oi_flags: Optional[Dict[str, bool]] = None,
+    state: Optional[Dict[str, Any]] = None,
 ) -> List[AlertEvent]:
     """Detect sudden spikes or classic false signals and produce alerts."""
     alerts: List[AlertEvent] = []
@@ -1003,9 +1004,48 @@ def detect_spike_traps(
 
     val = vp.get("VAL", float("nan")) if isinstance(vp, dict) else float("nan")
     vah = vp.get("VAH", float("nan")) if isinstance(vp, dict) else float("nan")
+    poc = vp.get("POC", float("nan")) if isinstance(vp, dict) else float("nan")
 
     market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
     minutes_from_open = (now - market_open).total_seconds() / 60.0
+
+    # ----- IV range spike tracking -----
+    def _oi_side(flags: Optional[Dict[str, bool]]) -> str:
+        if not flags:
+            return "none"
+        bull = flags.get("pe_write_above", False) or flags.get("ce_unwind_below", False)
+        bear = flags.get("ce_write_above", False) or flags.get("pe_unwind_below", False)
+        if bull and not bear:
+            return "bull"
+        if bear and not bull:
+            return "bear"
+        return "none"
+
+    if state is not None:
+        iv_state = state.setdefault("iv_range_event", {"active": False, "side": "none", "oi_flip_count": 0})
+        if not iv_state.get("active"):
+            if iv_z >= 2 and range_z > 2:
+                alerts.append(AlertEvent("IGNORE", "IV range spike"))
+                iv_state.update({"active": True, "side": _oi_side(oi_flags), "oi_flip_count": 0})
+        else:
+            side_now = _oi_side(oi_flags)
+            initial = iv_state.get("side", "none")
+            opposite = "bear" if initial == "bull" else "bull" if initial == "bear" else "none"
+            if side_now == opposite and side_now != "none":
+                iv_state["oi_flip_count"] = iv_state.get("oi_flip_count", 0) + 1
+            else:
+                iv_state["oi_flip_count"] = 0
+            reclaimed = ((price_now >= vwap_spot) or (poc == poc and price_now >= poc))
+            if (
+                iv_state.get("oi_flip_count", 0) >= 2
+                and iv_z < 0
+                and reclaimed
+            ):
+                alerts.append(AlertEvent("ACT", "IV range spike reversal"))
+                iv_state["active"] = False
+    else:
+        if iv_z >= 2 and range_z > 2:
+            alerts.append(AlertEvent("IGNORE", "IV range spike"))
 
     # ----- 1. Price-action spikes -----
     # Liquidity vacuum wicks
@@ -2011,6 +2051,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         prev_close,
         vp,
         oi_flags,
+        state,
     )
 
     # If an open trade exists, adjust it based on any IGNORE alerts
