@@ -156,10 +156,37 @@ SCENARIO_GAUGE = Gauge("scenario_probability", "Scenario probability", ["scenari
 TREND_ENGINES: Dict[str, TrendConsensus] = {}
 
 # ---------- dynamic weighting & thresholds ----------
+DEFAULT_TF_WEIGHTS = {1: 0.2, 5: 0.3, 10: 0.25, 15: 0.25}
+DEFAULT_TF_BIAS = {
+    "FII": {10: 0.05, 15: 0.05},
+    "DII": {1: 0.05, 5: 0.05}
+}
+
+def load_tf_config() -> Tuple[Dict[int, float], Dict[str, Dict[int, float]]]:
+    """Load base timeframe weights and bias adjustments from settings.json."""
+    try:
+        cfg = load_settings() or {}
+        base_cfg = cfg.get("TF_WEIGHTS", {})
+        base = {**DEFAULT_TF_WEIGHTS,
+                **{int(k): float(v) for k, v in base_cfg.items() if str(k).isdigit()}}
+        bias_cfg = cfg.get("TF_BIAS", {})
+        bias = {
+            "FII": {**DEFAULT_TF_BIAS["FII"],
+                    **{int(k): float(v) for k, v in bias_cfg.get("FII", {}).items() if str(k).isdigit()}},
+            "DII": {**DEFAULT_TF_BIAS["DII"],
+                    **{int(k): float(v) for k, v in bias_cfg.get("DII", {}).items() if str(k).isdigit()}},
+        }
+        return base, bias
+    except Exception:
+        return DEFAULT_TF_WEIGHTS.copy(), DEFAULT_TF_BIAS.copy()
+
+TF_BASE_WEIGHTS, TF_BIAS = load_tf_config()
+
 def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: float = 0.0):
-    """Return (weights, gate_cap) adjusted for volatility, time of day and
-    institutional bias."""
+    """Return (scenario_weights, gate_cap, tf_weights) adjusted for volatility,
+    time of day and institutional bias."""
     weights = WEIGHTS.copy()
+    tf_weights = TF_BASE_WEIGHTS.copy()
     base_range = 300 if "BANK" in symbol.upper() else 150
     # Volatility regime – emphasise volatility block when range expands
     vol_factor = max(-0.1, min(0.1, (atr_d - base_range) / max(1.0, base_range)))
@@ -176,17 +203,24 @@ def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: 
         weights["volatility"] += 0.05
         weights["price_trend"] -= 0.025
         weights["options_flow"] -= 0.025
-    # Institutional bias tilts towards trend weight
+    # Institutional bias tilts towards trend weight and timeframe emphasis
     if inst_bias > 0:
         weights["price_trend"] += 0.05
         weights["volatility"] -= 0.05
+        for tf, delta in TF_BIAS.get("FII", {}).items():
+            tf_weights[tf] = tf_weights.get(tf, 0) + delta
     elif inst_bias < 0:
         weights["price_trend"] += 0.05
         weights["volatility"] -= 0.05
-    tot = sum(max(v,0.0) for v in weights.values()) or 1.0
-    weights = {k: max(v,0.0)/tot for k,v in weights.items()}
-    gate = 0.49 + 0.1 * min(1.0, max(0.0, atr_d/(base_range*1.5)))
-    return weights, gate
+        for tf, delta in TF_BIAS.get("DII", {}).items():
+            tf_weights[tf] = tf_weights.get(tf, 0) + delta
+    # Normalize weights
+    tot = sum(max(v, 0.0) for v in weights.values()) or 1.0
+    weights = {k: max(v, 0.0) / tot for k, v in weights.items()}
+    tf_tot = sum(max(v, 0.0) for v in tf_weights.values()) or 1.0
+    tf_weights = {k: max(v, 0.0) / tf_tot for k, v in tf_weights.items()}
+    gate = 0.49 + 0.1 * min(1.0, max(0.0, atr_d / (base_range * 1.5)))
+    return weights, gate, tf_weights
 
 def dynamic_thresholds(symbol: str, atr_d: float, avg_oi: float) -> Tuple[float, float]:
     """Return (MAD multiplier, mph_norm threshold) adjusted for liquidity and
@@ -1085,10 +1119,6 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     spot_5m = spot_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
     fut_5m  = fut_1m.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna()
 
-    # Multi-timeframe trend consensus
-    tc = TREND_ENGINES.setdefault(symbol, TrendConsensus())
-    trend = tc.evaluate(spot_1m)
-
     # Technicals
     rsi5 = float(tech.rsi(spot_5m["close"], 14).iloc[-1])
     macd_line, macd_sig, _ = tech.macd(spot_5m["close"]); macd_last, macd_sig_last = float(macd_line.iloc[-1]), float(macd_sig.iloc[-1])
@@ -1526,7 +1556,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     }
 
     inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
-    dyn_weights, gate_cap = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
+    dyn_weights, gate_cap, tf_weights = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
+
+    tc = TREND_ENGINES.setdefault(symbol, TrendConsensus())
+    tc.weights = tf_weights
+    trend = tc.evaluate(spot_1m)
 
     # Scoring: expiry vs non-expiry (mode override)
     if mode == "expiry":
