@@ -14035,3 +14035,183 @@ Scenario: Bear Migration 19% (alt: Bull Migration 20%)
 4. IV crushing (div<=0, pctile<33) - [31m✘[0m
 [1m[33mFinal Verdict: Hold[0m
 SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 17.39 | Kelly 0.10
+2025-08-31 11:41:30,001 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 11:41:30,002 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 11:41:32,179 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 11:41:32,481 INFO: 11:41 IST | NIFTY 24426.85 | VWAP(fut) 24620
+D=-73 | ATR_D=22 | VND=3.25 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.24) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 15% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 86% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.71 | Kelly 0.10
+2025-08-31 11:41:32,482 INFO: 
+2025-08-31 11:41:33,752 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 11:41:34,273 INFO: 11:41 IST | BANKNIFTY 53655.65 | VWAP(fut) 54187
+D=-1344 | ATR_D=49 | VND=27.03 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=-0.17) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 14% (alt: Bear Migration 19%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.57 | Kelly 0.10
+2025-08-31 11:41:34,274 INFO: 
+2025-08-31 11:41:36,835 INFO: 11:41 IST | SENSEX 79809.65 | VWAP(fut) 80571
+D=-390 | ATR_D=70 | VND=5.51 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 13% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 22.52 | Kelly 0.10
+2025-08-31 11:41:36,836 INFO: 
+2025-08-31 11:41:38,417 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 11:41:38,884 INFO: 11:41 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12590
+D=-149 | ATR_D=14 | VND=10.4 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.22) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 19% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 17.30 | Kelly 0.10
+2025-08-31 12:02:05,572 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 12:02:05,573 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 12:02:07,407 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 12:02:08,059 INFO: 12:02 IST | NIFTY 24426.85 | VWAP(fut) 24614
+D=-73 | ATR_D=22 | VND=3.25 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.24) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 17%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 86% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.73 | Kelly 0.10
+2025-08-31 12:02:08,060 INFO: 
+2025-08-31 12:02:09,787 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 12:02:10,448 INFO: 12:02 IST | BANKNIFTY 53655.65 | VWAP(fut) 54167
+D=-1344 | ATR_D=49 | VND=27.01 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=-0.17) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 14% (alt: Squeeze Continuation (One-way) 17%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.56 | Kelly 0.10
+2025-08-31 12:02:10,448 INFO: 
+2025-08-31 12:02:12,849 INFO: 12:02 IST | SENSEX 79809.65 | VWAP(fut) 80544
+D=-390 | ATR_D=70 | VND=5.53 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 15% (alt: Event Knee-jerk then Revert 16%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 22.62 | Kelly 0.10
+2025-08-31 12:02:12,850 INFO: 
+2025-08-31 12:02:14,104 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 12:02:14,546 INFO: 12:02 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12569
+D=-149 | ATR_D=14 | VND=10.64 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.11) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 19% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 93% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 17.68 | Kelly 0.10
+2025-08-31 12:10:21,180 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 12:10:21,181 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-08-31 12:10:23,048 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 12:10:23,390 INFO: 12:10 IST | NIFTY 24426.85 | VWAP(fut) 24612
+D=-73 | ATR_D=22 | VND=3.2 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.23) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 15% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 86% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.37 | Kelly 0.10
+2025-08-31 12:10:23,391 INFO: 
+2025-08-31 12:10:25,468 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 12:10:26,131 INFO: 12:10 IST | BANKNIFTY 53655.65 | VWAP(fut) 54161
+D=-1344 | ATR_D=50 | VND=26.55 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=0.19) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 14% (alt: Squeeze Continuation (One-way) 19%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 95% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 21.19 | Kelly 0.10
+2025-08-31 12:10:26,132 INFO: 
+2025-08-31 12:10:28,872 INFO: 12:10 IST | SENSEX 79809.65 | VWAP(fut) 80542
+D=-390 | ATR_D=71 | VND=5.45 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift -0.0/hr (norm -0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 13% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | Pin & decay: prefer credits / tiny scalps[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 22.27 | Kelly 0.10
+2025-08-31 12:10:28,873 INFO: 
+2025-08-31 12:10:30,370 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 12:10:30,941 INFO: 12:10 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12565
+D=-149 | ATR_D=14 | VND=10.61 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.0) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 19% (alt: Bull Migration 20%)
+[1m[33mAction: NO-TRADE | microstructure filter (qi/stab)[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 17.64 | Kelly 0.10
