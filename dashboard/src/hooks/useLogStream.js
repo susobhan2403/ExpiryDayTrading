@@ -42,6 +42,10 @@ export default function useLogStream(symbol) {
   const [spot, setSpot] = useState(null);
 
   useEffect(() => {
+    // Reset state whenever the symbol changes so alerts from other indices
+    // don't bleed into the current view.
+    setLines({});
+    setSpot(null);
     const es = new EventSource(`/events?symbol=${symbol}`);
     es.onmessage = (e) => {
       try {
@@ -72,10 +76,17 @@ export default function useLogStream(symbol) {
         const colored = colorize(line);
 
         // Only keep the most recent line for each indicator and ignore
-        // duplicates so that stale/noisy data doesn't accumulate.
+        // duplicates so that stale/noisy data doesn't accumulate. Alerts are
+        // appended so multiple alert lines can be displayed sequentially.
         setLines((prevLines) => {
-          const prevLine = prevLines[indicator] ? prevLines[indicator][0] : null;
-          if (prevLine === colored) return prevLines;
+          if (indicator === 'alerts') {
+            const prevArr = prevLines.alerts || [];
+            if (prevArr[prevArr.length - 1] === colored) return prevLines;
+            const nextArr = [...prevArr, colored].slice(-10); // cap to last 10
+            return { ...prevLines, alerts: nextArr };
+          }
+          const prevArr = prevLines[indicator] || [];
+          if (prevArr[0] === colored) return prevLines;
           return { ...prevLines, [indicator]: [colored] };
         });
       } catch (err) {
