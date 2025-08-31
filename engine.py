@@ -2059,14 +2059,17 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     atr_mult = 1.5 if inst_bias > 0 else 1.0
     tp = trade_plan(top, atr, atr_mult)
 
-    # Microstructure guardrail: require strong queue imbalance and quote stability
+    # Microstructure guardrail: require strong queue imbalance, tight spread, and quote stability
     if tp.get("action") in ("BUY_CE", "BUY_PE"):
         direction = 1 if tp["action"] == "BUY_CE" else -1
         qi_ok = (micro_qi * direction) > 0.60
         stab_ok = micro_stab >= 0.3  # ≈3s of stable best bid/ask
-        if not (qi_ok and stab_ok):
-            logger.info(f"Abort entry: qi={micro_qi:.2f}, stab={micro_stab:.2f}")
-            tp = {"action": "NO-TRADE", "why": "microstructure filter (qi/stab)"}
+        spread_ok = micro_spread_pct <= 0.006
+        if not (spread_ok and qi_ok and stab_ok):
+            logger.info(
+                f"Abort entry: spread={micro_spread_pct:.4f}, qi={micro_qi:.2f}, stab={micro_stab:.2f}"
+            )
+            tp = {"action": "NO-TRADE", "why": "microstructure filter (spread/qi/stab)"}
 
     if not should_act:
         tp = {"action": "NO-TRADE", "why": "confidence below threshold"}
