@@ -18,7 +18,7 @@ Expiry Day Engine (Kite provider + Normalized Framework)
 """
 
 from __future__ import annotations
-import os, sys, json, time, math, argparse, logging, pathlib, itertools, statistics
+import os, sys, json, time, math, argparse, logging, pathlib, itertools, statistics, glob
 import datetime as dt
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, asdict
@@ -1952,6 +1952,89 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     return snap
 
+def replay_snapshots(pattern: str, speed: float = 1.0) -> None:
+    files = sorted(glob.glob(pattern))
+    if not files:
+        logger.error(f"No snapshot files found for pattern: {pattern}")
+        return
+    logger.info(f"Replaying {len(files)} snapshots at {speed}x speed")
+    prev_scen = None
+    prev_ts = None
+    open_trade = None
+    transitions = {}
+    results = []
+    for fp in files:
+        data = json.loads(pathlib.Path(fp).read_text())
+        ts = dt.datetime.fromisoformat(data.get("ts"))
+        spot = float(data.get("spot", float("nan")))
+        scen = data.get("scen_top")
+        trade = data.get("trade") or {}
+
+        if open_trade:
+            move = open_trade["direction"] * (spot - open_trade["entry"])
+            open_trade["mfe"] = max(open_trade["mfe"], move)
+            open_trade["mae"] = min(open_trade["mae"], move)
+            tgt = open_trade.get("target")
+            if tgt is not None and not open_trade["hit"]:
+                if open_trade["direction"] * (spot - tgt) >= 0:
+                    open_trade["hit"] = True
+
+        if prev_scen is not None and scen != prev_scen:
+            logger.info(f"Scenario flip: {prev_scen} -> {scen} @ {ts.strftime('%H:%M:%S')}")
+            transitions[(prev_scen, scen)] = transitions.get((prev_scen, scen), 0) + 1
+            if open_trade:
+                results.append(open_trade)
+                open_trade = None
+
+        action = trade.get("action")
+        if action and action != "NO-TRADE" and open_trade is None:
+            open_trade = {
+                "entry": spot,
+                "direction": 1 if "BUY_CE" in action else -1,
+                "instrument": trade.get("instrument", ""),
+                "target": float(trade.get("targets", [None])[0]) if trade.get("targets") else None,
+                "mfe": 0.0,
+                "mae": 0.0,
+                "hit": False,
+            }
+            logger.info(f"Trade entry: {action} {open_trade['instrument']} @ {spot}")
+        elif action == "NO-TRADE" and open_trade:
+            results.append(open_trade)
+            open_trade = None
+
+        prev_scen = scen
+        if speed > 0 and prev_ts is not None:
+            delta = (ts - prev_ts).total_seconds()
+            if delta > 0:
+                time.sleep(delta / speed)
+        prev_ts = ts
+
+    if open_trade:
+        results.append(open_trade)
+
+    total = len(results)
+    hits = sum(1 for r in results if r["hit"])
+    hit_rate = hits / total if total else 0.0
+    avg_mfe = sum(r["mfe"] for r in results) / total if total else 0.0
+    avg_mae = sum(r["mae"] for r in results) / total if total else 0.0
+    confusion = {}
+    for (a, b), cnt in transitions.items():
+        confusion.setdefault(a, {})[b] = cnt
+    report = {
+        "trades": total,
+        "hit_rate": hit_rate,
+        "avg_mfe": avg_mfe,
+        "avg_mae": avg_mae,
+        "confusion": confusion,
+    }
+    report_file = OUT_DIR / "replay_report.json"
+    report_file.write_text(json.dumps(to_native(report), indent=2))
+    logger.info(
+        f"Day-end report: trades={total} hit-rate={hit_rate:.1%} avg MFE={avg_mfe:.2f} avg MAE={avg_mae:.2f}"
+    )
+    logger.info(f"Scenario confusion: {confusion}")
+    logger.info(f"Report saved to {report_file}")
+
 def main():
     global WEIGHTS
     WEIGHTS = load_weights()
@@ -1963,15 +2046,23 @@ def main():
     ap.add_argument("--use-telegram", action="store_true")
     ap.add_argument("--slack-webhook", default=os.getenv("SLACK_WEBHOOK",""))
     ap.add_argument("--mode", choices=["auto","intraday","expiry"], default="auto")
+    ap.add_argument("--replay", help="Glob pattern for snapshot JSON files")
+    ap.add_argument("--speed", type=float, default=1.0, help="Replay speed multiplier (1.0=real-time)")
     args = ap.parse_args()
 
+    if args.replay:
+        replay_snapshots(args.replay, args.speed)
+        return
+
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
-    if args.provider.upper()!="KITE":
+    if args.provider.upper() != "KITE":
         logger.error("Only KITE provider is wired in this build. Use --provider KITE.")
         sys.exit(2)
 
     provider = provider_mod.KiteProvider()
-    logger.info(f"Engine started | provider=KITE | symbols={symbols} | poll={args.poll_seconds}s | mode={args.mode}")
+    logger.info(
+        f"Engine started | provider=KITE | symbols={symbols} | poll={args.poll_seconds}s | mode={args.mode}"
+    )
     if args.run_once:
         for i, sym in enumerate(symbols):
             run_once(provider, sym, args.poll_seconds, args.use_telegram, args.slack_webhook, args.mode)
