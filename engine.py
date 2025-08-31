@@ -34,6 +34,7 @@ import src.features.technicals as tech
 import src.features.options as opt
 from src.config import load_settings, save_settings, compute_dynamic_bands
 from src.ai.ensemble import ai_predict_probs, blend_probs
+from prometheus_client import Gauge, start_http_server
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -137,6 +138,18 @@ MPH_NORM_THR = float(os.getenv("MAXPAIN_DRIFT_NORM_THR", "0.6"))
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK", "")
+
+# ---------- prometheus metrics ----------
+METRICS_PORT = int(os.getenv("METRICS_PORT", "8000"))
+start_http_server(METRICS_PORT)
+
+VND_GAUGE = Gauge("vnd", "Volatility normalized distance")
+MPH_NORM_GAUGE = Gauge("mph_norm", "MaxPain drift normalized")
+IV_Z_GAUGE = Gauge("iv_z", "IV z-score")
+PCR_Z_GAUGE = Gauge("pcr_z", "PCR z-score")
+SPREAD_PCT_GAUGE = Gauge("spread_pct", "Bid-ask spread percentage")
+DEPTH_STAB_GAUGE = Gauge("depth_stability", "Quote depth stability")
+SCENARIO_GAUGE = Gauge("scenario_probability", "Scenario probability", ["scenario"])
 
 # ---------- dynamic weighting & thresholds ----------
 def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: float = 0.0):
@@ -699,6 +712,26 @@ class Snapshot:
     trade: Dict
     eq_line: str
 
+
+def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None:
+    """Push values from the latest snapshot to Prometheus gauges."""
+    try:
+        if snap.vnd == snap.vnd:
+            VND_GAUGE.set(snap.vnd)
+        if snap.mph_norm == snap.mph_norm:
+            MPH_NORM_GAUGE.set(snap.mph_norm)
+        if snap.iv_z == snap.iv_z:
+            IV_Z_GAUGE.set(snap.iv_z)
+        if snap.dpcr_z == snap.dpcr_z:
+            PCR_Z_GAUGE.set(snap.dpcr_z)
+        SPREAD_PCT_GAUGE.set(spread_pct)
+        DEPTH_STAB_GAUGE.set(depth_stab)
+        for scen, prob in (snap.scen_probs or {}).items():
+            SCENARIO_GAUGE.labels(scenario=scen).set(prob)
+    except Exception:
+        # metrics should never interrupt engine flow
+        pass
+
 def market_open_now() -> bool:
     now = dt.datetime.now(IST)
     if now.weekday() >= 5:  # Sat/Sun
@@ -1101,6 +1134,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # Microstructure features (best-effort): read aggregates if available else raw
     micro_bull = micro_bear = orb_up = orb_down = orb_thrust = False
     micro_imb = micro_cvd_slope = micro_qi = micro_stab = 0.0
+    micro_spread_pct = 0.0
     thrust_up = thrust_down = False
     try:
         date_tag_stream = now.strftime('%Y%m%d')
@@ -1109,6 +1143,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             dfm = pd.read_csv(stream_1m_file, parse_dates=['ts_min'])
             dfm = dfm[dfm['symbol'].str.upper() == symbol.upper()].tail(5)
             if not dfm.empty:
+                micro_spread_pct = float(dfm['spread'].mean() / price_now) if 'spread' in dfm.columns else 0.0
                 micro_imb = float(dfm['imb'].mean()) if 'imb' in dfm.columns else 0.0
                 micro_qi = float(dfm['qi'].mean()) if 'qi' in dfm.columns else 0.0
                 micro_stab = float(dfm['quote_stab'].mean()) if 'quote_stab' in dfm.columns else 0.0
@@ -1125,6 +1160,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
                 dfm = pd.read_csv(stream_file)
                 dfm = dfm[dfm['symbol'].str.upper() == symbol.upper()].tail(120)
                 if not dfm.empty:
+                    micro_spread_pct = float(dfm['spread'].tail(60).mean() / price_now) if 'spread' in dfm.columns else 0.0
                     micro_imb = float(dfm['imb'].tail(60).mean()) if 'imb' in dfm.columns else 0.0
                     micro_qi = float(dfm['qi'].tail(60).mean()) if 'qi' in dfm.columns else 0.0
                     micro_stab = float(dfm['quote_stab'].tail(60).mean()) if 'quote_stab' in dfm.columns else 0.0
@@ -1644,6 +1680,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         zero_gamma=float(zg if zg==zg else float('nan')),
         scen_probs=probs, scen_top=top, trade=tp, eq_line=eq_line
     )
+
+    update_metrics(snap, micro_spread_pct, micro_stab)
 
     ts_tag = now.strftime("%Y%m%d_%H%M%S")
     SNAP_DIR.mkdir(parents=True, exist_ok=True)
