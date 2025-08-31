@@ -77,11 +77,13 @@ export default function useLogStream(symbol) {
 
         // Only keep the most recent line for each indicator and ignore
         // duplicates so that stale/noisy data doesn't accumulate. Alerts are
-        // appended so multiple alert lines can be displayed sequentially.
+        // appended so multiple alert lines can be displayed sequentially
+        // while avoiding repeats even if the log writer emits the same alert
+        // multiple times.
         setLines((prevLines) => {
           if (indicator === 'alerts') {
             const prevArr = prevLines.alerts || [];
-            if (prevArr[prevArr.length - 1] === colored) return prevLines;
+            if (prevArr.includes(colored)) return prevLines;
             const nextArr = [...prevArr, colored].slice(-10); // cap to last 10
             return { ...prevLines, alerts: nextArr };
           }
