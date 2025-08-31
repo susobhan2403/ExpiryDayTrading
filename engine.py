@@ -891,6 +891,7 @@ def detect_spike_traps(
     atm_iv: float,
     prev_close: float,
     vp: Dict[str, float],
+    oi_flags: Optional[Dict[str, bool]] = None,
 ) -> List[AlertEvent]:
     """Detect sudden spikes or classic false signals and produce alerts."""
     alerts: List[AlertEvent] = []
@@ -1028,7 +1029,10 @@ def detect_spike_traps(
 
     # ----- 6. Futures/basis quirks -----
     if basis_slope > 0.5 and iv_z > 0 and abs(D) < ATR_D * 0.3:
-        alerts.append(AlertEvent("IGNORE", "Basis squeeze"))
+        if oi_flags and (oi_flags.get("ce_write_above") or oi_flags.get("pe_write_above")):
+            alerts.append(AlertEvent("ACT", "Basis squeeze trend"))
+        else:
+            alerts.append(AlertEvent("IGNORE", "Basis squeeze"))
     if abs(basis_slope) > ATR_D and now.day <= 2:
         alerts.append(AlertEvent("IGNORE", "Dividend/financing basis shift"))
 
@@ -1063,6 +1067,14 @@ SCENARIOS = [
     "Squeeze continuation (one-way)",
     "Event knee-jerk then revert",
 ]
+
+
+def apply_alert_bias(probs: Dict[str, float], alerts: List[AlertEvent]) -> Dict[str, float]:
+    """Adjust scenario probabilities based on generated alerts."""
+    if any(a.action == "ACT" and a.message == "Basis squeeze trend" for a in alerts):
+        probs = probs.copy()
+        probs[SCENARIOS[4]] = probs.get(SCENARIOS[4], 0) + 0.05
+    return probs
 
 def score_normalized(
     symbol: str,
@@ -1696,42 +1708,6 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     iv_pct_hint = round(100.0 * (sum(1 for x in vals if x<=atm_iv)/len(vals)),1) if (vals and atm_iv==atm_iv) else float('nan')
     iv_obs = len(vals)
 
-    # Detect microstructure spikes and false signals
-    alerts = detect_spike_traps(
-        provider,
-        symbol,
-        now,
-        spot_1m,
-        spot_5m,
-        vwap_spot,
-        pcr,
-        iv_z,
-        iv_pct_hint,
-        VND,
-        adx5,
-        rsi5,
-        macd_last,
-        macd_sig_last,
-        span_a_last,
-        span_b_last,
-        bb_u,
-        bb_l,
-        bb_m,
-        micro_spread_pct,
-        micro_cvd_slope,
-        micro_stab,
-        don_hi20_l,
-        don_lo20_l,
-        ATR_D,
-        D,
-        basis,
-        basis_slope,
-        chain,
-        atm_iv,
-        prev_close,
-        vp,
-    )
-
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
     # Dynamic banding and filters for OI analysis
@@ -1888,6 +1864,41 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "term_iv_slope": float(term_iv_slope),
         "vol_pressure": float(volume_pressure),
     }
+    alerts = detect_spike_traps(
+        provider,
+        symbol,
+        now,
+        spot_1m,
+        spot_5m,
+        vwap_spot,
+        pcr,
+        iv_z,
+        iv_pct_hint,
+        VND,
+        adx5,
+        rsi5,
+        macd_last,
+        macd_sig_last,
+        span_a_last,
+        span_b_last,
+        bb_u,
+        bb_l,
+        bb_m,
+        micro_spread_pct,
+        micro_cvd_slope,
+        micro_stab,
+        don_hi20_l,
+        don_lo20_l,
+        ATR_D,
+        D,
+        basis,
+        basis_slope,
+        chain,
+        atm_iv,
+        prev_close,
+        vp,
+        oi_flags,
+    )
 
     inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
     dyn_weights, gate_cap, tf_weights = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
@@ -1963,6 +1974,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         probs[SCENARIOS[2]] = probs.get(SCENARIOS[2],0) + 0.05
     if basis_slope < 0 and iv_z >= 0:
         probs[SCENARIOS[1]] = probs.get(SCENARIOS[1],0) + 0.05
+    probs = apply_alert_bias(probs, alerts)
     # Persist block-gating effect after AI blend: penalize scenarios lacking
     # at least one signal from each block to avoid unrealistic flips.
     try:

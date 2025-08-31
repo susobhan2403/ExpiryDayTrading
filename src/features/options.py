@@ -97,13 +97,13 @@ def nearest_weekly_expiry(now_ist: dt.datetime, symbol: str) -> str:
     weekday_target = 3
     # Weekly mapping by index
     if sym == "NIFTY":
-        weekday_target = 1 #if d >= eff else 3  # Tue after eff else Thu
+        weekday_target = 1 if d >= eff else 3  # Tue after eff else Thu
     elif sym == "BANKNIFTY":
         weekday_target = 1  # Tue
     elif sym in ("FINNIFTY", "MIDCPNIFTY"):
         weekday_target = 1  # Tue
     elif sym == "SENSEX":
-        weekday_target = 3 #if d >= eff else 1  # Thu after eff else Tue
+        weekday_target = 3 if d >= eff else 1  # Thu after eff else Tue
     # else: keep default Thursday
     days_ahead = (weekday_target - d.weekday()) % 7
     if days_ahead==0 and now_ist.time() > dt.time(15,30):
