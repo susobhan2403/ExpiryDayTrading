@@ -1580,6 +1580,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     tc = TREND_ENGINES.setdefault(symbol, TrendConsensus())
     tc.weights = tf_weights
+    tc.last_decision = state.get("last_decision", tc.last_decision)
+    tc.smoothed_score = state.get("smoothed_score", tc.smoothed_score)
     trend = tc.evaluate(spot_1m)
     decision, should_act = evaluate_decision(trend)
 
@@ -1802,6 +1804,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "position": pos,
         "basis_series": basis_series,
         "decision": asdict(decision),
+        "last_decision": tc.last_decision,
+        "smoothed_score": tc.smoothed_score,
     }
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))

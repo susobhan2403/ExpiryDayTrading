@@ -72,17 +72,21 @@ class TrendConsensus:
     weights: mapping of timeframe (minutes) to weight.
     threshold: minimum absolute score required to consider a direction.
     confirm: number of consecutive evaluations required to flip direction.
+    alpha: smoothing factor for exponential averaging of aggregate score.
     """
 
     def __init__(self,
                  weights: Optional[Dict[int, float]] = None,
                  threshold: float = 0.6,
-                 confirm: int = 3) -> None:
+                 confirm: int = 3,
+                 alpha: float = 0.3) -> None:
         self.weights = weights or {1: 0.2, 5: 0.3, 10: 0.25, 15: 0.25}
         self.threshold = threshold
         self.confirm = confirm
+        self.alpha = alpha
         self.last_decision = "NEUTRAL"
         self.last_score = 0.0
+        self.smoothed_score = 0.0
         self.last_change_ts: Optional[pd.Timestamp] = None
         self._history: deque[float] = deque(maxlen=confirm)
         self._buffer = BarBuffer(self.weights.keys())
@@ -110,7 +114,8 @@ class TrendConsensus:
             if w <= 0 or df.empty:
                 continue
             agg += w * self._classify(df)
-        self._history.append(agg)
+        self.smoothed_score = self.alpha * agg + (1 - self.alpha) * self.smoothed_score
+        self._history.append(self.smoothed_score)
 
         direction = self.last_decision
         if len(self._history) == self.confirm:
@@ -120,11 +125,11 @@ class TrendConsensus:
                 direction = "BEAR"
             else:
                 direction = "NEUTRAL"
-        confidence = abs(agg)
+        confidence = abs(self.smoothed_score)
         if direction != self.last_decision:
             self.last_decision = direction
             self.last_change_ts = pd.Timestamp.utcnow()
-        self.last_score = agg
-        return TrendResult(direction=direction, score=agg,
+        self.last_score = self.smoothed_score
+        return TrendResult(direction=direction, score=self.smoothed_score,
                            confidence=confidence,
                            last_change_ts=self.last_change_ts)
