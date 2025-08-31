@@ -854,6 +854,73 @@ def update_ignore_block(state: Dict, alerts: List[AlertEvent], cooloff: int, har
     return active
 
 
+def manage_trade_on_ignore(
+    state: Dict,
+    trade: Dict,
+    alerts: List[AlertEvent],
+    vwap: float,
+    last_swing: float,
+    snap_idx: int,
+    exit_pct: float = 0.25,
+) -> float:
+    """Adjust an open trade when IGNORE alerts occur.
+
+    If an IGNORE alert is present this snapshot:
+    - Move the stop to VWAP or the last swing (whichever is more protective).
+    - Halt any further size addition for the trade.
+    - If a second IGNORE arrives within two snapshots of the previous one,
+      signal a partial exit of ``exit_pct`` (default 25%).
+
+    Parameters
+    ----------
+    state : dict
+        Mutable engine state used to track previous ignore snapshots and
+        whether additional size can be added.
+    trade : dict
+        Open trade dictionary containing at least ``direction`` (1 for long,
+        -1 for short) and ``stop`` keys.
+    alerts : list[AlertEvent]
+        Alerts for the current snapshot.
+    vwap : float
+        Current VWAP value.
+    last_swing : float
+        Price of the most recent swing high/low depending on direction.
+    snap_idx : int
+        Index of the current snapshot.
+    exit_pct : float, optional
+        Fraction of position to exit on the second IGNORE.
+
+    Returns
+    -------
+    float
+        The fraction of the position that should be exited (0 if none).
+    """
+
+    if trade is None or not any(a.action == "IGNORE" for a in alerts):
+        return 0.0
+
+    direction = trade.get("direction", 1)
+    stop = float(trade.get("stop", 0.0))
+    protective = max(vwap, last_swing) if direction > 0 else min(vwap, last_swing)
+
+    if direction > 0:
+        trade["stop"] = max(stop, protective)
+    else:
+        trade["stop"] = min(stop, protective)
+
+    # prevent further adds
+    state["add_allowed"] = False
+
+    last_snap = state.get("last_ignore_snap")
+    scale_out = 0.0
+    if last_snap is not None and snap_idx - last_snap <= 2:
+        scale_out = exit_pct
+        trade["scale_out"] = scale_out
+
+    state["last_ignore_snap"] = snap_idx
+    return scale_out
+
+
 def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None:
     """Push values from the latest snapshot to Prometheus gauges."""
     try:
