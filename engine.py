@@ -35,7 +35,7 @@ import src.features.options as opt
 from src.config import load_settings, save_settings, compute_dynamic_bands
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from prometheus_client import Gauge, start_http_server
-from src.strategy.trend_consensus import TrendConsensus
+from src.strategy.trend_consensus import TrendConsensus, TrendResult
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -135,6 +135,7 @@ PIN_NORM = float(os.getenv("PIN_DISTANCE_NORM", "0.4"))     # VND < 0.4
 REV_NORM = float(os.getenv("REVERSION_NORM", "1.0"))        # VND >= 1.0
 SQUEEZE_NORM = float(os.getenv("SQUEEZE_DISTANCE_NORM", "1.5"))
 MPH_NORM_THR = float(os.getenv("MAXPAIN_DRIFT_NORM_THR", "0.6"))
+DECISION_CONFIDENCE_THRESHOLD = float(os.getenv("DECISION_CONFIDENCE_THR", "0.6"))
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -754,6 +755,14 @@ class Snapshot:
     eq_line: str
 
 
+@dataclass
+class DecisionResult:
+    trend_score: float
+    trend_direction: str
+    confidence: float
+    last_change_ts: Optional[str]
+
+
 def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None:
     """Push values from the latest snapshot to Prometheus gauges."""
     try:
@@ -1087,6 +1096,18 @@ def blend_probs(rule_probs: Dict[str,float], ai_probs: Dict[str,float], adx5: fl
     # renormalize
     s = sum(out.values()) or 1.0
     return {k: round(v/s,3) for k,v in out.items()}
+
+# ---------- decision evaluation ----------
+def evaluate_decision(trend: TrendResult, threshold: float = DECISION_CONFIDENCE_THRESHOLD) -> Tuple[DecisionResult, bool]:
+    """Convert TrendConsensus output into a DecisionResult and act flag."""
+    dr = DecisionResult(
+        trend_score=float(trend.score),
+        trend_direction=str(trend.direction),
+        confidence=float(trend.confidence),
+        last_change_ts=trend.last_change_ts.isoformat() if trend.last_change_ts else None,
+    )
+    should_act = dr.trend_direction != "NEUTRAL" and dr.confidence >= threshold
+    return dr, should_act
 
 # ---------- main cycle ----------
 def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: int, use_telegram: bool, slack_webhook: str, mode: str = "auto") -> Optional[Snapshot]:
@@ -1560,6 +1581,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     tc = TREND_ENGINES.setdefault(symbol, TrendConsensus())
     tc.weights = tf_weights
     trend = tc.evaluate(spot_1m)
+    decision, should_act = evaluate_decision(trend)
 
     # Scoring: expiry vs non-expiry (mode override)
     if mode == "expiry":
@@ -1697,6 +1719,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             logger.info(f"Abort entry: qi={micro_qi:.2f}, stab={micro_stab:.2f}")
             tp = {"action": "NO-TRADE", "why": "microstructure filter (qi/stab)"}
 
+    if not should_act:
+        tp = {"action": "NO-TRADE", "why": "confidence below threshold"}
+
     # Equivalence line (only if we have both NIFTY and BANKNIFTY ATRs saved)
     atr_map_file = OUT_DIR / "atr_map.json"
     atr_map = {}
@@ -1752,6 +1777,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     ts_tag = now.strftime("%Y%m%d_%H%M%S")
     SNAP_DIR.mkdir(parents=True, exist_ok=True)
     (SNAP_DIR / f"{symbol}_{ts_tag}.json").write_text(json.dumps(asdict(snap), indent=2))
+    (SNAP_DIR / f"decision_{symbol}_{ts_tag}.json").write_text(
+        json.dumps({"decision": asdict(decision), "should_act": should_act}, indent=2)
+    )
 
     csv_file = OUT_DIR / f"{symbol}_rollup.csv"
     header = not csv_file.exists()
@@ -1773,11 +1801,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "confirmations": conf,
         "position": pos,
         "basis_series": basis_series,
-        "trend": {
-            "direction": trend.direction,
-            "score": trend.score,
-            "confidence": trend.confidence,
-        },
+        "decision": asdict(decision),
     }
     state_file.write_text(json.dumps(to_native(state)))
     drift_file.write_text(json.dumps(to_native(mp_hist)))
