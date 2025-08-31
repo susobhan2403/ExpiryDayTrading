@@ -257,7 +257,8 @@ const server = http.createServer(async (req, res) => {
               currentSymbol = header[1];
             }
             const isHeader = /IST \| [A-Z]+/.test(upper);
-            const indicator = isHeader || /^D=|^PCR |^ATM |^SCENARIO:|^ACTION:|^FINAL VERDICT/.test(upper.trim());
+            const indicator =
+              isHeader || /^(D=|PCR |ATM |SCENARIO:|ACTION:|FINAL VERDICT|ALERT:)/.test(upper.trim());
             const match = (!symbol || currentSymbol === symbol) && indicator;
             if (match) {
               res.write(`data: ${JSON.stringify({ line: plain })}\n\n`);

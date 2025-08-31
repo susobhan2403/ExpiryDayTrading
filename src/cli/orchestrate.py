@@ -153,27 +153,29 @@ class Orchestrator:
         if not self.eod_train_time:
             return
         def loop():
-            while not self.stop_event.is_set():
-                sec = self._seconds_until_ist(self.eod_train_time)
-                # sleep in chunks
-                while sec > 0 and not self.stop_event.is_set():
-                    sl = min(60, sec)
-                    time.sleep(sl); sec -= sl
-                if self.stop_event.is_set():
-                    break
-                # EOD: build features and train for each symbol
-                for sym in self.eod_symbols:
-                    try:
-                        print(f"[orchestrate] EOD build_features {sym}")
-                        subprocess.run([sys.executable, '-m', 'src.cli.build_features', '--symbol', sym,
-                                        '--k-atr', str(self.eod_k_atr), '--time-barrier', str(self.eod_time_barrier)],
-                                       cwd=str(ROOT), check=False)
-                        print(f"[orchestrate] EOD train_lgbm {sym}")
-                        subprocess.run([sys.executable, '-m', 'src.cli.train_lgbm', '--symbol', sym,
-                                        '--task', 'clf', '--target', 'label', '--calibrate', self.eod_calibrate],
-                                       cwd=str(ROOT), check=False)
-                    except Exception as e:
-                        print('[orchestrate] EOD training error:', e)
+            sec = self._seconds_until_ist(self.eod_train_time)
+            while sec > 0 and not self.stop_event.is_set():
+                sl = min(60, sec)
+                time.sleep(sl); sec -= sl
+            if self.stop_event.is_set():
+                return
+            for sym in self.eod_symbols:
+                try:
+                    print(f"[orchestrate] EOD build_features {sym}")
+                    subprocess.run([sys.executable, '-m', 'src.cli.build_features', '--symbol', sym,
+                                    '--k-atr', str(self.eod_k_atr), '--time-barrier', str(self.eod_time_barrier)],
+                                   cwd=str(ROOT), check=False)
+                    print(f"[orchestrate] EOD train_lgbm {sym}")
+                    subprocess.run([sys.executable, '-m', 'src.cli.train_lgbm', '--symbol', sym,
+                                    '--task', 'clf', '--target', 'label', '--calibrate', self.eod_calibrate],
+                                   cwd=str(ROOT), check=False)
+                except Exception as e:
+                    print('[orchestrate] EOD training error:', e)
+            try:
+                print('[orchestrate] EOD reweight')
+                subprocess.run([sys.executable, '-m', 'src.ai.reweight'], cwd=str(ROOT), check=False)
+            except Exception as e:
+                print('[orchestrate] EOD reweight error:', e)
         self.eod_thread = threading.Thread(target=loop, daemon=True)
         self.eod_thread.start()
         # normalize printout time
@@ -229,9 +231,10 @@ class Orchestrator:
         self.start_eod_trainer()
         self.start_engine()
         try:
-            # wait on engine
             if self.proc_engine is not None:
                 self.proc_engine.wait()
+            if self.eod_thread is not None:
+                self.eod_thread.join()
         finally:
             self.stop()
 
