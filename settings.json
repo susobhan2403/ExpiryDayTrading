@@ -10,6 +10,8 @@
   "PIN_DISTANCE_POINTS": 150,
   "ADX_RISE_MIN": 2,
   "SNAPSHOT_MINUTES": 5,
+  "ignore_is_hard_block": true,
+  "ignore_cooloff_snaps": 2,
   "PRESETS": {},
   "WEIGHTS": {
     "price_trend": 0.35,
