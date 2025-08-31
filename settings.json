@@ -11,9 +11,11 @@
   "ADX_RISE_MIN": 2,
   "SNAPSHOT_MINUTES": 5,
   "PRESETS": {},
-  "price_trend": 0.35,
-  "options_flow ": 0.45,
-  "volatility": 0.2,
+  "WEIGHTS": {
+    "price_trend": 0.35,
+    "options_flow": 0.45,
+    "volatility": 0.2
+  },
   "ORCHESTRATE": {
     "SYMBOLS": "NIFTY,BANKNIFTY,SENSEX,MIDCPNIFTY",
     "MODE": "auto",
