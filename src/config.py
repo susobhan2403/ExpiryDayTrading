@@ -5,6 +5,13 @@ from typing import Dict, Tuple
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
+STEP_MAP = {
+    "BANKNIFTY": 100,
+    "SENSEX": 100,
+    "NIFTY": 50,
+    "MIDCPNIFTY": 25,
+}
+
 def load_settings() -> Dict:
     path = ROOT / "settings.json"
     try:
@@ -21,8 +28,9 @@ def save_settings(cfg: Dict) -> None:
     except Exception:
         pass
 
-def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: float, VND: float, D: float, step: int) -> Tuple[int,int,int,int]:
+def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: float, VND: float, D: float, step: int | None = None) -> Tuple[int,int,int,int]:
     sym = symbol.upper()
+    step = step if step is not None else STEP_MAP.get(sym, 50)
     is_bank = "BANK" in sym
     base_above = 3
     base_below = 2
