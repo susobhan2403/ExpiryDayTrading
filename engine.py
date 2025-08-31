@@ -1096,7 +1096,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     # Microstructure features (best-effort): read aggregates if available else raw
     micro_bull = micro_bear = orb_up = orb_down = orb_thrust = False
-    micro_imb = micro_cvd_slope = 0.0
+    micro_imb = micro_cvd_slope = micro_qi = micro_stab = 0.0
     thrust_up = thrust_down = False
     try:
         date_tag_stream = now.strftime('%Y%m%d')
@@ -1106,6 +1106,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             dfm = dfm[dfm['symbol'].str.upper() == symbol.upper()].tail(5)
             if not dfm.empty:
                 micro_imb = float(dfm['imb'].mean()) if 'imb' in dfm.columns else 0.0
+                micro_qi = float(dfm['qi'].mean()) if 'qi' in dfm.columns else 0.0
+                micro_stab = float(dfm['quote_stab'].mean()) if 'quote_stab' in dfm.columns else 0.0
                 if 'cvd' in dfm.columns:
                     vals = dfm['cvd'].values
                     micro_cvd_slope = float(vals[-1] - vals[0]) if len(vals) >= 2 else 0.0
@@ -1120,6 +1122,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
                 dfm = dfm[dfm['symbol'].str.upper() == symbol.upper()].tail(120)
                 if not dfm.empty:
                     micro_imb = float(dfm['imb'].tail(60).mean()) if 'imb' in dfm.columns else 0.0
+                    micro_qi = float(dfm['qi'].tail(60).mean()) if 'qi' in dfm.columns else 0.0
+                    micro_stab = float(dfm['quote_stab'].tail(60).mean()) if 'quote_stab' in dfm.columns else 0.0
                     cvd_series = dfm['cvd'].tail(60) if 'cvd' in dfm.columns else pd.Series([0])
                     micro_cvd_slope = float(cvd_series.iloc[-1] - cvd_series.iloc[0]) if len(cvd_series) >= 2 else 0.0
         # ORB (first 15 mins 9:15-9:30)
@@ -1454,6 +1458,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         "orb_up": bool(orb_up),
         "orb_down": bool(orb_down),
         "micro_imb": float(micro_imb),
+        "micro_qi": float(micro_qi),
+        "micro_stab": float(micro_stab),
         "micro_cvd_slope": float(micro_cvd_slope),
         "inst_bull": bool(inst_bull),
         "inst_bear": bool(inst_bear),
@@ -1575,6 +1581,15 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         return {"action":"NO-TRADE","why":"signals conflicted"}
 
     tp = trade_plan(top)
+
+    # Microstructure guardrail: require strong queue imbalance and quote stability
+    if tp.get("action") in ("BUY_CE", "BUY_PE"):
+        direction = 1 if tp["action"] == "BUY_CE" else -1
+        qi_ok = (micro_qi * direction) > 0.60
+        stab_ok = micro_stab >= 0.3  # ≈3s of stable best bid/ask
+        if not (qi_ok and stab_ok):
+            logger.info(f"Abort entry: qi={micro_qi:.2f}, stab={micro_stab:.2f}")
+            tp = {"action": "NO-TRADE", "why": "microstructure filter (qi/stab)"}
 
     # Equivalence line (only if we have both NIFTY and BANKNIFTY ATRs saved)
     atr_map_file = OUT_DIR / "atr_map.json"
