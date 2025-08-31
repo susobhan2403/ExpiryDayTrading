@@ -14353,3 +14353,235 @@ SCP 95% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | 
 2025-08-31 20:17:28,993 INFO: 
 2025-08-31 20:17:29,511 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
 2025-08-31 20:17:29,814 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 21:42:07,852 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 21:42:07,853 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY', 'SENSEX'] | poll=120s | mode=auto
+2025-08-31 21:42:07,853 INFO: Market closed (IST). Stopping engine.
+2025-08-31 21:42:47,417 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 21:42:47,418 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY', 'SENSEX'] | poll=120s | mode=auto
+2025-08-31 21:42:48,334 WARNING: NIFTY: spot proxy via futures also empty (fut token 13568258).
+2025-08-31 21:42:48,475 WARNING: NIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 21:42:48,476 INFO: 
+2025-08-31 21:42:48,794 WARNING: BANKNIFTY: spot proxy via futures also empty (fut token 13566722).
+2025-08-31 21:42:48,933 WARNING: BANKNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 21:42:48,934 INFO: 
+2025-08-31 21:42:49,215 WARNING: MIDCPNIFTY: spot proxy via futures also empty (fut token 13567490).
+2025-08-31 21:42:49,367 WARNING: MIDCPNIFTY: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 21:42:49,368 INFO: 
+2025-08-31 21:42:49,986 WARNING: SENSEX: spot proxy via futures also empty (fut token 215645189).
+2025-08-31 21:42:50,140 WARNING: SENSEX: both spot and futures OHLCV empty. Check Kite Historical addon and access token.
+2025-08-31 22:15:35,982 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 22:15:35,982 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY', 'SENSEX'] | poll=120s | mode=auto
+2025-08-31 22:15:38,337 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:15:38,633 INFO: 22:15 IST | NIFTY 24426.85 | VWAP(fut) 24639
+D=-73 | ATR_D=9 | VND=7.89 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.23) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 22%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.71 | Kelly 0.10
+2025-08-31 22:15:38,633 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:15:38,633 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:15:38,633 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:15:38,634 INFO: 
+2025-08-31 22:15:40,296 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:15:40,809 INFO: 22:15 IST | BANKNIFTY 53655.65 | VWAP(fut) 54270
+D=-1344 | ATR_D=26 | VND=50.72 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=0.24) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 15% (alt: Bull Migration 17%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 40.49 | Kelly 0.10
+2025-08-31 22:15:40,809 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:15:40,809 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:15:40,809 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:15:40,810 INFO: 
+2025-08-31 22:15:43,630 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:15:44,457 INFO: 22:15 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=6 | VND=22.13 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.23) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 20% (alt: Bull Migration 21%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 92% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 36.79 | Kelly 0.10
+2025-08-31 22:15:44,457 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:15:44,457 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:15:44,458 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:15:44,458 INFO: 
+2025-08-31 22:15:49,676 INFO: 22:15 IST | SENSEX 79809.65 | VWAP(fut) 80631
+D=-390 | ATR_D=30 | VND=12.72 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 20% (alt: Pin and Decay 20%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.01 | Kelly 0.10
+2025-08-31 22:15:49,676 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:15:49,677 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:15:49,677 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:17:18,344 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 22:17:18,345 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY', 'SENSEX'] | poll=120s | mode=auto
+2025-08-31 22:17:20,890 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:17:21,316 INFO: 22:17 IST | NIFTY 24426.85 | VWAP(fut) 24639
+D=-73 | ATR_D=9 | VND=7.89 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.23) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 22%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.71 | Kelly 0.10
+2025-08-31 22:17:21,317 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:17:21,317 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:17:21,318 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:17:21,318 INFO: 
+2025-08-31 22:17:23,077 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:17:23,639 INFO: 22:17 IST | BANKNIFTY 53655.65 | VWAP(fut) 54270
+D=-1344 | ATR_D=26 | VND=50.72 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=0.19) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 15% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 40.49 | Kelly 0.10
+2025-08-31 22:17:23,640 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:17:23,641 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:17:23,641 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:17:23,642 INFO: 
+2025-08-31 22:17:25,116 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:17:25,601 INFO: 22:17 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=6 | VND=22.13 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.24) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 20% (alt: Bull Migration 21%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 92% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 36.79 | Kelly 0.10
+2025-08-31 22:17:25,602 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:17:25,602 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:17:25,602 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:17:25,603 INFO: 
+2025-08-31 22:17:28,397 INFO: 22:17 IST | SENSEX 79809.65 | VWAP(fut) 80631
+D=-390 | ATR_D=30 | VND=12.72 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 20% (alt: Pin and Decay 20%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.01 | Kelly 0.10
+2025-08-31 22:17:28,397 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:17:28,398 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:17:28,398 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:19:02,780 INFO: KITE_API_KEY loaded from settings.json and set in environment.
+2025-08-31 22:19:02,780 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'MIDCPNIFTY', 'SENSEX'] | poll=120s | mode=auto
+2025-08-31 22:19:05,311 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:19:05,600 INFO: 22:19 IST | NIFTY 24426.85 | VWAP(fut) 24639
+D=-73 | ATR_D=9 | VND=7.89 | SSD=1.46 | PD=0.3%
+PCR 0.544 (Δz=0.0) | MaxPain 24500 | Drift -0.0/hr (norm -0.0)
+ATM 24450 IV nan% (ΔIV_z=0.0) | Basis 140.9
+Scenario: Event Knee-jerk then Revert 16% (alt: Pin and Decay 22%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 85% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.71 | Kelly 0.10
+2025-08-31 22:19:05,601 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:19:05,601 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:19:05,601 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:19:05,602 INFO: 
+2025-08-31 22:19:07,110 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:19:08,046 INFO: 22:19 IST | BANKNIFTY 53655.65 | VWAP(fut) 54270
+D=-1344 | ATR_D=26 | VND=50.72 | SSD=13.44 | PD=2.51%
+PCR 0.857 (Δz=-0.23) | MaxPain 55000 | Drift -0.0/hr (norm -0.0)
+ATM 53700 IV nan% (ΔIV_z=0.0) | Basis 407.2
+Scenario: Event Knee-jerk then Revert 15% (alt: Bull Migration 16%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 94% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 40.49 | Kelly 0.10
+2025-08-31 22:19:08,047 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:19:08,048 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:19:08,049 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:19:08,050 INFO: 
+2025-08-31 22:19:10,868 INFO: Abort entry: qi=0.00, stab=0.00
+2025-08-31 22:19:11,760 INFO: 22:19 IST | MIDCPNIFTY 12450.20 | VWAP(fut) 12602
+D=-149 | ATR_D=6 | VND=22.13 | SSD=3.0 | PD=1.2%
+PCR 1.192 (Δz=0.31) | MaxPain 12600 | Drift -0.0/hr (norm -0.0)
+ATM 12450 IV nan% (ΔIV_z=0.0) | Basis 71.8
+Scenario: Bear Migration 20% (alt: Bull Migration 21%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 92% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 36.79 | Kelly 0.10
+2025-08-31 22:19:11,760 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:19:11,761 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:19:11,762 INFO: ALERT: IGNORE Single-stock divergence
+2025-08-31 22:19:11,763 INFO: 
+2025-08-31 22:19:16,901 INFO: 22:19 IST | SENSEX 79809.65 | VWAP(fut) 80631
+D=-390 | ATR_D=30 | VND=12.72 | SSD=7.81 | PD=0.49%
+PCR 0.544 (Δz=0.0) | MaxPain 80200 | Drift 0.0/hr (norm 0.0)
+ATM 79800 IV nan% (ΔIV_z=0.0) | Basis 552.1
+Scenario: Pin and Decay (IV crush) 20% (alt: Pin and Decay 20%)
+[1m[33mAction: NO-TRADE | confidence below threshold[0m
+[1m[35mEnter when atleast 3 of below 4 are satisfied:[0m
+1. VND < pin norm (range-bound) - [31m✘[0m
+2. ADX < low (chop) - [31m✘[0m
+3. Two-sided OI near ATM - [31m✘[0m
+4. IV crushing (div<=0, pctile<33) - [31m✘[0m
+[1m[33mFinal Verdict: Hold[0m
+SCP 99% | ERP 0% | Strategy: Trend bias: Calendars (term skew) or light debit | Size(vol) 52.01 | Kelly 0.10
+2025-08-31 22:19:16,902 INFO: ALERT: IGNORE OI change unreliable
+2025-08-31 22:19:16,903 INFO: ALERT: IGNORE Max pain unreliable
+2025-08-31 22:19:16,903 INFO: ALERT: IGNORE Single-stock divergence

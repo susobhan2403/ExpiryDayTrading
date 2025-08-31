@@ -150,31 +150,58 @@ class KiteProvider(MarketDataProvider):
         return futs.iloc[0]
 
     def _hist(self, token: int, interval: str, lookback_minutes: int, is_future: bool = False) -> pd.DataFrame:
-        now = dt.datetime.now().replace(tzinfo=None)
-        start = now - dt.timedelta(minutes=max(lookback_minutes + 15, 240))
+        """Fetch minute candles with off-hours resilience.
+
+        - Anchors the end time to the last trading session close when market is
+          closed (weekends or pre-open), so queries return data instead of empty.
+        - Falls back to a wider 7-day window if the immediate lookback returns empty.
+        """
+        now_ist = dt.datetime.now(IST)
+        # Determine an appropriate 'end' anchored to the latest trading session
+        end_ist = now_ist
+        if now_ist.weekday() >= 5:  # Sat/Sun -> last Friday 15:29:59 IST
+            days_back = (now_ist.weekday() - 4)  # 1 for Sat, 2 for Sun
+            last_weekday = (now_ist - dt.timedelta(days=days_back)).date()
+            end_ist = IST.localize(dt.datetime.combine(last_weekday, dt.time(15, 29, 59)))
+        elif now_ist.time() < dt.time(9, 15):  # before market open -> previous weekday close
+            # move to previous business day (skip weekends)
+            prev = now_ist - dt.timedelta(days=1)
+            while prev.weekday() >= 5:
+                prev -= dt.timedelta(days=1)
+            end_ist = IST.localize(dt.datetime.combine(prev.date(), dt.time(15, 29, 59)))
+
+        # Use at least 4 hours of history to build resamples/indicators
+        lb = max(lookback_minutes + 15, 240)
+        start_ist = end_ist - dt.timedelta(minutes=lb)
+
+        # Primary query
         data = []
         try:
             data = self.kite.historical_data(
-                token, start, now, "minute",
+                token, start_ist, end_ist, "minute",
                 continuous=False,
                 oi=False
             )
         except Exception as e:
             logger.warning(f"[hist] token={token} error: {e}")
             data = []
+
+        # Fallback: widen to last 7 days ending at end_ist
         if not data:
             try:
-                alt_start = now - dt.timedelta(days=2)
+                alt_start = end_ist - dt.timedelta(days=7)
                 data = self.kite.historical_data(
-                    token, alt_start, now, "minute",
+                    token, alt_start, end_ist, "minute",
                     continuous=False,
                     oi=False
                 )
             except Exception as e:
-                logger.warning(f"[hist-retry] token={token} error: {e}")
+                logger.warning(f"[hist-retry-wide] token={token} error: {e}")
                 data = []
+
         if not data:
             return pd.DataFrame(columns=["open","high","low","close","volume"])
+
         df = pd.DataFrame(data)
         dates = pd.to_datetime(df["date"])
         try:
@@ -186,8 +213,10 @@ class KiteProvider(MarketDataProvider):
             dates = pd.to_datetime(df["date"]).tz_localize(dt.timezone.utc).tz_convert(IST)
         df = df.set_index(dates)[["open","high","low","close","volume"]]
         df.index.name = "date"
+
         if interval == "5m":
             df = df.resample("5min").agg({"open":"first","high":"max","low":"min","close":"last","volume":"sum"}).dropna(how="any")
+
         return df.tail(lookback_minutes)
 
     def get_spot_ohlcv(self, symbol: str, interval: str, lookback_minutes: int) -> pd.DataFrame:
