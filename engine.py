@@ -36,6 +36,7 @@ from src.config import load_settings, save_settings, compute_dynamic_bands
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from prometheus_client import Gauge, start_http_server
 from src.strategy.trend_consensus import TrendConsensus, TrendResult
+from src.strategy.filters import KalmanFilter1D
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -1578,7 +1579,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
     dyn_weights, gate_cap, tf_weights = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
 
-    tc = TREND_ENGINES.setdefault(symbol, TrendConsensus())
+    tc = TREND_ENGINES.setdefault(
+        symbol, TrendConsensus(score_filter=KalmanFilter1D())
+    )
     tc.weights = tf_weights
     tc.last_decision = state.get("last_decision", tc.last_decision)
     tc.smoothed_score = state.get("smoothed_score", tc.smoothed_score)

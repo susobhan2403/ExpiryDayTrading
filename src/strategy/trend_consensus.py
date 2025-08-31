@@ -13,6 +13,8 @@ from typing import Dict, Iterable, Optional
 
 import pandas as pd
 
+from .filters import KalmanFilter1D
+
 
 class BarBuffer:
     """Incrementally maintain OHLCV aggregates for multiple timeframes."""
@@ -79,11 +81,13 @@ class TrendConsensus:
                  weights: Optional[Dict[int, float]] = None,
                  threshold: float = 0.6,
                  confirm: int = 3,
-                 alpha: float = 0.3) -> None:
+                 alpha: float = 0.3,
+                 score_filter: Optional[KalmanFilter1D] = None) -> None:
         self.weights = weights or {1: 0.2, 5: 0.3, 10: 0.25, 15: 0.25}
         self.threshold = threshold
         self.confirm = confirm
         self.alpha = alpha
+        self.filter = score_filter
         self.last_decision = "NEUTRAL"
         self.last_score = 0.0
         self.smoothed_score = 0.0
@@ -114,7 +118,10 @@ class TrendConsensus:
             if w <= 0 or df.empty:
                 continue
             agg += w * self._classify(df)
-        self.smoothed_score = self.alpha * agg + (1 - self.alpha) * self.smoothed_score
+        if self.filter is not None:
+            self.smoothed_score = self.filter.update(agg)
+        else:
+            self.smoothed_score = self.alpha * agg + (1 - self.alpha) * self.smoothed_score
         self._history.append(self.smoothed_score)
 
         direction = self.last_decision
