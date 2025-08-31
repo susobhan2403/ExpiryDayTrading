@@ -9,9 +9,51 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 
 import pandas as pd
+
+
+class BarBuffer:
+    """Incrementally maintain OHLCV aggregates for multiple timeframes."""
+
+    def __init__(self, timeframes: Optional[Iterable[int]] = None) -> None:
+        tfs = sorted(timeframes) if timeframes else [1]
+        self.timeframes = tfs
+        cols = ["open", "high", "low", "close", "volume"]
+        self.frames: Dict[int, pd.DataFrame] = {
+            tf: pd.DataFrame(columns=cols) for tf in tfs
+        }
+        self.last_ts: Optional[pd.Timestamp] = None
+
+    def update(self, df: pd.DataFrame) -> Dict[int, pd.DataFrame]:
+        """Ingest new 1m bars and update aggregated frames."""
+        if df.empty:
+            return self.frames
+        if self.last_ts is not None:
+            df = df[df.index > self.last_ts]
+        for ts, row in df.iterrows():
+            self._add_bar(ts, row)
+            self.last_ts = ts
+        return self.frames
+
+    def _add_bar(self, ts: pd.Timestamp, row: pd.Series) -> None:
+        # 1m frame
+        if 1 in self.timeframes:
+            self.frames[1].loc[ts] = [row.open, row.high, row.low, row.close, row.volume]
+        for tf in self.timeframes:
+            if tf == 1:
+                continue
+            start = ts.floor(f"{tf}min")
+            frame = self.frames[tf]
+            if start in frame.index:
+                prev = frame.loc[start]
+                frame.at[start, "high"] = max(prev.high, row.high)
+                frame.at[start, "low"] = min(prev.low, row.low)
+                frame.at[start, "close"] = row.close
+                frame.at[start, "volume"] = prev.volume + row.volume
+            else:
+                frame.loc[start] = [row.open, row.high, row.low, row.close, row.volume]
 
 
 @dataclass
@@ -43,6 +85,7 @@ class TrendConsensus:
         self.last_score = 0.0
         self.last_change_ts: Optional[pd.Timestamp] = None
         self._history: deque[float] = deque(maxlen=confirm)
+        self._buffer = BarBuffer(self.weights.keys())
 
     def _classify(self, df: pd.DataFrame) -> int:
         """Return +1 for bullish, -1 for bearish, 0 for neutral for a timeframe."""
@@ -59,16 +102,11 @@ class TrendConsensus:
         return 0
 
     def evaluate(self, spot_1m: pd.DataFrame) -> TrendResult:
-        """Evaluate trend using the provided 1-minute OHLCV dataframe."""
-        frames: Dict[int, pd.DataFrame] = {
-            1: spot_1m,
-            5: spot_1m.resample("5min").agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna(),
-            10: spot_1m.resample("10min").agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna(),
-            15: spot_1m.resample("15min").agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}).dropna(),
-        }
+        """Evaluate trend using pre-computed OHLCV frames."""
+        frames = self._buffer.update(spot_1m)
         agg = 0.0
-        for tf, df in frames.items():
-            w = self.weights.get(tf, 0.0)
+        for tf, w in self.weights.items():
+            df = frames.get(tf, pd.DataFrame())
             if w <= 0 or df.empty:
                 continue
             agg += w * self._classify(df)
