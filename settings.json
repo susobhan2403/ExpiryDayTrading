@@ -16,6 +16,16 @@
     "options_flow": 0.45,
     "volatility": 0.2
   },
+  "TF_WEIGHTS": {
+    "1": 0.2,
+    "5": 0.3,
+    "10": 0.25,
+    "15": 0.25
+  },
+  "TF_BIAS": {
+    "FII": {"10": 0.05, "15": 0.05},
+    "DII": {"1": 0.05, "5": 0.05}
+  },
   "ORCHESTRATE": {
     "SYMBOLS": "NIFTY,BANKNIFTY,SENSEX,MIDCPNIFTY",
     "MODE": "auto",
