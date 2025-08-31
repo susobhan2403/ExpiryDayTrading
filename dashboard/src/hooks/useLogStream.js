@@ -9,7 +9,7 @@ const indicatorForLine = (line) => {
   if (t.startsWith('Scenario:')) return 'scenario';
   if (t.startsWith('Action:')) return 'action';
   if (t.startsWith('Final Verdict')) return 'decision';
-  if (t.startsWith('ALERT:')) return 'alerts';
+  if (t.includes('ALERT:')) return 'alerts';
   return 'misc';
 };
 
@@ -29,8 +29,8 @@ const colorize = (line) => {
     if (l.includes('Exit Now')) return `<span class="decision-exit">${l}</span>`;
     return `<span class="decision-hold">${l}</span>`;
   }
-  if (t.startsWith('ALERT:')) {
-    const l = line.replace(/^ALERT:\s*/, '');
+  if (t.includes('ALERT:')) {
+    const l = t.replace(/^.*ALERT:\s*/, '');
     if (l.startsWith('ACT')) return `<span class="alert-act">${l}</span>`;
     return `<span class="alert-ignore">${l}</span>`;
   }
