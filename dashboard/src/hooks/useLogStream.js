@@ -55,7 +55,9 @@ export default function useLogStream(symbol) {
           const m = line.match(/IST \| [A-Z]+\s+(\d+(?:\.\d+)?)/);
           if (m) {
             const price = parseFloat(m[1]);
-            fetch(`/spotdiff?symbol=${symbol}&last=${price}`)
+            let url = `/spotdiff?symbol=${symbol}&last=${price}`;
+            if (prev !== null) url += `&close=${prev}`;
+              fetch(url)
               .then((r) => r.json())
               .then((d) => {
                 if (
