@@ -35,6 +35,7 @@ import src.features.technicals as tech
 import src.features.options as opt
 from src.config import load_settings, save_settings, STEP_MAP
 from src.ai.ensemble import ai_predict_probs, blend_probs
+from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
 from src.strategy.trend_consensus import TrendConsensus, TrendResult
 from src.strategy.filters import KalmanFilter1D
@@ -181,6 +182,8 @@ def dynamic_conf_threshold() -> float:
         return DECISION_CONFIDENCE_THRESHOLD
     vals = np.array(CONF_HISTORY, dtype=float)
     return float(max(DECISION_CONFIDENCE_THRESHOLD * 0.5, vals.mean() - vals.std(ddof=0)))
+
+LLM = LLMGateway()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -883,6 +886,8 @@ class DecisionResult:
     trend_direction: str
     confidence: float
     last_change_ts: Optional[str]
+    llm_confidence: float = 0.0
+    rationale: str = ""
 
 
 @dataclass
@@ -1589,6 +1594,16 @@ def evaluate_decision(trend: TrendResult, threshold: Optional[float] = None) -> 
         confidence=float(trend.confidence),
         last_change_ts=trend.last_change_ts.isoformat() if trend.last_change_ts else None,
     )
+    llm_conf, _ = LLM.validate_signal({
+        "trend_score": float(trend.score),
+        "trend_confidence": float(trend.confidence),
+        "direction": str(trend.direction),
+    }, [])
+    if llm_conf == llm_conf:
+        dr.llm_confidence = float(llm_conf)
+        dr.confidence = float((dr.confidence + llm_conf) / 2.0)
+    else:
+        dr.llm_confidence = dr.confidence
 
     thr = threshold if threshold is not None else dynamic_conf_threshold()
     should_act = dr.trend_direction != "NEUTRAL" and dr.confidence >= thr
@@ -1770,6 +1785,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # FII/DII clients bias (optional) → integrate as micro bias
     inst_bull = inst_bear = False
     inst_bias_val = 0.0
+    inst_info = {"fii": 0.0, "dii": 0.0}
     try:
         from src.features.clients import load_clients_features
         cli_path = ROOT / 'data' / 'clients.csv'
@@ -1777,6 +1793,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             feats = load_clients_features(str(cli_path), now.date())
             fii_d1 = feats.get('fii_net_d1', 0.0)
             dii_d1 = feats.get('dii_net_d1', 0.0)
+            inst_info = {"fii": fii_d1, "dii": dii_d1}
             denom = abs(fii_d1) + abs(dii_d1) + 1e-9
             inst_bias_val = float((fii_d1 - dii_d1) / denom)
             fii_z = feats.get('fii_net_d1_z', 0.0)
@@ -2133,6 +2150,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         state,
     )
 
+    alerts = LLM.filter_alerts(alerts)
+
     # If an open trade exists, adjust it based on any IGNORE alerts
     if open_trade:
         if len(spot_5m) >= 2:
@@ -2320,7 +2339,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
                 f"Micro penalty {micro_penalty:.2f}: spread={micro_spread_pct:.4f}, qi={micro_qi:.2f}, stab={micro_stab:.2f}"
             )
             should_act = should_act and micro_penalty >= 0.5
-
+    decision.rationale = LLM.contextualize(inst_info, top, techs)
     if not should_act:
         tp = {"action": "NO-TRADE", "why": "confidence below threshold"}
 
@@ -2684,7 +2703,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             pass
     except Exception:
         pass
+    if decision.rationale:
+        line = line + "\nRationale: " + decision.rationale
     logger.info(line)
+    LLM.log_feedback(symbol, decision)
 
     for al in alerts:
         logger.info(f"ALERT: {al.action} {al.message}")
