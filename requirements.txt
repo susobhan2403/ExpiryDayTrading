@@ -5,3 +5,4 @@ pandas>=1.5
 prometheus-client>=0.22
 pytz>=2023.3
 requests>=2.31
+lightgbm>=4.6.0
