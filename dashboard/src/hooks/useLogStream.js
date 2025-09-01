@@ -71,6 +71,9 @@ export default function useLogStream(symbol) {
               })
               .catch(() => setSpot({ price, diff: 0, pct: 0 }));
           }
+          // New snapshot -> clear old alerts so the list reflects the latest
+          // state instead of accumulating stale messages.
+          setLines((prev) => ({ ...prev, alerts: [] }));
           return;
         }
         const colored = colorize(line);

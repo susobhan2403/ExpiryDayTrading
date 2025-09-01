@@ -173,24 +173,29 @@ const server = http.createServer(async (req, res) => {
   if (parsed.pathname === '/spotdiff') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
     try {
-      let last, close, node = {};
+      // Start with CSV fallbacks so a missing/failed Kite quote still yields a
+      // usable diff.  These files are produced by the engine at regular
+      // intervals and allow the dashboard to operate in offline/demo modes.
+      let last = latestSpotCsv(symbol);
+      let close = prevCloseCsv(symbol);
+      let node = {};
 
+      // If Kite quotes are available prefer them, but guard against failures.
       if (kite) {
-        const key = indexQuoteKey(symbol);
-        const q = await kite.quote([key]);
-        node = q[key] || {};
-        last = node.last_price;
-        close = node.ohlc?.close;
-      }
-
-      // Fallbacks using engine CSV outputs
-      if (!(typeof last === 'number' && isFinite(last))) {
-        const csvLast = latestSpotCsv(symbol);
-        if (typeof csvLast === 'number' && isFinite(csvLast)) last = csvLast;
-      }
-      if (!(typeof close === 'number' && isFinite(close))) {
-        const fb = prevCloseCsv(symbol);
-        if (typeof fb === 'number' && isFinite(fb)) close = fb;
+        try {
+          const key = indexQuoteKey(symbol);
+          const q = await kite.quote([key]);
+          node = q[key] || {};
+          if (typeof node.last_price === 'number' && isFinite(node.last_price)) {
+            last = node.last_price;
+          }
+          const kc = node.ohlc?.close;
+          if (typeof kc === 'number' && isFinite(kc)) {
+            close = kc;
+          }
+        } catch {
+          // swallow and rely on CSV values
+        }
       }
 
       let diff =
@@ -212,15 +217,15 @@ const server = http.createServer(async (req, res) => {
         pct = node.change;
       }
 
-      if (
-        typeof diff === 'number' && isFinite(diff) &&
-        typeof pct === 'number' && isFinite(pct)
-      ) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ diff, pct }));
-        return;
+      if (!(typeof diff === 'number' && isFinite(diff) &&
+            typeof pct === 'number' && isFinite(pct))) {
+        diff = 0;
+        pct = 0;
       }
-      throw new Error('diff unavailable');
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ diff, pct }));
+      return;
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(err) }));
