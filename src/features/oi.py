@@ -7,23 +7,40 @@ def _get_oi(node):
     except Exception:
         return 0
 
-def compute_voi(prev_chain: Dict, curr_chain: Dict, dt_minutes: float, atm: int, step: int) -> Dict[str, float]:
-    """
-    VOI (velocity of OI) per side near ATM bands and totals.
-    Returns per-minute rates to make it interval-agnostic.
+def compute_voi(
+    prev_chain: Dict,
+    curr_chain: Dict,
+    dt_minutes: float,
+    atm: int,
+    step: int,
+    band_multiplier: int = 3,
+) -> Dict[str, float]:
+    """Compute velocity of OI (VOI).
+
+    The metric is normalised to a *per-minute* rate by dividing by
+    ``dt_minutes`` so that different polling intervals are comparable.
+    Only strikes within ``±band_multiplier * step`` of ``atm`` are
+    considered.
     """
     if not prev_chain or not curr_chain or dt_minutes <= 0:
         return {"voi_ce_atm": 0.0, "voi_pe_atm": 0.0, "voi_ce_total": 0.0, "voi_pe_total": 0.0}
 
-    # Collect unions of strikes
-    strikes = set(curr_chain.get("calls", {}).keys()) | set(curr_chain.get("puts", {}).keys())
-    # Some saved prev chains may have str keys
     prev_calls = prev_chain.get("calls", {})
     prev_puts = prev_chain.get("puts", {})
+    curr_calls = curr_chain.get("calls", {})
+    curr_puts = curr_chain.get("puts", {})
 
-    # Define ATM bands: +/− one step around ATM
-    band_up = atm + step
-    band_dn = atm - step
+    # strikes present in either chain
+    strikes = (
+        set(curr_calls.keys())
+        | set(curr_puts.keys())
+        | set(prev_calls.keys())
+        | set(prev_puts.keys())
+    )
+
+    band = band_multiplier * step
+    upper = atm + band
+    lower = atm - band
 
     d_ce_total = 0
     d_pe_total = 0
@@ -35,15 +52,23 @@ def compute_voi(prev_chain: Dict, curr_chain: Dict, dt_minutes: float, atm: int,
             k_int = int(k)
         except Exception:
             continue
-        ce_now = _get_oi(curr_chain.get("calls", {}).get(k, {}))
-        pe_now = _get_oi(curr_chain.get("puts", {}).get(k, {}))
-        ce_prev = _get_oi(prev_calls.get(str(k), prev_calls.get(k, {})))
-        pe_prev = _get_oi(prev_puts.get(str(k), prev_puts.get(k, {})))
+        if k_int < lower or k_int > upper:
+            continue
+
+        ce_now = _get_oi(curr_calls.get(k_int, curr_calls.get(str(k_int), {})))
+        pe_now = _get_oi(curr_puts.get(k_int, curr_puts.get(str(k_int), {})))
+        ce_prev = _get_oi(prev_calls.get(k_int, prev_calls.get(str(k_int), {})))
+        pe_prev = _get_oi(prev_puts.get(k_int, prev_puts.get(str(k_int), {})))
+
+        if ce_now == ce_prev == 0 and pe_now == pe_prev == 0:
+            continue
+
         d_ce = ce_now - ce_prev
         d_pe = pe_now - pe_prev
         d_ce_total += d_ce
         d_pe_total += d_pe
-        if k_int in (band_dn, atm, band_up):
+
+        if k_int in (atm - step, atm, atm + step):
             d_ce_atm += d_ce
             d_pe_atm += d_pe
 
