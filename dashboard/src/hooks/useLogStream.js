@@ -46,6 +46,13 @@ export default function useLogStream(symbol) {
     // don't bleed into the current view.
     setLines({});
     setSpot(null);
+    let prev = null;
+    fetch(`/prevclose?symbol=${symbol}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.close === 'number' && isFinite(d.close)) prev = d.close;
+      })
+      .catch(() => {});
     const es = new EventSource(`/events?symbol=${symbol}`);
     es.onmessage = (e) => {
       try {
@@ -57,7 +64,7 @@ export default function useLogStream(symbol) {
             const price = parseFloat(m[1]);
             let url = `/spotdiff?symbol=${symbol}&last=${price}`;
             if (prev !== null) url += `&close=${prev}`;
-              fetch(url)
+            fetch(url)
               .then((r) => r.json())
               .then((d) => {
                 if (

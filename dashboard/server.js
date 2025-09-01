@@ -183,6 +183,11 @@ const server = http.createServer(async (req, res) => {
         if (Number.isFinite(qp)) last = qp;
       }
       let close = prevCloseCsv(symbol);
+      const qClose = parsed.query.close;
+      if (qClose !== undefined) {
+        const qc = parseFloat(Array.isArray(qClose) ? qClose[0] : qClose);
+        if (Number.isFinite(qc)) close = qc;
+      }
       let node = {};
 
       // If Kite quotes are available prefer them, but guard against failures.
