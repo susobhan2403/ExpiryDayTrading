@@ -667,7 +667,19 @@ class KiteProvider(MarketDataProvider):
             exps = sorted([e for e in df["expiry"].unique() if e >= today])
         if not exps:
             raise RuntimeError("No future expiries")
-        expiry = exps[0]
+
+        # Drop monthly expiries – identify any expiry that has a gap >7 days
+        # to the next available expiry and exclude it from the weekly list.
+        monthly = {
+            exps[i]
+            for i in range(len(exps) - 1)
+            if (exps[i + 1] - exps[i]).days > 7
+        }
+        weekly = [e for e in exps if e not in monthly]
+        if not weekly:
+            raise RuntimeError("No future weekly expiries")
+
+        expiry = weekly[0]
         chain = df[df["expiry"] == expiry].copy()
         chain["strike"] = chain["strike"].astype(int)
         return chain, expiry.isoformat()
