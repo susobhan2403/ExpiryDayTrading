@@ -35,6 +35,7 @@ import src.features.technicals as tech
 import src.features.options as opt
 from src.config import load_settings, save_settings, STEP_MAP
 from src.ai.ensemble import ai_predict_probs, blend_probs
+from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
 from src.strategy.trend_consensus import TrendConsensus, TrendResult
 from src.strategy.filters import KalmanFilter1D
@@ -182,6 +183,8 @@ def dynamic_conf_threshold() -> float:
     vals = np.array(CONF_HISTORY, dtype=float)
     return float(max(DECISION_CONFIDENCE_THRESHOLD * 0.5, vals.mean() - vals.std(ddof=0)))
 
+LLM = LLMGateway()
+
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 SLACK_WEBHOOK = os.getenv("SLACK_WEBHOOK", "")
@@ -298,22 +301,20 @@ def dynamic_weight_gate(symbol: str, atr_d: float, now: dt.datetime, inst_bias: 
         weights["price_trend"] -= 0.025
         weights["options_flow"] -= 0.025
     # Institutional bias tilts towards trend weight and timeframe emphasis
-    if inst_bias > 0:
-        weights["price_trend"] += 0.05
-        weights["volatility"] -= 0.05
-        for tf, delta in TF_BIAS.get("FII", {}).items():
-            tf_weights[tf] = tf_weights.get(tf, 0) + delta
-    elif inst_bias < 0:
-        weights["price_trend"] += 0.05
-        weights["volatility"] -= 0.05
-        for tf, delta in TF_BIAS.get("DII", {}).items():
-            tf_weights[tf] = tf_weights.get(tf, 0) + delta
+    if inst_bias != 0:
+        bias_mag = min(abs(inst_bias), 1.0)
+        weights["price_trend"] += 0.05 * bias_mag
+        weights["volatility"] -= 0.05 * bias_mag
+        bias_key = "FII" if inst_bias > 0 else "DII"
+        for tf, delta in TF_BIAS.get(bias_key, {}).items():
+            tf_weights[tf] = tf_weights.get(tf, 0) + delta * bias_mag
     # Normalize weights
     tot = sum(max(v, 0.0) for v in weights.values()) or 1.0
     weights = {k: max(v, 0.0) / tot for k, v in weights.items()}
     tf_tot = sum(max(v, 0.0) for v in tf_weights.values()) or 1.0
     tf_weights = {k: max(v, 0.0) / tf_tot for k, v in tf_weights.items()}
-    gate = 0.49 + 0.1 * min(1.0, max(0.0, atr_d / (base_range * 1.5)))
+    atr_pct = min(1.0, max(0.0, atr_d / (base_range * 1.5)))
+    gate = 0.45 + 0.10 * atr_pct
     return weights, gate, tf_weights
 
 def dynamic_thresholds(symbol: str, atr_d: float, avg_oi: float) -> Tuple[float, float]:
@@ -885,6 +886,8 @@ class DecisionResult:
     trend_direction: str
     confidence: float
     last_change_ts: Optional[str]
+    llm_confidence: float = 0.0
+    rationale: str = ""
 
 
 @dataclass
@@ -1591,6 +1594,16 @@ def evaluate_decision(trend: TrendResult, threshold: Optional[float] = None) -> 
         confidence=float(trend.confidence),
         last_change_ts=trend.last_change_ts.isoformat() if trend.last_change_ts else None,
     )
+    llm_conf, _ = LLM.validate_signal({
+        "trend_score": float(trend.score),
+        "trend_confidence": float(trend.confidence),
+        "direction": str(trend.direction),
+    }, [])
+    if llm_conf == llm_conf:
+        dr.llm_confidence = float(llm_conf)
+        dr.confidence = float((dr.confidence + llm_conf) / 2.0)
+    else:
+        dr.llm_confidence = dr.confidence
 
     thr = threshold if threshold is not None else dynamic_conf_threshold()
     should_act = dr.trend_direction != "NEUTRAL" and dr.confidence >= thr
@@ -1771,11 +1784,18 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     # FII/DII clients bias (optional) → integrate as micro bias
     inst_bull = inst_bear = False
+    inst_bias_val = 0.0
+    inst_info = {"fii": 0.0, "dii": 0.0}
     try:
         from src.features.clients import load_clients_features
         cli_path = ROOT / 'data' / 'clients.csv'
         if cli_path.exists():
             feats = load_clients_features(str(cli_path), now.date())
+            fii_d1 = feats.get('fii_net_d1', 0.0)
+            dii_d1 = feats.get('dii_net_d1', 0.0)
+            inst_info = {"fii": fii_d1, "dii": dii_d1}
+            denom = abs(fii_d1) + abs(dii_d1) + 1e-9
+            inst_bias_val = float((fii_d1 - dii_d1) / denom)
             fii_z = feats.get('fii_net_d1_z', 0.0)
             dii_z = feats.get('dii_net_d1_z', 0.0)
             inst_bull = (fii_z > 0.5) or (dii_z > 0.5)
@@ -2130,6 +2150,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         state,
     )
 
+    alerts = LLM.filter_alerts(alerts)
+
     # If an open trade exists, adjust it based on any IGNORE alerts
     if open_trade:
         if len(spot_5m) >= 2:
@@ -2141,8 +2163,19 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             logger.info(f"Scale out {exit_frac*100:.0f}% due to consecutive IGNORE alerts")
         state["open_trade"] = open_trade
 
-    inst_bias = (1.0 if inst_bull and not inst_bear else (-1.0 if inst_bear and not inst_bull else 0.0))
+    inst_bias = inst_bias_val
     dyn_weights, gate_cap, tf_weights = dynamic_weight_gate(symbol, ATR_D, now, inst_bias)
+    spread_thr, qi_thr, stab_thr = micro_thresholds()
+    micro_penalty = 1.0
+    if micro_spread_pct > spread_thr:
+        micro_penalty *= max(0.0, 1 - (micro_spread_pct - spread_thr) / max(spread_thr, 1e-9))
+    if micro_stab < stab_thr:
+        micro_penalty *= max(0.0, micro_stab / max(stab_thr, 1e-9))
+    if abs(micro_qi) < qi_thr:
+        micro_penalty *= max(0.0, abs(micro_qi) / max(qi_thr, 1e-9))
+    if micro_penalty < 1.0:
+        dyn_weights = {k: v * micro_penalty for k, v in dyn_weights.items()}
+        gate_cap = 0.45 + (gate_cap - 0.45) * micro_penalty
 
     tc = TREND_ENGINES.setdefault(
         symbol, TrendConsensus(score_filter=KalmanFilter1D())
@@ -2292,26 +2325,21 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     atr_mult = 1.5 if inst_bias > 0 else 1.0
     tp = trade_plan(top, atr, atr_mult)
 
-    # Microstructure guardrail: require strong queue imbalance, tight spread, and quote stability
-    # Previously all three conditions had to be satisfied which proved too
-    # strict and frequently negated otherwise valid setups.  Relax the gate so
-    # that we only abort if fewer than two conditions are met.  This still
-    # filters out poor microstructure while permitting trades when one metric
-    # is marginal (e.g. slightly wide spread but solid queue imbalance and
-    # stability).
+    # Microstructure guardrail softened into penalty
     if tp.get("action") in ("BUY_CE", "BUY_PE"):
         direction = 1 if tp["action"] == "BUY_CE" else -1
         spread_thr, qi_thr, stab_thr = micro_thresholds()
         qi_ok = (micro_qi * direction) > qi_thr
-        stab_ok = micro_stab >= stab_thr  # ≈3s of stable best bid/ask by default
+        stab_ok = micro_stab >= stab_thr
         spread_ok = micro_spread_pct <= spread_thr
         ok_count = sum([spread_ok, qi_ok, stab_ok])
-        if ok_count < 2:
+        micro_penalty = ok_count / 3
+        if micro_penalty < 1:
             logger.info(
-                f"Abort entry: spread={micro_spread_pct:.4f}, qi={micro_qi:.2f}, stab={micro_stab:.2f}"
+                f"Micro penalty {micro_penalty:.2f}: spread={micro_spread_pct:.4f}, qi={micro_qi:.2f}, stab={micro_stab:.2f}"
             )
-            tp = {"action": "NO-TRADE", "why": "microstructure filter (spread/qi/stab)"}
-
+            should_act = should_act and micro_penalty >= 0.5
+    decision.rationale = LLM.contextualize(inst_info, top, techs)
     if not should_act:
         tp = {"action": "NO-TRADE", "why": "confidence below threshold"}
 
@@ -2675,7 +2703,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             pass
     except Exception:
         pass
+    if decision.rationale:
+        line = line + "\nRationale: " + decision.rationale
     logger.info(line)
+    LLM.log_feedback(symbol, decision)
 
     for al in alerts:
         logger.info(f"ALERT: {al.action} {al.message}")
