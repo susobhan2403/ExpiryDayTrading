@@ -31,8 +31,9 @@ FEEDBACK_PATH = OUT_DIR / "llm_feedback.jsonl"
 class LLMGateway:
     """Facade for LLM helpers with graceful fallbacks when API is absent."""
 
-    def __init__(self) -> None:
+    def __init__(self, model: str = "gpt-4o-mini") -> None:
         self.client = openai
+        self.model = model
         if self.client:  # load API key from settings.json if available
             try:
                 cfg = load_settings()
@@ -85,7 +86,7 @@ class LLMGateway:
                 )
                 content = json.dumps({"features": features, "headlines": headlines})
                 resp = self.client.ChatCompletion.create(
-                    model="gpt-4o-mini",
+                    model=self.model,
                     messages=[{"role": "system", "content": prompt}, {"role": "user", "content": content}],
                 )
                 txt = resp["choices"][0]["message"]["content"].strip()
@@ -107,7 +108,7 @@ class LLMGateway:
                 )
                 content = json.dumps({"flows": inst_info, "scenario": scenario, "techs": techs})
                 resp = self.client.ChatCompletion.create(
-                    model="gpt-4o-mini",
+                    model=self.model,
                     messages=[{"role": "system", "content": prompt}, {"role": "user", "content": content}],
                 )
                 return resp["choices"][0]["message"]["content"].strip()

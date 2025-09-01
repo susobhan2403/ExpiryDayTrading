@@ -1,5 +1,6 @@
 """Utilities for LLM assisted feature engineering."""
-from typing import List
+from typing import List, Optional
+import os
 
 from src.config import load_settings
 
@@ -12,12 +13,23 @@ except Exception:  # pragma: no cover - optional dependency
     openai = None
 
 
-def synthesize_features(texts: List[str], model: str = "gpt-4o-mini") -> List[str]:
+def synthesize_features(texts: List[str], model: Optional[str] = None) -> List[str]:
     """Return list of synthetic features from input texts using an LLM.
 
-    If OpenAI API is unavailable, returns empty list.
+    If ``model`` is ``None`` the value is read from ``settings.json`` or the
+    ``OPENAI_MODEL`` environment variable.  If the OpenAI API is unavailable,
+    returns an empty list.
     """
     if openai is None:
         return []
-    resp = openai.ChatCompletion.create(model=model, messages=[{"role": "user", "content": "\n".join(texts)}])
-    return [c['message']['content'] for c in resp['choices']]
+    if model is None:
+        cfg_model = ""
+        try:
+            cfg_model = load_settings().get("OPENAI_MODEL", "")
+        except Exception:
+            pass
+        model = os.environ.get("OPENAI_MODEL", cfg_model or "gpt-4o-mini")
+    resp = openai.ChatCompletion.create(
+        model=model, messages=[{"role": "user", "content": "\n".join(texts)}]
+    )
+    return [c["message"]["content"] for c in resp["choices"]]
