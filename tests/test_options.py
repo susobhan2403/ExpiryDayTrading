@@ -9,6 +9,7 @@ from src.features.options import (
     max_pain,
     pcr_from_chain,
 )
+from src.config import get_rfr
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "chain_sample.csv"
@@ -45,7 +46,7 @@ def test_atm_iv_solver_bounds():
             100: {"bid": 80, "ask": 82, "bid_qty": 1, "ask_qty": 1, "oi": 0}
         },
     }
-    iv = atm_iv_from_chain(chain, spot=100, minutes_to_exp=1440, risk_free_rate=0.0)
+    iv = atm_iv_from_chain(chain, spot=100, minutes_to_exp=1440, risk_free_rate=get_rfr())
     assert not math.isnan(iv)
     assert iv > 1.5
 

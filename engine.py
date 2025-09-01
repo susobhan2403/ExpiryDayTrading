@@ -33,7 +33,7 @@ from colorama import init as colorama_init, Fore, Style
 import src.provider.kite as provider_mod
 import src.features.technicals as tech
 import src.features.options as opt
-from src.config import load_settings, save_settings, STEP_MAP
+from src.config import load_settings, save_settings, STEP_MAP, get_rfr
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
@@ -103,7 +103,7 @@ def to_native(obj):
 DEFAULT_SYMBOLS = ["BANKNIFTY"]
 DEFAULT_PROVIDER = "KITE"   # ← use Kite by default per your request
 DEFAULT_POLL_SECS = 240
-RISK_FREE = float(os.getenv("RISK_FREE_RATE", "0.066"))
+RISK_FREE = get_rfr()
 
 # Scenario weighting and gates
 # Allow override via settings.json -> {"WEIGHTS": {"price_trend": 0.35, ...}}
