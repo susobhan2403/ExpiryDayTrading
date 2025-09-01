@@ -2235,12 +2235,19 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     tp = trade_plan(top, atr, atr_mult)
 
     # Microstructure guardrail: require strong queue imbalance, tight spread, and quote stability
+    # Previously all three conditions had to be satisfied which proved too
+    # strict and frequently negated otherwise valid setups.  Relax the gate so
+    # that we only abort if fewer than two conditions are met.  This still
+    # filters out poor microstructure while permitting trades when one metric
+    # is marginal (e.g. slightly wide spread but solid queue imbalance and
+    # stability).
     if tp.get("action") in ("BUY_CE", "BUY_PE"):
         direction = 1 if tp["action"] == "BUY_CE" else -1
         qi_ok = (micro_qi * direction) > 0.60
         stab_ok = micro_stab >= 0.3  # ≈3s of stable best bid/ask
         spread_ok = micro_spread_pct <= 0.006
-        if not (spread_ok and qi_ok and stab_ok):
+        ok_count = sum([spread_ok, qi_ok, stab_ok])
+        if ok_count < 2:
             logger.info(
                 f"Abort entry: spread={micro_spread_pct:.4f}, qi={micro_qi:.2f}, stab={micro_stab:.2f}"
             )

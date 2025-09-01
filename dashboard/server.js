@@ -204,19 +204,25 @@ const server = http.createServer(async (req, res) => {
       let diff = 0;
       let pct = 0;
 
-      if (
-        typeof last === 'number' && isFinite(last) &&
-        typeof close === 'number' && isFinite(close)
-      ) {
+      // Prefer an explicit last/close pair.  When either side is missing try
+      // to recover using Kite's net_change/change fields so that the dashboard
+      // still receives a sensible difference and percent move.
+      const lastOk = typeof last === 'number' && isFinite(last);
+      const closeOk = typeof close === 'number' && isFinite(close);
+      const netOk = typeof node.net_change === 'number' && isFinite(node.net_change);
+      const pctOk = typeof node.change === 'number' && isFinite(node.change);
+
+      if (lastOk && closeOk) {
         diff = last - close;
         pct = (diff / close) * 100;
-      } else if (
-        typeof node.net_change === 'number' && isFinite(node.net_change) &&
-        typeof node.change === 'number' && isFinite(node.change)
-      ) {
-        // Fallback to Kite quote deltas if available
-        diff = node.net_change;
-        pct = node.change;
+      } else {
+        if (netOk) diff = node.net_change;
+        if (pctOk) {
+          pct = node.change;
+          if (!netOk && lastOk) diff = last * pct / 100;
+        } else if (netOk && closeOk) {
+          pct = (node.net_change / close) * 100;
+        }
       }
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
