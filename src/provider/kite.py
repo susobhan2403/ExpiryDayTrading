@@ -296,26 +296,31 @@ class KiteProvider(MarketDataProvider):
         return chain
 
     def get_indices_snapshot(self, symbols: List[str]) -> Dict[str, float]:
+        """Return the latest spot price for each index.
+
+        The previous implementation fell back to near-month futures prices when
+        index quotes were unavailable.  This introduced large basis-driven
+        errors, resulting in incorrect ATM strikes.  Instead of using futures,
+        we now attempt a secondary quote call and ultimately return ``nan`` when
+        spot data cannot be fetched."""
         keys = []
         map_key = {}
         for s in symbols:
             k = self._index_ltp_key(s)
-            keys.append(k); map_key[k]=s
-        out = {}
+            keys.append(k)
+            map_key[k] = s
+
+        out: Dict[str, float] = {}
         try:
-            q = self.kite.ltp(keys)
-            for k,v in q.items():
-                out[map_key[k]] = float(v["last_price"])
+            q = self.kite.quote(keys)
+            for k, v in q.items():
+                out[map_key[k]] = float(v.get("last_price") or float("nan"))
         except Exception as e:
-            logger.warning(f"ltp error: {e}")
+            logger.warning(f"quote error: {e}")
+
+        # Ensure every requested symbol has a value
         for s in symbols:
-            if s not in out:
-                try:
-                    fut = self._nearest_future_row(s)
-                    seg = "BFO" if s.upper()=="SENSEX" else "NFO"
-                    q = self.kite.quote([f"{seg}:{fut['tradingsymbol']}"])
-                    out[s] = float(list(q.values())[0]["last_price"])
-                except: out[s] = float('nan')
+            out.setdefault(s, float("nan"))
         return out
 
     def get_option_chains(self, symbol: str, expiries: List[str]) -> Dict[str, Dict]:

@@ -73,6 +73,23 @@ function prevCloseCsv(symbol) {
   }
 }
 
+// Latest spot from rollup CSV (last row)
+function latestSpotCsv(symbol) {
+  try {
+    const f = path.join(ROOT, 'out', `${symbol}_rollup.csv`);
+    if (!fs.existsSync(f)) return null;
+    const txt = fs.readFileSync(f, 'utf8').trim();
+    const lines = txt.split(/\r?\n/);
+    if (lines.length <= 1) return null; // header only
+    const arr = lines[lines.length - 1].split(',');
+    if (arr.length < 2) return null;
+    const spot = parseFloat(arr[1]);
+    return Number.isFinite(spot) ? spot : null;
+  } catch {
+    return null;
+  }
+}
+
 const kite = await initKite();
 
 // Determine the directory to serve static assets from. In production the
@@ -156,20 +173,21 @@ const server = http.createServer(async (req, res) => {
   if (parsed.pathname === '/spotdiff') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
     try {
-      if (!kite) throw new Error('kite not initialized');
-      const key = indexQuoteKey(symbol);
-      const q = await kite.quote([key]);
-      const node = q[key] || {};
+      let last, close, node = {};
 
-      // Prefer computing the difference from ``last_price`` and the
-      // previous close as those fields are always provided for indices.
-      // Earlier logic relied on ``net_change``/``change`` which are often
-      // omitted by the API, causing the dashboard to show 0.00 (0.00%).
-      let last = node.last_price;
-      let close = node.ohlc?.close;
+      if (kite) {
+        const key = indexQuoteKey(symbol);
+        const q = await kite.quote([key]);
+        node = q[key] || {};
+        last = node.last_price;
+        close = node.ohlc?.close;
+      }
 
-      // If the previous close is missing (e.g., when Kite is unavailable),
-      // fall back to the rollup CSV produced by the engine.
+      // Fallbacks using engine CSV outputs
+      if (!(typeof last === 'number' && isFinite(last))) {
+        const csvLast = latestSpotCsv(symbol);
+        if (typeof csvLast === 'number' && isFinite(csvLast)) last = csvLast;
+      }
       if (!(typeof close === 'number' && isFinite(close))) {
         const fb = prevCloseCsv(symbol);
         if (typeof fb === 'number' && isFinite(fb)) close = fb;
@@ -185,8 +203,7 @@ const server = http.createServer(async (req, res) => {
           ? (diff / close) * 100
           : undefined;
 
-      // As a final fallback, use Kite's ``net_change``/``change`` fields if
-      // they exist.
+      // Final fallback using Kite change fields if available
       if (
         !(typeof diff === 'number' && isFinite(diff) &&
           typeof pct === 'number' && isFinite(pct))
