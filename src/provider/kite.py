@@ -120,12 +120,24 @@ class KiteProvider(MarketDataProvider):
         if df.empty:
             raise RuntimeError(f"No options for {symbol}")
         df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
-        today = dt.datetime.now(IST).date()
+        now_ist = dt.datetime.now(IST)
+        today = now_ist.date()
         weekly = sorted(e for e in df["expiry"].unique() if e >= today)[:5]
-        if dt.datetime.now(IST).time() > dt.time(15, 30):
+        if now_ist.time() > dt.time(15, 30):
             weekly = [e for e in weekly if e > today]
         if not weekly:
             raise RuntimeError("No future expiries")
+
+        # Remove monthly expiries: any expiry followed by a gap >7 days
+        monthly = {
+            weekly[i]
+            for i in range(len(weekly) - 1)
+            if (weekly[i + 1] - weekly[i]).days > 7
+        }
+        weekly = [e for e in weekly if e not in monthly]
+        if not weekly:
+            raise RuntimeError("No future weekly expiries")
+
         expiry = weekly[0]
         chain = df[df["expiry"] == expiry].copy()
         chain["strike"] = chain["strike"].astype(int)
