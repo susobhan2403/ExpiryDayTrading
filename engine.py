@@ -20,6 +20,7 @@ Expiry Day Engine (Kite provider + Normalized Framework)
 from __future__ import annotations
 import os, sys, json, time, math, argparse, logging, pathlib, itertools, statistics, glob
 import datetime as dt
+from collections import deque
 from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass, asdict
 
@@ -137,6 +138,49 @@ REV_NORM = float(os.getenv("REVERSION_NORM", "1.0"))        # VND >= 1.0
 SQUEEZE_NORM = float(os.getenv("SQUEEZE_DISTANCE_NORM", "1.5"))
 MPH_NORM_THR = float(os.getenv("MAXPAIN_DRIFT_NORM_THR", "0.6"))
 DECISION_CONFIDENCE_THRESHOLD = float(os.getenv("DECISION_CONFIDENCE_THR", "0.6"))
+
+# Rolling stats for dynamic microstructure and confidence thresholds
+MICRO_HISTORY = {
+    "spread": deque(maxlen=50),
+    "qi": deque(maxlen=50),
+    "stab": deque(maxlen=50),
+}
+CONF_HISTORY: deque[float] = deque(maxlen=100)
+
+def update_micro_history(spread: float, qi: float, stab: float) -> None:
+    """Store recent microstructure metrics for dynamic thresholding."""
+    if spread == spread:
+        MICRO_HISTORY["spread"].append(float(spread))
+    if qi == qi:
+        MICRO_HISTORY["qi"].append(float(qi))
+    if stab == stab:
+        MICRO_HISTORY["stab"].append(float(stab))
+
+def micro_thresholds() -> Tuple[float, float, float]:
+    """Return dynamic thresholds for spread, qi and stability."""
+    spread_vals = np.array(MICRO_HISTORY["spread"], dtype=float)
+    qi_vals = np.array(MICRO_HISTORY["qi"], dtype=float)
+    stab_vals = np.array(MICRO_HISTORY["stab"], dtype=float)
+
+    spread_thr = 0.006
+    qi_thr = 0.60
+    stab_thr = 0.3
+
+    if len(spread_vals) >= 10:
+        spread_thr = float(spread_vals.mean() + 2 * spread_vals.std(ddof=0))
+    if len(qi_vals) >= 10:
+        qi_thr = float(qi_vals.mean() + qi_vals.std(ddof=0))
+    if len(stab_vals) >= 10:
+        stab_thr = float(max(stab_vals.mean() - stab_vals.std(ddof=0), 0.1))
+
+    return spread_thr, qi_thr, stab_thr
+
+def dynamic_conf_threshold() -> float:
+    """Adaptive confidence cut-off based on recent model scores."""
+    if len(CONF_HISTORY) < 20:
+        return DECISION_CONFIDENCE_THRESHOLD
+    vals = np.array(CONF_HISTORY, dtype=float)
+    return float(max(DECISION_CONFIDENCE_THRESHOLD * 0.5, vals.mean() - vals.std(ddof=0)))
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -1535,15 +1579,22 @@ def blend_probs(rule_probs: Dict[str,float], ai_probs: Dict[str,float], adx5: fl
     return {k: round(v/s,3) for k,v in out.items()}
 
 # ---------- decision evaluation ----------
-def evaluate_decision(trend: TrendResult, threshold: float = DECISION_CONFIDENCE_THRESHOLD) -> Tuple[DecisionResult, bool]:
-    """Convert TrendConsensus output into a DecisionResult and act flag."""
+def evaluate_decision(trend: TrendResult, threshold: Optional[float] = None) -> Tuple[DecisionResult, bool]:
+    """Convert TrendConsensus output into a DecisionResult and act flag.
+
+    When ``threshold`` is ``None`` the confidence gate is derived from recent
+    model output via :func:`dynamic_conf_threshold` to avoid a static cut-off
+    that can be overly conservative."""
     dr = DecisionResult(
         trend_score=float(trend.score),
         trend_direction=str(trend.direction),
         confidence=float(trend.confidence),
         last_change_ts=trend.last_change_ts.isoformat() if trend.last_change_ts else None,
     )
-    should_act = dr.trend_direction != "NEUTRAL" and dr.confidence >= threshold
+
+    thr = threshold if threshold is not None else dynamic_conf_threshold()
+    should_act = dr.trend_direction != "NEUTRAL" and dr.confidence >= thr
+    CONF_HISTORY.append(dr.confidence)
     return dr, should_act
 
 # ---------- main cycle ----------
@@ -1715,6 +1766,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     except Exception:
         pass
 
+    # Record microstructure stats for dynamic thresholds
+    update_micro_history(micro_spread_pct, abs(micro_qi), micro_stab)
+
     # FII/DII clients bias (optional) → integrate as micro bias
     inst_bull = inst_bear = False
     try:
@@ -1790,7 +1844,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     fut_move_up = fut_5m['close'].iloc[-1] > fut_5m['close'].iloc[-2] if len(fut_5m) >= 2 else False
 
     # Basis & VWAP relation
-    basis = float(fut_1m["close"].iloc[-1] - spot_1m["close"].iloc[-1])
+    if spot_now == spot_now:
+        basis = float(fut_1m["close"].iloc[-1] - spot_now)
+    else:
+        logger.warning(f"{symbol}: spot price unavailable for basis calculation")
+        basis = float("nan")
     # basis_series depends on persisted state; initialize after loading state
 
     # Max Pain drift per hour & MPH_norm (keep last 20 in file)
@@ -2243,9 +2301,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # stability).
     if tp.get("action") in ("BUY_CE", "BUY_PE"):
         direction = 1 if tp["action"] == "BUY_CE" else -1
-        qi_ok = (micro_qi * direction) > 0.60
-        stab_ok = micro_stab >= 0.3  # ≈3s of stable best bid/ask
-        spread_ok = micro_spread_pct <= 0.006
+        spread_thr, qi_thr, stab_thr = micro_thresholds()
+        qi_ok = (micro_qi * direction) > qi_thr
+        stab_ok = micro_stab >= stab_thr  # ≈3s of stable best bid/ask by default
+        spread_ok = micro_spread_pct <= spread_thr
         ok_count = sum([spread_ok, qi_ok, stab_ok])
         if ok_count < 2:
             logger.info(

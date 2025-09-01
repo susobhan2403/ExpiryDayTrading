@@ -46,6 +46,7 @@ class KiteProvider(MarketDataProvider):
         self.kite.set_access_token(sess["access_token"])
         self._nfo = None
         self._nse = None
+        self._index_cache: Dict[str, float] = {}
 
     def _instruments(self, exch: str) -> pd.DataFrame:
         if exch=="NFO":
@@ -314,13 +315,18 @@ class KiteProvider(MarketDataProvider):
         try:
             q = self.kite.quote(keys)
             for k, v in q.items():
-                out[map_key[k]] = float(v.get("last_price") or float("nan"))
+                price = float(v.get("last_price") or float("nan"))
+                sym = map_key[k]
+                if price == price:
+                    self._index_cache[sym] = price
+                out[sym] = price
         except Exception as e:
             logger.warning(f"quote error: {e}")
 
-        # Ensure every requested symbol has a value
+        # Fallback to last cached quote if current fetch fails
         for s in symbols:
-            out.setdefault(s, float("nan"))
+            if s not in out or out[s] != out[s]:
+                out[s] = self._index_cache.get(s, float("nan"))
         return out
 
     def get_option_chains(self, symbol: str, expiries: List[str]) -> Dict[str, Dict]:
