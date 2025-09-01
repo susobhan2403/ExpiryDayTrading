@@ -2164,7 +2164,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     last_top = state.get("last_top", "")
     top = max(probs, key=probs.get)
     if last_top and top != last_top:
-        gain = probs[top] - last_probs.get(last_top, 0.0)
+        prev_prob = probs.get(last_top, 0.0)
+        gain = probs[top] - prev_prob
         expected_direction = {
             "Bear migration": "BEAR",
             "Bull migration / gamma carry": "BULL",
@@ -2179,7 +2180,10 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             trend_ok = trend.direction == "BULL" and trend.confidence >= tc.threshold
         elif dir_req == "BEAR":
             trend_ok = trend.direction == "BEAR" and trend.confidence >= tc.threshold
-        if gain < SCENARIO_FLIP_DELTA or not trend_ok:
+        # Only hold on to the previous scenario if it still carries equal or
+        # greater probability.  This prevents the UI from displaying a
+        # low-probability scenario as primary when an alternative dominates.
+        if (gain < SCENARIO_FLIP_DELTA or not trend_ok) and prev_prob >= probs[top]:
             top = last_top
 
     # Trade plan (mechanical)

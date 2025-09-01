@@ -202,5 +202,11 @@ def atm_iv_from_chain(chain: Dict, spot: float, minutes_to_exp: float, risk_free
         if price:
             ivs.append(implied_vol(price, spot, K, risk_free_rate, T, call=is_call))
     ivs=[v for v in ivs if v==v and v>0]
-    if not ivs: return float('nan')
-    return min(ivs) if len(ivs)==2 else ivs[0]
+    if not ivs:
+        return float('nan')
+    # Use the average of call/put IVs when both sides are available.  The
+    # previous implementation returned the minimum which consistently
+    # under-reported volatility when one side of the book was stale or
+    # mispriced (e.g. wide put quotes).  Sensibull and other vendors average
+    # the two, yielding figures that more closely reflect the true ATM level.
+    return sum(ivs)/len(ivs)

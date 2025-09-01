@@ -85,7 +85,11 @@ def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: f
             pin_pts = int(pin_pts * 1.25)
         else:
             above = max(2, above); below = max(2, below)
-            far_pts = max(base_far - (400 if is_bank else 200), base_far//2)
+            # Previously we reduced the far OTM filter on non-trending expiry
+            # days which yielded overly tight bands (e.g. 550pt for
+            # MIDCPNIFTY).  Keeping the baseline distance matches external
+            # references and test expectations.
+            far_pts = base_far
             pin_pts = max(int(pin_pts * 0.7), step)
     else:
         if trending:
