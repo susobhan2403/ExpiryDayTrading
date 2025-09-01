@@ -1,0 +1,42 @@
+{
+  "ts": "2025-08-28T15:04:22.405831+05:30",
+  "symbol": "NIFTY",
+  "spot": 24494.1,
+  "vwap_spot": NaN,
+  "vwap_fut": 24586.65831656763,
+  "rsi5": 33.78213988338342,
+  "macd": -17.39071119187429,
+  "macd_signal": -13.736126133497718,
+  "adx5": 30.884155712795554,
+  "pcr": 0.694,
+  "dpcr": -0.008,
+  "dpcr_z": -0.57,
+  "maxpain": 24550,
+  "dist_to_mp": -55.9,
+  "atr_d": 209.8,
+  "vnd": 0.27,
+  "mph_pts_per_hr": -51.3,
+  "mph_norm": -0.24,
+  "atm": 24500,
+  "atm_iv": 9.53,
+  "div": 1.14,
+  "iv_z": 0.53,
+  "iv_pct_hint": 3.7,
+  "basis": 0.9,
+  "ssd": 1.12,
+  "pdist_pct": 0.23,
+  "scen_probs": {
+    "Short-cover reversion up": 0.19,
+    "Bear migration": 0.155,
+    "Bull migration / gamma carry": 0.155,
+    "Pin & decay day (IV crush)": 0.155,
+    "Squeeze continuation (one-way)": 0.19,
+    "Event knee-jerk then revert": 0.155
+  },
+  "scen_top": "Pin & decay day (IV crush)",
+  "trade": {
+    "action": "NO-TRADE",
+    "why": "Pin & decay: prefer credits / tiny scalps"
+  },
+  "eq_line": "Equivalence: 200 NIFTY \u2248 571 BANKNIFTY (ATR_NF=209, ATR_BN=598)"
+}

@@ -1,0 +1,49 @@
+{
+  "ts": "2025-08-28T15:00:20.190443+05:30",
+  "symbol": "BANKNIFTY",
+  "spot": 53848.3,
+  "vwap_spot": NaN,
+  "vwap_fut": 54091.77535502402,
+  "rsi5": 33.90316169177845,
+  "macd": -56.231696097078384,
+  "macd_signal": -50.01209814318298,
+  "adx5": 32.47495589783807,
+  "pcr": 0.648,
+  "dpcr": 0.034,
+  "dpcr_z": 2.43,
+  "maxpain": 54000,
+  "dist_to_mp": -151.7,
+  "atr_d": 581.9,
+  "vnd": 0.26,
+  "mph_pts_per_hr": -116.2,
+  "mph_norm": -0.2,
+  "atm": 53800,
+  "atm_iv": 23.07,
+  "div": -7.34,
+  "iv_z": -2.65,
+  "iv_pct_hint": 71.7,
+  "basis": 5.6,
+  "ssd": 1.52,
+  "pdist_pct": 0.28,
+  "scen_probs": {
+    "Short-cover reversion up": 0.178,
+    "Bear migration": 0.146,
+    "Bull migration / gamma carry": 0.178,
+    "Pin & decay day (IV crush)": 0.146,
+    "Squeeze continuation (one-way)": 0.146,
+    "Event knee-jerk then revert": 0.207
+  },
+  "scen_top": "Short-cover reversion up",
+  "trade": {
+    "action": "BUY_CE",
+    "instrument": "CE 53900",
+    "entry": "VWAP reclaim + RSI(5m) > 50",
+    "sl": "VWAP - 0.15\u00d7ATR_D",
+    "targets": [
+      "53806",
+      "53950"
+    ],
+    "invalidate": "VWAP loss + CE write above spot"
+  },
+  "eq_line": "Equivalence: 200 NIFTY \u2248 557 BANKNIFTY (ATR_NF=208, ATR_BN=581)"
+}
