@@ -6,15 +6,32 @@ def _norm_pdf(x: float) -> float:
     return math.exp(-0.5*x*x)/math.sqrt(2*math.pi)
 
 def bs_gamma(S: float, K: float, r: float, T: float, sigma: float) -> float:
-    if S<=0 or K<=0 or T<=0 or sigma<=0:
+    """Black–Scholes gamma with ``r`` as an annualised decimal."""
+    if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
         return 0.0
-    d1 = (math.log(S/K) + (r+0.5*sigma*sigma)*T)/(sigma*math.sqrt(T))
-    return _norm_pdf(d1)/(S*sigma*math.sqrt(T))
+    d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    return _norm_pdf(d1) / (S * sigma * math.sqrt(T))
 
-def gex_from_chain(chain: Dict, spot: float, minutes_to_exp: float, r: float, atm_iv: float, contract_mult: int = 1) -> float:
-    """Approximate dealer gamma exposure (GEX): sum of gamma * OI * contract_mult * sign.
-    Assumes net dealer short options stance → sign = -1 for both calls and puts.
-    Uses a flat IV (atm_iv) for tractability.
+def gex_from_chain(
+    chain: Dict,
+    spot: float,
+    minutes_to_exp: float,
+    r: float,
+    atm_iv: float,
+    contract_mult: int = 1,
+) -> float:
+    """Approximate dealer gamma exposure (GEX).
+
+    Parameters
+    ----------
+    r : float
+        Annualised risk-free rate expressed as a decimal (e.g., ``0.066``).
+
+    Notes
+    -----
+    GEX is computed as the sum of gamma * OI * ``contract_mult`` with a net
+    dealer short assumption (sign ``-1`` for calls and puts) using a flat IV
+    ``atm_iv`` for tractability.
     """
     if not chain or not chain.get('strikes'):
         return 0.0
@@ -34,7 +51,10 @@ def gex_from_chain(chain: Dict, spot: float, minutes_to_exp: float, r: float, at
     return float(gex)
 
 def zero_gamma_level(chain: Dict, spot: float, minutes_to_exp: float, r: float, atm_iv: float, step: int) -> float:
-    """Brute scan for zero-gamma crossing near spot using a small window of strikes."""
+    """Brute scan for zero-gamma crossing near spot.
+
+    ``r`` is the annualised risk-free rate in decimal form.
+    """
     if not chain or not chain.get('strikes'):
         return float('nan')
     strikes = sorted(chain['strikes'])

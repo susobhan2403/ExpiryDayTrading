@@ -3,19 +3,30 @@ import math
 import datetime as dt
 from typing import Dict, List
 
-from src.config import STEP_MAP
+from src.config import STEP_MAP, get_rfr
 
 import pandas as pd
 import pytz
 
 IST = pytz.timezone("Asia/Kolkata")
 
-def bs_price(S,K,r,T,sig,call=True):
-    if T<=0 or sig<=0: return 0.0
-    d1 = (math.log(S/K) + (r+0.5*sig*sig)*T)/(sig*math.sqrt(T))
-    d2 = d1 - sig*math.sqrt(T)
-    N = lambda x: 0.5*(1+math.erf(x/math.sqrt(2)))
-    return (S*N(d1) - K*math.exp(-r*T)*N(d2)) if call else (K*math.exp(-r*T)*N(-d2) - S*N(-d1))
+
+def bs_price(S, K, r, T, sig, call=True):
+    """Black–Scholes price for a European option.
+
+    Parameters
+    ----------
+    r : float
+        Annualised risk-free rate as a decimal (e.g., ``0.066`` for 6.6%).
+    """
+    if T <= 0 or sig <= 0:
+        return 0.0
+    d1 = (math.log(S / K) + (r + 0.5 * sig * sig) * T) / (sig * math.sqrt(T))
+    d2 = d1 - sig * math.sqrt(T)
+    N = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))
+    return (S * N(d1) - K * math.exp(-r * T) * N(d2)) if call else (
+        K * math.exp(-r * T) * N(-d2) - S * N(-d1)
+    )
 
 def implied_vol(
     price: float,
@@ -30,9 +41,16 @@ def implied_vol(
 ) -> float:
     """Solve Black–Scholes IV using bisection with wide bounds.
 
+    Parameters
+    ----------
+    r : float
+        Annualised risk-free rate expressed as a decimal (e.g., ``0.066``).
+
+    Notes
+    -----
     The previous implementation fixed the search window to ``[0.03, 1.5]`` and
     60 iterations which frequently failed in high volatility regimes (e.g.
-    BANKNIFTY spikes) and returned biased or ``NaN`` values.  The new solver
+    BANKNIFTY spikes) and returned biased or ``NaN`` values. The new solver
     expands the upper bound and exposes tolerance/iteration controls so callers
     can tune accuracy.
     """
@@ -51,27 +69,51 @@ def implied_vol(
     return mid
 
 def bs_delta(S: float, K: float, r: float, T: float, sig: float, call: bool = True) -> float:
-    if S<=0 or K<=0 or T<=0 or sig<=0:
+    """Black–Scholes delta.
+
+    Parameters
+    ----------
+    r : float
+        Annualised risk-free rate as a decimal.
+    """
+    if S <= 0 or K <= 0 or T <= 0 or sig <= 0:
         return 0.0
-    d1 = (math.log(S/K) + (r+0.5*sig*sig)*T)/(sig*math.sqrt(T))
+    d1 = (math.log(S / K) + (r + 0.5 * sig * sig) * T) / (sig * math.sqrt(T))
     if call:
         # N(d1)
-        return 0.5*(1+math.erf(d1/math.sqrt(2)))
+        return 0.5 * (1 + math.erf(d1 / math.sqrt(2)))
     else:
         # N(d1)-1
-        return 0.5*(1+math.erf(d1/math.sqrt(2))) - 1.0
+        return 0.5 * (1 + math.erf(d1 / math.sqrt(2))) - 1.0
 
 def bs_gamma(S: float, K: float, r: float, T: float, sig: float) -> float:
-    if S<=0 or K<=0 or T<=0 or sig<=0:
-        return 0.0
-    d1 = (math.log(S/K) + (r+0.5*sig*sig)*T) / (sig*math.sqrt(T))
-    return math.exp(-0.5*d1*d1) / (S*sig*math.sqrt(2*math.pi*T))
+    """Black–Scholes gamma.
 
-def risk_reversal_25(chain: Dict, spot: float, minutes_to_exp: float, r: float, atm_iv: float) -> Dict[str, float]:
+    Parameters
+    ----------
+    r : float
+        Annualised risk-free rate as a decimal.
     """
-    Approximate 25-delta risk reversal: RR = IV_call(25d) - IV_put(25d)
-    Uses ATM IV to select strikes with delta≈±0.25, then backs out IV from market prices.
-    Returns { 'rr': float, 'k_call': int, 'k_put': int, 'iv_call': float, 'iv_put': float }
+    if S <= 0 or K <= 0 or T <= 0 or sig <= 0:
+        return 0.0
+    d1 = (math.log(S / K) + (r + 0.5 * sig * sig) * T) / (sig * math.sqrt(T))
+    return math.exp(-0.5 * d1 * d1) / (S * sig * math.sqrt(2 * math.pi * T))
+
+def risk_reversal_25(
+    chain: Dict, spot: float, minutes_to_exp: float, r: float, atm_iv: float
+) -> Dict[str, float]:
+    """
+    Approximate 25-delta risk reversal: ``RR = IV_call(25d) - IV_put(25d)``.
+
+    Parameters
+    ----------
+    r : float
+        Annualised risk-free rate as a decimal (e.g., ``0.066``).
+
+    Returns
+    -------
+    dict
+        ``{"rr": float, "k_call": int, "k_put": int, "iv_call": float, "iv_put": float}``
     """
     out = {"rr": float('nan'), "k_call": 0, "k_put": 0, "iv_call": float('nan'), "iv_put": float('nan')}
     strikes = sorted(chain.get('strikes') or [])
@@ -240,28 +282,41 @@ def pcr_from_chain(
         return float("nan")
     return pe_sum / ce_sum
 
-def gamma_exposure(chain: Dict, spot: float, minutes_to_exp: float, atm_iv: float, r: float = 0.0) -> tuple[float, Dict[int,float]]:
-    strikes = chain.get('strikes') or []
+def gamma_exposure(
+    chain: Dict,
+    spot: float,
+    minutes_to_exp: float,
+    atm_iv: float,
+    r: float = get_rfr(),
+) -> tuple[float, Dict[int, float]]:
+    """Compute dealer gamma exposure and zero-gamma level.
+
+    Parameters
+    ----------
+    r : float, default ``get_rfr()``
+        Annualised risk-free rate as a decimal.
+    """
+    strikes = chain.get("strikes") or []
     if not strikes:
-        return float('nan'), {}
-    T = max(1e-9, minutes_to_exp) / (365*24*60)
-    sig = atm_iv if atm_iv==atm_iv and atm_iv>0 else 0.2
-    gex_map: Dict[int,float] = {}
+        return float("nan"), {}
+    T = max(1e-9, minutes_to_exp) / (365 * 24 * 60)
+    sig = atm_iv if atm_iv == atm_iv and atm_iv > 0 else 0.2
+    gex_map: Dict[int, float] = {}
     for k in strikes:
-        ce = chain['calls'].get(k, {})
-        pe = chain['puts'].get(k, {})
-        oi_tot = float(ce.get('oi',0) + pe.get('oi',0))
-        skew = 1.0 if ce.get('oi',0) >= pe.get('oi',0) else -1.0
+        ce = chain["calls"].get(k, {})
+        pe = chain["puts"].get(k, {})
+        oi_tot = float(ce.get("oi", 0) + pe.get("oi", 0))
+        skew = 1.0 if ce.get("oi", 0) >= pe.get("oi", 0) else -1.0
         gamma = bs_gamma(spot, k, r, T, sig)
         gex_map[int(k)] = oi_tot * gamma * skew
-    zg = float('nan')
+    zg = float("nan")
     if gex_map:
         ks = sorted(gex_map.keys())
         cum = 0.0
-        for i,k in enumerate(ks[:-1]):
+        for i, k in enumerate(ks[:-1]):
             cum += gex_map[k]
-            if cum <= 0 and cum + gex_map[ks[i+1]] >= 0:
-                zg = float(ks[i+1])
+            if cum <= 0 and cum + gex_map[ks[i + 1]] >= 0:
+                zg = float(ks[i + 1])
                 break
     return zg, gex_map
 
@@ -300,37 +355,47 @@ def atm_iv_from_chain(
     risk_free_rate: float,
     symbol: str = "",
 ) -> float:
+    """Infer ATM implied volatility from an option chain.
+
+    Parameters
+    ----------
+    risk_free_rate : float
+        Annualised risk-free rate expressed as a decimal.
+    """
     strikes = chain["strikes"]
     if not strikes:
         return float("nan")
     K = atm_strike(spot, strikes, symbol)
-    ce = chain['calls'].get(K); pe = chain['puts'].get(K)
-    T = max(1e-9, minutes_to_exp) / (365*24*60)
-    ivs=[]
+    ce = chain["calls"].get(K)
+    pe = chain["puts"].get(K)
+    T = max(1e-9, minutes_to_exp) / (365 * 24 * 60)
+    ivs = []
     now = dt.datetime.now(IST)
     for row, is_call in [(ce, True), (pe, False)]:
         if not row:
             continue
-        bid = row.get("bid", 0.0); ask = row.get("ask", 0.0)
-        bq = row.get("bid_qty", 0.0); aq = row.get("ask_qty", 0.0)
+        bid = row.get("bid", 0.0)
+        ask = row.get("ask", 0.0)
+        bq = row.get("bid_qty", 0.0)
+        aq = row.get("ask_qty", 0.0)
         ltp = row.get("ltp", 0.0)
         ts_str = row.get("ltp_ts")
         ltt = pd.to_datetime(ts_str) if ts_str else None
         price = None
-        if bid>0 and ask>0 and bq>0 and aq>0:
-            price = (ask*bq + bid*aq) / (bq + aq)
-        elif bid>0 and ask>0 and (ask-bid)/max(1,K) <= 0.006 and bq>0 and aq>0:
-            price = 0.5*(bid+ask)
-        elif ltp>0 and ltt is not None and abs((now - ltt).total_seconds()) <= 60:
+        if bid > 0 and ask > 0 and bq > 0 and aq > 0:
+            price = (ask * bq + bid * aq) / (bq + aq)
+        elif bid > 0 and ask > 0 and (ask - bid) / max(1, K) <= 0.006 and bq > 0 and aq > 0:
+            price = 0.5 * (bid + ask)
+        elif ltp > 0 and ltt is not None and abs((now - ltt).total_seconds()) <= 60:
             price = ltp
         if price:
             ivs.append(implied_vol(price, spot, K, risk_free_rate, T, call=is_call))
-    ivs=[v for v in ivs if v==v and v>0]
+    ivs = [v for v in ivs if v == v and v > 0]
     if not ivs:
-        return float('nan')
+        return float("nan")
     # Use the average of call/put IVs when both sides are available.  The
     # previous implementation returned the minimum which consistently
     # under-reported volatility when one side of the book was stale or
     # mispriced (e.g. wide put quotes).  Sensibull and other vendors average
     # the two, yielding figures that more closely reflect the true ATM level.
-    return sum(ivs)/len(ivs)
+    return sum(ivs) / len(ivs)

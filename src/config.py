@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import os
 import pathlib
 from typing import Dict, Tuple
 
@@ -27,6 +28,18 @@ def save_settings(cfg: Dict) -> None:
         path.write_text(json.dumps(cfg, indent=2))
     except Exception:
         pass
+
+
+def get_rfr() -> float:
+    """Return the risk-free rate as an annualised decimal.
+
+    The value is sourced from the ``RISK_FREE_RATE`` environment variable or
+    ``settings.json`` and expressed as a fraction (e.g., ``0.066`` for 6.6%).
+    """
+    try:
+        return float(os.getenv("RISK_FREE_RATE", load_settings().get("RISK_FREE_RATE", 0.0)))
+    except Exception:
+        return 0.0
 
 def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: float, VND: float, D: float, step: int | None = None) -> Tuple[int,int,int,int]:
     sym = symbol.upper()
