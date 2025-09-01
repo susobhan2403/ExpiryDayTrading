@@ -177,6 +177,11 @@ const server = http.createServer(async (req, res) => {
       // usable diff.  These files are produced by the engine at regular
       // intervals and allow the dashboard to operate in offline/demo modes.
       let last = latestSpotCsv(symbol);
+      const qLast = parsed.query.last;
+      if (qLast !== undefined) {
+        const qp = parseFloat(Array.isArray(qLast) ? qLast[0] : qLast);
+        if (Number.isFinite(qp)) last = qp;
+      }
       let close = prevCloseCsv(symbol);
       let node = {};
 
