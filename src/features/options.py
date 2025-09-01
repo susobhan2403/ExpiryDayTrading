@@ -117,21 +117,40 @@ def minutes_to_expiry(expiry_iso: str) -> float:
     return max(0.0, (expiry_dt - now).total_seconds()/60.0)
 
 def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
-    """Return the smallest strike that is >= spot.
+    """Return the smallest strike that is >= ``spot``.
 
-    Sensibull and many retail platforms define the ATM strike as the next
-    available strike above the spot (rather than the mathematically closest
-    strike).  Previously this function selected the nearest strike with a
-    tie-breaking rule that favoured the higher strike, which caused our engine
-    to occasionally pick a lower strike than external vendors.  To align with
-    those platforms and avoid ATM mismatches, we now simply round *up* to the
-    next strike.
+    The option-chain data returned by brokers occasionally omits strikes that
+    are far from the money.  When the underlying rallies beyond the highest
+    strike in the chain our previous implementation simply returned that last
+    available value, leading to large ATM mismatches (e.g. engine reporting
+    53800 when the underlying was trading above 54100).  To stay aligned with
+    vendors such as Sensibull we always *round up* to the next strike using the
+    observed strike spacing when we run out of data.
+
+    Parameters
+    ----------
+    spot: float
+        Current underlying price.
+    strikes: list[int]
+        Strike prices available in the option chain.  The function infers the
+        strike spacing from this list and will extrapolate beyond its bounds if
+        required.
     """
     if not strikes:
         return 0
-    strikes = sorted(strikes)
+
+    strikes = sorted(int(k) for k in strikes)
     higher = [k for k in strikes if k >= spot]
-    return higher[0] if higher else strikes[-1]
+    if higher:
+        return higher[0]
+
+    # Spot is above the highest available strike.  Infer the step size and
+    # project the next valid strike rather than returning the truncated value.
+    if len(strikes) >= 2:
+        step = min(b - a for a, b in zip(strikes, strikes[1:])) or 50
+    else:
+        step = 50
+    return int(math.ceil(spot / step) * step)
 
 def pcr_from_chain(chain: Dict) -> float:
     ce = sum(v['oi'] for v in chain['calls'].values())

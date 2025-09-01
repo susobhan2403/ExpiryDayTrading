@@ -198,29 +198,25 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      let diff =
+      // Begin with neutral defaults so the dashboard always receives numeric
+      // values.  Missing quotes previously resulted in `undefined` which broke
+      // the front-end's rendering of the spot change.
+      let diff = 0;
+      let pct = 0;
+
+      if (
         typeof last === 'number' && isFinite(last) &&
         typeof close === 'number' && isFinite(close)
-          ? last - close
-          : undefined;
-      let pct =
-        typeof diff === 'number' && typeof close === 'number'
-          ? (diff / close) * 100
-          : undefined;
-
-      // Final fallback using Kite change fields if available
-      if (
-        !(typeof diff === 'number' && isFinite(diff) &&
-          typeof pct === 'number' && isFinite(pct))
       ) {
+        diff = last - close;
+        pct = (diff / close) * 100;
+      } else if (
+        typeof node.net_change === 'number' && isFinite(node.net_change) &&
+        typeof node.change === 'number' && isFinite(node.change)
+      ) {
+        // Fallback to Kite quote deltas if available
         diff = node.net_change;
         pct = node.change;
-      }
-
-      if (!(typeof diff === 'number' && isFinite(diff) &&
-            typeof pct === 'number' && isFinite(pct))) {
-        diff = 0;
-        pct = 0;
       }
 
       res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -491,19 +491,26 @@ def minutes_to_expiry(expiry_iso: str) -> float:
     return max(0.0, (expiry_dt - now).total_seconds()/60.0)
 
 def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
-    """Return the smallest strike greater than or equal to ``spot``.
+    """Return the smallest strike that is >= ``spot``.
 
-    The earlier implementation picked the mathematically closest strike with a
-    tie-breaking rule favouring the higher strike.  Third-party platforms like
-    Sensibull, however, always round up to the next strike when determining the
-    ATM level.  Using the previous method resulted in mismatched ATM strikes and
-    IVs compared to those platforms.  Rounding up ensures consistency and avoids
-    incorrect IV comparisons."""
+    Provider option chains sometimes omit far OTM strikes.  If the underlying
+    moves beyond the highest available strike our previous logic would simply
+    return that last value, under-reporting the actual ATM level.  We now
+    extrapolate using the observed strike spacing so the result always rounds up
+    to the next valid strike, matching Sensibull and other retail platforms."""
     if not strikes:
         return 0
-    strikes = sorted(strikes)
+
+    strikes = sorted(int(k) for k in strikes)
     higher = [k for k in strikes if k >= spot]
-    return higher[0] if higher else strikes[-1]
+    if higher:
+        return higher[0]
+
+    if len(strikes) >= 2:
+        step = min(b - a for a, b in zip(strikes, strikes[1:])) or 50
+    else:
+        step = 50
+    return int(math.ceil(spot / step) * step)
 
 def pcr_from_chain(chain: Dict) -> float:
     ce = sum(v['oi'] for v in chain['calls'].values())
