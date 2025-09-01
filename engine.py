@@ -39,6 +39,7 @@ from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
 from src.strategy.trend_consensus import TrendConsensus, TrendResult
 from src.strategy.filters import KalmanFilter1D
+from src.output.explain import write_explain
 
 # ---------- paths & logging ----------
 IST = pytz.timezone("Asia/Kolkata")
@@ -200,6 +201,10 @@ PCR_Z_GAUGE = Gauge("pcr_z", "PCR z-score")
 SPREAD_PCT_GAUGE = Gauge("spread_pct", "Bid-ask spread percentage")
 DEPTH_STAB_GAUGE = Gauge("depth_stability", "Quote depth stability")
 SCENARIO_GAUGE = Gauge("scenario_probability", "Scenario probability", ["scenario"])
+PCR_GAUGE = Gauge("pcr", "Put-call ratio")
+ATM_GAUGE = Gauge("atm_strike", "ATM strike")
+STEP_GAUGE = Gauge("strike_step", "Option strike step")
+MINS_TO_EXPIRY_GAUGE = Gauge("mins_to_expiry", "Minutes to expiry")
 
 # Multi-timeframe trend engines per symbol
 TREND_ENGINES: Dict[str, TrendConsensus] = {}
@@ -998,8 +1003,15 @@ def manage_trade_on_ignore(
     return scale_out
 
 
-def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None:
+def update_metrics(
+    snap: Snapshot,
+    spread_pct: float,
+    depth_stab: float,
+    step: int,
+    mins_to_expiry: float,
+) -> None:
     """Push values from the latest snapshot to Prometheus gauges."""
+
     try:
         if snap.vnd == snap.vnd:
             VND_GAUGE.set(snap.vnd)
@@ -1009,6 +1021,11 @@ def update_metrics(snap: Snapshot, spread_pct: float, depth_stab: float) -> None
             IV_Z_GAUGE.set(snap.iv_z)
         if snap.dpcr_z == snap.dpcr_z:
             PCR_Z_GAUGE.set(snap.dpcr_z)
+        if snap.pcr == snap.pcr:
+            PCR_GAUGE.set(snap.pcr)
+        ATM_GAUGE.set(snap.atm)
+        STEP_GAUGE.set(step)
+        MINS_TO_EXPIRY_GAUGE.set(mins_to_expiry)
         SPREAD_PCT_GAUGE.set(spread_pct)
         DEPTH_STAB_GAUGE.set(depth_stab)
         for scen, prob in (snap.scen_probs or {}).items():
@@ -2405,7 +2422,25 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         scen_probs=probs, scen_top=top, trade=tp, eq_line=eq_line
     )
 
-    update_metrics(snap, micro_spread_pct, micro_stab)
+    update_metrics(snap, micro_spread_pct, micro_stab, step, mins_to_exp)
+
+    explain_path = OUT_DIR / "explain.json"
+    explain_snapshot = {
+        "ts": snap.ts,
+        "symbol": symbol,
+        "expiry": expiry,
+        "step": step,
+        "atm": snap.atm,
+        "pcr": snap.pcr,
+        "dpcr_z": snap.dpcr_z,
+        "vnd": snap.vnd,
+        "mph_norm": snap.mph_norm,
+        "iv_z": snap.iv_z,
+    }
+    write_explain(explain_snapshot, explain_path)
+    logger.info(
+        "expiry=%s step=%s atm=%s pcr=%.2f", expiry, step, snap.atm, snap.pcr
+    )
 
     ts_tag = now.strftime("%Y%m%d_%H%M%S")
     SNAP_DIR.mkdir(parents=True, exist_ok=True)
