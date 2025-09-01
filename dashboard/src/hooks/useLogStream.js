@@ -1,0 +1,102 @@
+import { useEffect, useState } from 'react';
+
+const indicatorForLine = (line) => {
+  const t = line.trim();
+  if (/\d{2}:\d{2} IST \| [A-Z]+/.test(t)) return 'spot';
+  if (t.startsWith('D=')) return 'distance';
+  if (t.startsWith('PCR')) return 'pcr';
+  if (t.startsWith('ATM')) return 'atm';
+  if (t.startsWith('Scenario:')) return 'scenario';
+  if (t.startsWith('Action:')) return 'action';
+  if (t.startsWith('Final Verdict')) return 'decision';
+  if (t.includes('ALERT:')) return 'alerts';
+  return 'misc';
+};
+
+const colorize = (line) => {
+  const t = line.trim();
+  if (t.startsWith('Scenario:')) {
+    return line.replace(/^Scenario:\s*/, '');
+  }
+  if (t.startsWith('Action:')) {
+    const l = line.replace(/^Action:\s*/, '');
+    if (/^TRADE\b/.test(l.trim())) return `<span class="action-trade">${l}</span>`;
+    return l;
+  }
+  if (t.startsWith('Final Verdict')) {
+    const l = line.replace(/^Final Verdict:\s*/, '');
+    if (l.includes('Enter Now')) return `<span class="decision-enter">${l}</span>`;
+    if (l.includes('Exit Now')) return `<span class="decision-exit">${l}</span>`;
+    return `<span class="decision-hold">${l}</span>`;
+  }
+  if (t.includes('ALERT:')) {
+    const l = t.replace(/^.*ALERT:\s*/, '');
+    if (l.startsWith('ACT')) return `<span class="alert-act">${l}</span>`;
+    return `<span class="alert-ignore">${l}</span>`;
+  }
+  return line.replace(/EXIT NOW/g, '<span class="exit">EXIT NOW</span>');
+};
+
+export default function useLogStream(symbol) {
+  const [lines, setLines] = useState({});
+  const [spot, setSpot] = useState(null);
+
+  useEffect(() => {
+    // Reset state whenever the symbol changes so alerts from other indices
+    // don't bleed into the current view.
+    setLines({});
+    setSpot(null);
+    const es = new EventSource(`/events?symbol=${symbol}`);
+    es.onmessage = (e) => {
+      try {
+        const { line } = JSON.parse(e.data);
+        const indicator = indicatorForLine(line);
+        if (indicator === 'spot') {
+          const m = line.match(/IST \| [A-Z]+\s+(\d+(?:\.\d+)?)/);
+          if (m) {
+            const price = parseFloat(m[1]);
+            fetch(`/spotdiff?symbol=${symbol}`)
+              .then((r) => r.json())
+              .then((d) => {
+                if (
+                  typeof d.diff === 'number' &&
+                  isFinite(d.diff) &&
+                  typeof d.pct === 'number' &&
+                  isFinite(d.pct)
+                ) {
+                  setSpot({ price, diff: d.diff, pct: d.pct });
+                } else {
+                  setSpot({ price, diff: 0, pct: 0 });
+                }
+              })
+              .catch(() => setSpot({ price, diff: 0, pct: 0 }));
+          }
+          return;
+        }
+        const colored = colorize(line);
+
+        // Only keep the most recent line for each indicator and ignore
+        // duplicates so that stale/noisy data doesn't accumulate. Alerts are
+        // appended so multiple alert lines can be displayed sequentially
+        // while avoiding repeats even if the log writer emits the same alert
+        // multiple times.
+        setLines((prevLines) => {
+          if (indicator === 'alerts') {
+            const prevArr = prevLines.alerts || [];
+            if (prevArr.includes(colored)) return prevLines;
+            const nextArr = [...prevArr, colored].slice(-10); // cap to last 10
+            return { ...prevLines, alerts: nextArr };
+          }
+          const prevArr = prevLines[indicator] || [];
+          if (prevArr[0] === colored) return prevLines;
+          return { ...prevLines, [indicator]: [colored] };
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    return () => es.close();
+  }, [symbol]);
+
+  return { ...lines, spot };
+}
