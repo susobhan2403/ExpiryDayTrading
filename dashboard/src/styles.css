@@ -21,6 +21,11 @@ body {
 .spot-change {
   font-weight: bold;
 }
+/* Reduce the font size of spot price and change by 1px relative to the header */
+.symbol-board .symbol .spot-price,
+.symbol-board .symbol .spot-change {
+  font-size: calc(1em - 1px);
+}
 .spot-change.up {
   color: #4caf50;
 }
