@@ -1,8 +1,13 @@
 """Utilities for LLM assisted feature engineering."""
 from typing import List
 
+from src.config import load_settings
+
 try:
     import openai
+    key = load_settings().get("OPEN_API_KEY", "")
+    if key:
+        openai.api_key = key
 except Exception:  # pragma: no cover - optional dependency
     openai = None
 

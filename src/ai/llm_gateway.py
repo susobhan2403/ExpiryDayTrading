@@ -15,6 +15,8 @@ import datetime as dt
 from dataclasses import asdict
 from typing import Dict, List, Tuple
 
+from src.config import load_settings
+
 try:  # pragma: no cover - optional dependency
     import openai  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
@@ -31,6 +33,16 @@ class LLMGateway:
 
     def __init__(self) -> None:
         self.client = openai
+        if self.client:  # load API key from settings.json if available
+            try:
+                cfg = load_settings()
+                key = cfg.get("OPEN_API_KEY", "")
+                if key:
+                    self.client.api_key = key
+                else:
+                    self.client = None
+            except Exception:
+                self.client = None
 
     # ------------------ noise filtering ------------------
     def _is_structural(self, message: str) -> bool:

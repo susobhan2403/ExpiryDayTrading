@@ -42,5 +42,6 @@
     "EOD_K_ATR": 1.0,
     "EOD_TIME_BARRIER": 15,
     "EOD_CALIBRATE": "platt"
-  }
+  },
+  "OPEN_API_KEY": "sample"
 }
