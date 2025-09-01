@@ -40,21 +40,57 @@ const colorize = (line) => {
 export default function useLogStream(symbol) {
   const [lines, setLines] = useState({});
   const [spot, setSpot] = useState(null);
+  const [prevClose, setPrevClose] = useState(null);
+  const [lastPrice, setLastPrice] = useState(null);
 
   useEffect(() => {
     // Reset state whenever the symbol changes so alerts from other indices
     // don't bleed into the current view.
     setLines({});
-    setSpot({ price: 0, diff: 0, pct: 0 });
-    // Do not fetch /prevclose in dev/offline; rely on /spotdiff which derives
-    // from quote fields or server fallbacks.
+    setSpot(null);
+    setPrevClose(null);
+    setLastPrice(null);
+    fetch(`/prevclose?symbol=${symbol}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.close === 'number' && isFinite(d.close)) setPrevClose(d.close);
+      })
+      .catch(() => {});
     const es = new EventSource(`/events?symbol=${symbol}`);
     es.onmessage = (e) => {
       try {
         const { line } = JSON.parse(e.data);
         const indicator = indicatorForLine(line);
         if (indicator === 'spot') {
-          // Clear old alerts when a new snapshot header arrives.
+          const m = line.match(/IST \| [A-Z]+\s+(\d+(?:\.\d+)?)/);
+          if (m) {
+            const price = parseFloat(m[1]);
+            setLastPrice(price);
+            // Prefer computing locally when we already have prev close.
+            if (typeof prevClose === 'number' && isFinite(prevClose)) {
+              const diff = price - prevClose;
+              const pct = (diff / prevClose) * 100;
+              setSpot({ price, diff, pct });
+            } else {
+              let url = `/spotdiff?symbol=${symbol}&last=${price}`;
+              fetch(url)
+                .then((r) => r.json())
+                .then((d) => {
+                  if (
+                    typeof d.diff === 'number' &&
+                    isFinite(d.diff) &&
+                    typeof d.pct === 'number' &&
+                    isFinite(d.pct)
+                  ) {
+                    setSpot({ price, diff: d.diff, pct: d.pct });
+                  } else {
+                    setSpot({ price, diff: 0, pct: 0 });
+                  }
+                })
+                .catch(() => setSpot({ price, diff: 0, pct: 0 }));
+            }
+          }
+          // New snapshot -> clear old alerts so the list reflects the latest
           // state instead of accumulating stale messages.
           setLines((prev) => ({ ...prev, alerts: [] }));
           return;
@@ -84,25 +120,19 @@ export default function useLogStream(symbol) {
     return () => es.close();
   }, [symbol]);
 
-  // Poll /spotdiff to compute spot change using Kite quotes + persisted prev-close.
+  // If we fetched prevClose after we already received a spot snapshot while
+  // the market/logs are static (e.g., market closed), recompute diff/pct.
   useEffect(() => {
-    let cancelled = false;
-    const fetchDiff = () => {
-      fetch(`/spotdiff?symbol=${symbol}`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (cancelled) return;
-          const price = typeof d.last === 'number' && isFinite(d.last) ? d.last : 0;
-          const diff = typeof d.diff === 'number' && isFinite(d.diff) ? d.diff : 0;
-          const pct = typeof d.pct === 'number' && isFinite(d.pct) ? d.pct : 0;
-          setSpot({ price, diff, pct });
-        })
-        .catch(() => {});
-    };
-    fetchDiff();
-    const id = setInterval(fetchDiff, 15000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [symbol]);
+    if (
+      typeof prevClose === 'number' && isFinite(prevClose) &&
+      typeof lastPrice === 'number' && isFinite(lastPrice)
+    ) {
+      const diff = lastPrice - prevClose;
+      const pct = (diff / prevClose) * 100;
+      setSpot({ price: lastPrice, diff, pct });
+    }
+  }, [prevClose, lastPrice]);
 
   return { ...lines, spot };
 }
+

@@ -11,7 +11,6 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const LOG_FILE = path.join(ROOT, 'logs', 'engine.log');
-const PREV_CACHE_FILE = path.join(ROOT, 'out', 'prevclose.json');
 
 // Initialize Kite client for prev-close queries
 async function initKite() {
@@ -38,88 +37,41 @@ function indexQuoteKey(symbol) {
   const s = symbol.toUpperCase();
   if (s === 'BANKNIFTY') return 'NSE:NIFTY BANK';
   if (s === 'NIFTY') return 'NSE:NIFTY 50';
-  if (s === 'FINNIFTY') return 'NSE:NIFTY FINANCIAL SERVICES';
-  if (s === 'MIDCPNIFTY') return 'NSE:NIFTY MIDCAP SELECT';
+  if (s === 'FINNIFTY') return 'NSE:NIFTY FIN SERVICE';
+  if (s === 'MIDCPNIFTY') return 'NSE:NIFTY MID SELECT';
   if (s === 'SENSEX') return 'BSE:SENSEX';
   return 'NSE:NIFTY 50';
 }
 
-// Simplified design: persist previous session closes in a file and compute
-// diffs only from Kite quotes (last_price) and the persisted close. When
-// quotes are temporarily unavailable (e.g., market closed or network issues),
-// fall back to the engine's rollup CSV or the last header line in the log so
-// the dashboard still shows a spot price instead of 0.
-let prevCloseCache = {};
-function loadPrevCloseCache() {
+// Extract the previous trading session's closing spot from the rollup CSV
+// emitted by the engine.  This mirrors the fallback logic used by the
+// /prevclose endpoint so that the spot difference can still be computed when
+// Kite quotes are unavailable or incomplete.
+function prevCloseCsv(symbol) {
   try {
-    if (fs.existsSync(PREV_CACHE_FILE)) {
-      const txt = fs.readFileSync(PREV_CACHE_FILE, 'utf8');
-      const obj = JSON.parse(txt);
-      if (obj && typeof obj === 'object') prevCloseCache = obj;
-    }
-  } catch {}
-}
-function savePrevCloseCache() {
-  try {
-    const dir = path.dirname(PREV_CACHE_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(PREV_CACHE_FILE, JSON.stringify(prevCloseCache, null, 2), 'utf8');
-  } catch {}
-}
-
-// Periodically refresh prev-close from Kite ohlc.close so the cache stays
-// in sync across trading days without depending on CSVs or logs.
-async function refreshPrevCloseCache() {
-  if (!kite) return;
-  try {
-    const symbols = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY', 'FINNIFTY'];
-    const keys = symbols.map(indexQuoteKey);
-    const q = await kite.quote(keys);
-    for (let i = 0; i < symbols.length; i++) {
-      const sym = symbols[i];
-      const key = keys[i];
-      const node = q[key] || {};
-      const close = node?.ohlc?.close;
-      if (typeof close === 'number' && isFinite(close)) prevCloseCache[sym] = close;
-    }
-    savePrevCloseCache();
-  } catch {}
-}
-
-async function ensurePrevClose(symbol) {
-  const s = symbol.toUpperCase();
-  if (typeof prevCloseCache[s] === 'number' && isFinite(prevCloseCache[s])) return prevCloseCache[s];
-  if (!kite) return null;
-  try {
-    const key = indexQuoteKey(s);
-    const q = await kite.quote([key]);
-    const node = q[key] || {};
-    let close = node?.ohlc?.close;
-    if (!(typeof close === 'number' && isFinite(close))) {
-      const last = node?.last_price;
-      const net = node?.net_change;
-      const pct = node?.change;
-      if (typeof last === 'number' && isFinite(last)) {
-        if (typeof net === 'number' && isFinite(net)) close = last - net;
-        else if (typeof pct === 'number' && isFinite(pct) && pct > -100) close = last / (1 + pct / 100);
+    const f = path.join(ROOT, 'out', `${symbol}_rollup.csv`);
+    if (!fs.existsSync(f)) return null;
+    const txt = fs.readFileSync(f, 'utf8').trim();
+    const lines = txt.split(/\r?\n/);
+    if (lines.length <= 1) return null; // header only
+    let lastDay = null;
+    for (let i = lines.length - 1; i >= 1; i--) {
+      const arr = lines[i].split(',');
+      if (arr.length < 2) continue;
+      const ts = arr[0];
+      const day = ts.slice(0, 10);
+      const hour = parseInt(ts.slice(11, 13), 10);
+      if (!lastDay) { lastDay = day; continue; }
+      if (day !== lastDay && hour < 16) {
+        const spot = parseFloat(arr[1]);
+        return Number.isFinite(spot) ? spot : null;
       }
     }
-    if (typeof close === 'number' && isFinite(close)) {
-      prevCloseCache[s] = close;
-      savePrevCloseCache();
-      return close;
-    }
-  } catch {}
-  return null;
+    return null;
+  } catch {
+    return null;
+  }
 }
-
-
-const kite = await initKite();
-// Load persisted prev closes at startup
-loadPrevCloseCache();
-// Best-effort refresh on start and hourly thereafter
-await refreshPrevCloseCache();
-setInterval(refreshPrevCloseCache, 60 * 60 * 1000);
 
 // Latest spot from rollup CSV (last row)
 function latestSpotCsv(symbol) {
@@ -138,23 +90,7 @@ function latestSpotCsv(symbol) {
   }
 }
 
-// Latest spot parsed from the most recent log header for the symbol
-function latestSpotFromLogs(symbol) {
-  try {
-    if (!fs.existsSync(LOG_FILE)) return null;
-    const txt = fs.readFileSync(LOG_FILE, 'utf8');
-    const lines = txt.trim().split(/\r?\n/);
-    const re = new RegExp(`IST \\| ${symbol}\\s+(\\d+(?:\\.\\d+)?)`, 'i');
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const m = lines[i].match(re);
-      if (m) {
-        const v = parseFloat(m[1]);
-        if (Number.isFinite(v)) return v;
-      }
-    }
-  } catch {}
-  return null;
-}
+const kite = await initKite();
 
 // Determine the directory to serve static assets from. In production the
 // dashboard is built into "dashboard/dist". When running locally, or if the
@@ -170,16 +106,64 @@ const server = http.createServer(async (req, res) => {
 
   if (parsed.pathname === '/prevclose') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
+
+    // Helper: CSV fallback from engine rollup when Kite is unavailable
+    const csvFallback = () => {
+      try {
+        const f = path.join(ROOT, 'out', `${symbol}_rollup.csv`);
+        if (!fs.existsSync(f)) return null;
+        const txt = fs.readFileSync(f, 'utf8').trim();
+        const lines = txt.split(/\r?\n/);
+        if (lines.length <= 1) return null; // header only
+        let lastDay = null;
+        for (let i = lines.length - 1; i >= 1; i--) { // skip header at 0
+          const arr = lines[i].split(',');
+          if (arr.length < 2) continue;
+          const ts = arr[0];
+          const day = ts.slice(0, 10);
+          const hour = parseInt(ts.slice(11, 13), 10);
+          if (!lastDay) { lastDay = day; continue; }
+          if (day !== lastDay && hour < 16) {
+            // Use the last spot from the previous trading session before the
+            // market close (roughly 16:00 IST). Some rollup files contain
+            // after-hours entries which previously caused the fallback to
+            // return near-current prices, yielding tiny or zero differences.
+            const spot = parseFloat(arr[1]);
+            return Number.isFinite(spot) ? spot : null;
+          }
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Primary: Kite quote ohlc.close
     try {
-      const close = await ensurePrevClose(symbol);
+      if (!kite) throw new Error('kite not initialized');
+      const key = indexQuoteKey(symbol);
+      const q = await kite.quote([key]);
+      const close = q[key]?.ohlc?.close;
       if (typeof close === 'number' && isFinite(close)) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ close }));
         return;
       }
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'prevclose unavailable' }));
+      // fallback if close missing
+      const fb = csvFallback();
+      if (fb !== null) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ close: fb }));
+        return;
+      }
+      throw new Error('close unavailable');
     } catch (err) {
+      const fb = csvFallback();
+      if (fb !== null) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ close: fb, note: 'csv_fallback' }));
+        return;
+      }
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(err) }));
     }
@@ -189,35 +173,70 @@ const server = http.createServer(async (req, res) => {
   if (parsed.pathname === '/spotdiff') {
     const symbol = (parsed.query.symbol || '').toUpperCase();
     try {
-      // Ensure prev close is available in the cache/file
-      const prev = await ensurePrevClose(symbol);
-      if (!(typeof prev === 'number' && isFinite(prev))) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ last: null, prev: null, diff: 0, pct: 0 }));
-        return;
+      // Start with CSV fallbacks so a missing/failed Kite quote still yields a
+      // usable diff.  These files are produced by the engine at regular
+      // intervals and allow the dashboard to operate in offline/demo modes.
+      let last = latestSpotCsv(symbol);
+      const qLast = parsed.query.last;
+      if (qLast !== undefined) {
+        const qp = parseFloat(Array.isArray(qLast) ? qLast[0] : qLast);
+        if (Number.isFinite(qp)) last = qp;
       }
-      let last = null;
-      // Try Kite quotes first
+      let close = prevCloseCsv(symbol);
+      const qClose = parsed.query.close;
+      if (qClose !== undefined) {
+        const qc = parseFloat(Array.isArray(qClose) ? qClose[0] : qClose);
+        if (Number.isFinite(qc)) close = qc;
+      }
+      let node = {};
+
+      // If Kite quotes are available prefer them, but guard against failures.
       if (kite) {
         try {
           const key = indexQuoteKey(symbol);
           const q = await kite.quote([key]);
-          const node = q[key] || {};
-          if (typeof node?.last_price === 'number' && isFinite(node.last_price)) last = node.last_price;
-        } catch {}
+          node = q[key] || {};
+          if (typeof node.last_price === 'number' && isFinite(node.last_price)) {
+            last = node.last_price;
+          }
+          const kc = node.ohlc?.close;
+          if (typeof kc === 'number' && isFinite(kc)) {
+            close = kc;
+          }
+        } catch {
+          // swallow and rely on CSV values
+        }
       }
-      // Fallbacks for last
-      if (!(typeof last === 'number' && isFinite(last))) last = latestSpotCsv(symbol);
-      if (!(typeof last === 'number' && isFinite(last))) last = latestSpotFromLogs(symbol);
-      if (!(typeof last === 'number' && isFinite(last))) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ last: null, prev, diff: 0, pct: 0 }));
-        return;
+
+      // Begin with neutral defaults so the dashboard always receives numeric
+      // values.  Missing quotes previously resulted in `undefined` which broke
+      // the front-end's rendering of the spot change.
+      let diff = 0;
+      let pct = 0;
+
+      // Prefer an explicit last/close pair.  When either side is missing try
+      // to recover using Kite's net_change/change fields so that the dashboard
+      // still receives a sensible difference and percent move.
+      const lastOk = typeof last === 'number' && isFinite(last);
+      const closeOk = typeof close === 'number' && isFinite(close);
+      const netOk = typeof node.net_change === 'number' && isFinite(node.net_change);
+      const pctOk = typeof node.change === 'number' && isFinite(node.change);
+
+      if (lastOk && closeOk) {
+        diff = last - close;
+        pct = (diff / close) * 100;
+      } else {
+        if (netOk) diff = node.net_change;
+        if (pctOk) {
+          pct = node.change;
+          if (!netOk && lastOk) diff = last * pct / 100;
+        } else if (netOk && closeOk) {
+          pct = (node.net_change / close) * 100;
+        }
       }
-      const diff = last - prev;
-      const pct = (diff / prev) * 100;
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ last, prev, diff, pct }));
+      res.end(JSON.stringify({ diff, pct }));
       return;
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -315,3 +334,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Dashboard server listening on port ${PORT}`);
 });
+

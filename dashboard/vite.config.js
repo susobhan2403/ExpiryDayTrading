@@ -9,7 +9,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/events': 'http://localhost:3000',
-      '/prevclose': 'http://localhost:3000'
+      '/prevclose': 'http://localhost:3000',
+      // Needed for spot change (diff/pct) API used by the dashboard
+      '/spotdiff': 'http://localhost:3000'
     }
   },
   build: {
