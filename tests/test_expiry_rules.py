@@ -30,3 +30,15 @@ def test_sensex_before_sep2025_is_tuesday():
     exp = nearest_weekly_expiry(now, 'SENSEX')
     assert wd(exp) == 1
 
+
+def test_banknifty_after_sep2025_is_tuesday():
+    now = aware(2026,1,2,10,0)
+    exp = nearest_weekly_expiry(now, 'BANKNIFTY')
+    assert wd(exp) == 1
+
+
+def test_midcpnifty_after_sep2025_is_tuesday():
+    now = aware(2026,1,2,10,0)
+    exp = nearest_weekly_expiry(now, 'MIDCPNIFTY')
+    assert wd(exp) == 1
+

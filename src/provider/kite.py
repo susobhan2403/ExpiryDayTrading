@@ -118,17 +118,15 @@ class KiteProvider(MarketDataProvider):
         inst = self._instruments(ex).copy()
         df = inst[(inst["name"] == sym) & (inst["segment"] == seg)].copy()
         if df.empty:
-            raise RuntimeError(f"No NFO options for {symbol}")
+            raise RuntimeError(f"No options for {symbol}")
         df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
-        now_ist = dt.datetime.now(IST)
-        today = now_ist.date()
-        if now_ist.time() > dt.time(15, 30):
-            exps = sorted([e for e in df["expiry"].unique() if e > today])
-        else:
-            exps = sorted([e for e in df["expiry"].unique() if e >= today])
-        if not exps:
+        today = dt.datetime.now(IST).date()
+        weekly = sorted(e for e in df["expiry"].unique() if e >= today)[:5]
+        if dt.datetime.now(IST).time() > dt.time(15, 30):
+            weekly = [e for e in weekly if e > today]
+        if not weekly:
             raise RuntimeError("No future expiries")
-        expiry = exps[0]
+        expiry = weekly[0]
         chain = df[df["expiry"] == expiry].copy()
         chain["strike"] = chain["strike"].astype(int)
         return chain, expiry.isoformat()
