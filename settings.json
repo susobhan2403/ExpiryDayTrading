@@ -6,7 +6,7 @@
   "SLACK_WEBHOOK": "",
   "BAND_MAX_STRIKES_ABOVE": 4,
   "BAND_MAX_STRIKES_BELOW": 3,
-  "FAR_OTM_FILTER_POINTS": 600,
+  "FAR_OTM_FILTER_POINTS": 750,
   "PIN_DISTANCE_POINTS": 150,
   "ADX_RISE_MIN": 2,
   "ignore_is_hard_block": true,
@@ -43,5 +43,6 @@
     "EOD_TIME_BARRIER": 15,
     "EOD_CALIBRATE": "platt"
   },
-  "OPEN_API_KEY": "sample"
+  "OPEN_API_KEY": "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",
+  "OPENAI_MODEL": "gpt-5"
 }
