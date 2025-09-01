@@ -3,6 +3,8 @@ import math
 import datetime as dt
 from typing import Dict, List
 
+from src.config import STEP_MAP
+
 import pandas as pd
 import pytz
 
@@ -15,15 +17,37 @@ def bs_price(S,K,r,T,sig,call=True):
     N = lambda x: 0.5*(1+math.erf(x/math.sqrt(2)))
     return (S*N(d1) - K*math.exp(-r*T)*N(d2)) if call else (K*math.exp(-r*T)*N(-d2) - S*N(-d1))
 
-def implied_vol(price,S,K,r,T,call=True):
-    if price<=0 or S<=0 or K<=0 or T<=0: return float('nan')
-    lo, hi = 0.03, 1.5
-    for _ in range(60):
-        mid = 0.5*(lo+hi)
-        pm = bs_price(S,K,r,T,mid,call)
-        if abs(pm-price) < 1e-3: return mid
-        if pm > price: hi = mid
-        else: lo = mid
+def implied_vol(
+    price: float,
+    S: float,
+    K: float,
+    r: float,
+    T: float,
+    call: bool = True,
+    hi: float = 3.0,
+    tol: float = 1e-4,
+    max_iter: int = 100,
+) -> float:
+    """Solve Black–Scholes IV using bisection with wide bounds.
+
+    The previous implementation fixed the search window to ``[0.03, 1.5]`` and
+    60 iterations which frequently failed in high volatility regimes (e.g.
+    BANKNIFTY spikes) and returned biased or ``NaN`` values.  The new solver
+    expands the upper bound and exposes tolerance/iteration controls so callers
+    can tune accuracy.
+    """
+    if price <= 0 or S <= 0 or K <= 0 or T <= 0:
+        return float("nan")
+    lo = 1e-3
+    for _ in range(max_iter):
+        mid = 0.5 * (lo + hi)
+        pm = bs_price(S, K, r, T, mid, call)
+        if abs(pm - price) < tol:
+            return mid
+        if pm > price:
+            hi = mid
+        else:
+            lo = mid
     return mid
 
 def bs_delta(S: float, K: float, r: float, T: float, sig: float, call: bool = True) -> float:
@@ -116,46 +140,46 @@ def minutes_to_expiry(expiry_iso: str) -> float:
     now = dt.datetime.now(IST)
     return max(0.0, (expiry_dt - now).total_seconds()/60.0)
 
-def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
-    """Return the smallest strike that is >= ``spot``.
-
-    The option-chain data returned by brokers occasionally omits strikes that
-    are far from the money.  When the underlying rallies beyond the highest
-    strike in the chain our previous implementation simply returned that last
-    available value, leading to large ATM mismatches (e.g. engine reporting
-    53800 when the underlying was trading above 54100).  To stay aligned with
-    vendors such as Sensibull we always *round up* to the next strike using the
-    observed strike spacing when we run out of data.
+def atm_strike(spot: float, strikes: List[int], symbol: str = "") -> int:
+    """Return the strike closest to ``spot`` with tie → higher.
 
     Parameters
     ----------
     spot: float
         Current underlying price.
     strikes: list[int]
-        Strike prices available in the option chain.  The function infers the
-        strike spacing from this list and will extrapolate beyond its bounds if
-        required.
+        Available strikes from the option chain.
+    symbol: str, optional
+        Underlying symbol used to look up fallback strike step when the chain
+        is truncated.
     """
     if not strikes:
         return 0
-
     strikes = sorted(int(k) for k in strikes)
-    higher = [k for k in strikes if k >= spot]
-    if higher:
-        return higher[0]
+    step = STEP_MAP.get(
+        symbol.upper(),
+        min((b - a for a, b in zip(strikes, strikes[1:])), default=50),
+    )
+    lower = max([k for k in strikes if k <= spot], default=None)
+    upper = min([k for k in strikes if k >= spot], default=None)
+    if lower is None and upper is None:
+        return 0
+    if lower is None:
+        return upper
+    if upper is None:
+        # extrapolate upwards
+        return int(math.ceil(spot / step) * step)
+    return upper if (spot - lower) >= (upper - spot) else lower
 
-    # Spot is above the highest available strike.  Infer the step size and
-    # project the next valid strike rather than returning the truncated value.
-    if len(strikes) >= 2:
-        step = min(b - a for a, b in zip(strikes, strikes[1:])) or 50
-    else:
-        step = 50
-    return int(math.ceil(spot / step) * step)
+
+# Backwards compatibility – alias old name
+def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
+    return atm_strike(spot, strikes)
 
 def pcr_from_chain(chain: Dict) -> float:
-    ce = sum(v['oi'] for v in chain['calls'].values())
-    pe = sum(v['oi'] for v in chain['puts'].values())
-    return (pe/ce) if ce>0 else float('nan')
+    ce = sum(v["oi"] for v in chain["calls"].values())
+    pe = sum(v["oi"] for v in chain["puts"].values())
+    return (pe / ce) if ce > 0 else float("nan")
 
 def gamma_exposure(chain: Dict, spot: float, minutes_to_exp: float, atm_iv: float, r: float = 0.0) -> tuple[float, Dict[int,float]]:
     strikes = chain.get('strikes') or []
@@ -182,23 +206,45 @@ def gamma_exposure(chain: Dict, spot: float, minutes_to_exp: float, atm_iv: floa
                 break
     return zg, gex_map
 
-def max_pain(chain: Dict) -> int:
-    strikes = sorted(chain['strikes'])
-    ce_oi = {k: chain['calls'][k]['oi'] for k in strikes}
-    pe_oi = {k: chain['puts'][k]['oi'] for k in strikes}
-    bestK, bestPain = None, float('inf')
+def max_pain(chain: Dict, spot: float = 0.0, step: int | None = None) -> int:
+    """Compute the max-pain strike with deterministic tie-breaking.
+
+    Ties are resolved by choosing the strike closest to ``spot``.  When the
+    spot is beyond the best strike and the next strike is missing from the
+    chain, ``step`` is used to extrapolate upward so the value never lags the
+    underlying.
+    """
+    strikes = sorted(int(k) for k in chain["strikes"])
+    ce_oi = {k: chain["calls"][k]["oi"] for k in strikes}
+    pe_oi = {k: chain["puts"][k]["oi"] for k in strikes}
+    bestK, bestPain = None, float("inf")
     for K in strikes:
-        pain = (
-            sum(ce_oi[s] * max(0, K - s) for s in strikes) +
-            sum(pe_oi[s] * max(0, s - K) for s in strikes)
-        )
-        if pain < bestPain: bestPain, bestK = pain, K
+        pain = sum(
+            ce_oi[s] * max(0, K - s) for s in strikes
+        ) + sum(pe_oi[s] * max(0, s - K) for s in strikes)
+        if pain < bestPain or (
+            pain == bestPain and bestK is not None and abs(K - spot) < abs(bestK - spot)
+        ):
+            bestPain, bestK = pain, K
+    if bestK is None:
+        return 0
+    if step is None:
+        step = min((b - a for a, b in zip(strikes, strikes[1:])), default=50)
+    while spot > bestK and (bestK + step) not in strikes:
+        bestK += step
     return int(bestK)
 
-def atm_iv_from_chain(chain: Dict, spot: float, minutes_to_exp: float, risk_free_rate: float) -> float:
-    strikes = chain['strikes']
-    if not strikes: return float('nan')
-    K = atm_strike_with_tie_high(spot, strikes)
+def atm_iv_from_chain(
+    chain: Dict,
+    spot: float,
+    minutes_to_exp: float,
+    risk_free_rate: float,
+    symbol: str = "",
+) -> float:
+    strikes = chain["strikes"]
+    if not strikes:
+        return float("nan")
+    K = atm_strike(spot, strikes, symbol)
     ce = chain['calls'].get(K); pe = chain['puts'].get(K)
     T = max(1e-9, minutes_to_exp) / (365*24*60)
     ivs=[]
