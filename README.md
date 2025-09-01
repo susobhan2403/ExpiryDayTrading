@@ -55,3 +55,19 @@ Add a Prometheus data source pointing at the engine host. Example panels:
 * **Table** – query `scenario_probability` and group by `scenario` to list all current scenario probabilities.
 
 These widgets provide quick operational insight into market conditions without inspecting logs.
+
+## LLM Model Configuration
+
+Optional features that rely on large language models default to OpenAI's
+`gpt-4o-mini`.  The model can be changed by setting an `OPENAI_MODEL` value in
+`settings.json` or by exporting an `OPENAI_MODEL` environment variable.  For
+example, to switch to the upcoming `gpt-5` model:
+
+```json
+{
+  "OPENAI_MODEL": "gpt-5"
+}
+```
+
+This allows the engine to adopt newer models as they become available without
+code changes.
