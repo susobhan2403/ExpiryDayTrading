@@ -13,3 +13,9 @@ def test_atm_upper_bound():
     # Midway between 24550 and 24600 -> still round up to 24600
     assert atm_strike_with_tie_high(24575, strikes) == 24600
 
+
+def test_atm_extrapolates_when_spot_above_chain():
+    strikes = [100, 200, 300]
+    # Spot beyond highest listed strike should project next strike (step=100)
+    assert atm_strike_with_tie_high(340, strikes) == 400
+
