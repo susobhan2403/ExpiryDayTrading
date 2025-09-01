@@ -112,6 +112,27 @@ class TrendConsensus:
     def evaluate(self, spot_1m: pd.DataFrame) -> TrendResult:
         """Evaluate trend using pre-computed OHLCV frames."""
         frames = self._buffer.update(spot_1m)
+        impulse = False
+        df1 = frames.get(1, pd.DataFrame())
+        if not df1.empty and len(df1) >= 21:
+            close = df1["close"].astype(float)
+            delta = close.diff()
+            up = delta.clip(lower=0).rolling(14).mean()
+            down = (-delta.clip(upper=0)).rolling(14).mean()
+            rs = up / (down + 1e-9)
+            rsi = 100 - (100 / (1 + rs))
+            if len(rsi) >= 2:
+                rsi_prev, rsi_curr = rsi.iloc[-2], rsi.iloc[-1]
+                if (rsi_prev < 30 <= rsi_curr) or (rsi_prev > 70 >= rsi_curr):
+                    impulse = True
+            ma20 = close.rolling(20).mean()
+            std20 = close.rolling(20).std(ddof=0)
+            upper = ma20 + 2 * std20
+            lower = ma20 - 2 * std20
+            if len(upper) >= 1:
+                price_curr = close.iloc[-1]
+                if price_curr > upper.iloc[-1] or price_curr < lower.iloc[-1]:
+                    impulse = True
         agg = 0.0
         for tf, w in self.weights.items():
             df = frames.get(tf, pd.DataFrame())
@@ -123,6 +144,8 @@ class TrendConsensus:
         else:
             self.smoothed_score = self.alpha * agg + (1 - self.alpha) * self.smoothed_score
         self._history.append(self.smoothed_score)
+        if impulse:
+            self._history.append(self.smoothed_score)
 
         direction = self.last_decision
         if len(self._history) == self.confirm:
