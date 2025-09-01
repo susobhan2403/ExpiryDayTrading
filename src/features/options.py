@@ -176,10 +176,69 @@ def atm_strike(spot: float, strikes: List[int], symbol: str = "") -> int:
 def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
     return atm_strike(spot, strikes)
 
-def pcr_from_chain(chain: Dict) -> float:
-    ce = sum(v["oi"] for v in chain["calls"].values())
-    pe = sum(v["oi"] for v in chain["puts"].values())
-    return (pe / ce) if ce > 0 else float("nan")
+def pcr_from_chain(
+    chain: Dict,
+    spot: float | None = None,
+    symbol: str = "",
+    band_steps: int = 2,
+) -> float:
+    """Return the put-call ratio within a narrow strike band around ATM.
+
+    Parameters
+    ----------
+    chain: dict
+        Option chain containing ``strikes``, ``calls`` and ``puts`` mappings.
+    spot: float, optional
+        Current underlying price used to determine the at-the-money strike.
+        When omitted the ratio is computed across the entire chain.
+    symbol: str, optional
+        Underlying symbol for strike-step lookup via ``STEP_MAP``.
+    band_steps: int, default 2
+        Number of strike steps to include above and below ATM.  With the
+        default value the band spans ``±2`` steps.
+
+    Returns
+    -------
+    float
+        Put-call open interest ratio for the filtered strikes.  ``NaN`` is
+        returned when fewer than two valid strikes remain after filtering or
+        total call OI is zero.
+    """
+
+    strikes = chain.get("strikes") or []
+    if not strikes:
+        return float("nan")
+
+    if spot is None:
+        ce = sum(v.get("oi", 0) for v in chain["calls"].values())
+        pe = sum(v.get("oi", 0) for v in chain["puts"].values())
+        return (pe / ce) if ce > 0 else float("nan")
+
+    strikes = sorted(int(k) for k in strikes)
+    atm = atm_strike(spot, strikes, symbol)
+    step = STEP_MAP.get(
+        symbol.upper(),
+        min((b - a for a, b in zip(strikes, strikes[1:])), default=50),
+    )
+    lo = atm - band_steps * step
+    hi = atm + band_steps * step
+
+    ce_sum = pe_sum = 0.0
+    valid = 0
+    for k in strikes:
+        if k < lo or k > hi:
+            continue
+        ce_oi = float(chain["calls"].get(k, {}).get("oi", 0))
+        pe_oi = float(chain["puts"].get(k, {}).get("oi", 0))
+        if ce_oi <= 0 or pe_oi <= 0 or ce_oi != ce_oi or pe_oi != pe_oi:
+            continue
+        ce_sum += ce_oi
+        pe_sum += pe_oi
+        valid += 1
+
+    if valid < 2 or ce_sum <= 0:
+        return float("nan")
+    return pe_sum / ce_sum
 
 def gamma_exposure(chain: Dict, spot: float, minutes_to_exp: float, atm_iv: float, r: float = 0.0) -> tuple[float, Dict[int,float]]:
     strikes = chain.get('strikes') or []

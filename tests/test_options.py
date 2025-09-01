@@ -3,7 +3,12 @@ from pathlib import Path
 import math
 import pandas as pd
 
-from src.features.options import atm_strike, atm_iv_from_chain, max_pain
+from src.features.options import (
+    atm_strike,
+    atm_iv_from_chain,
+    max_pain,
+    pcr_from_chain,
+)
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "chain_sample.csv"
@@ -43,4 +48,35 @@ def test_atm_iv_solver_bounds():
     iv = atm_iv_from_chain(chain, spot=100, minutes_to_exp=1440, risk_free_rate=0.0)
     assert not math.isnan(iv)
     assert iv > 1.5
+
+
+def _make_chain(strikes, ce_ois, pe_ois):
+    calls = {k: {"oi": ce} for k, ce in zip(strikes, ce_ois)}
+    puts = {k: {"oi": pe} for k, pe in zip(strikes, pe_ois)}
+    return {"strikes": strikes, "calls": calls, "puts": puts}
+
+
+def test_pcr_band_filtering():
+    strikes = [19400, 19450, 19500, 19550, 19600, 19650]
+    ce = [5, 10, 10, 15, 5, 20]
+    pe = [5, 10, 20, 25, 30, 40]
+    chain = _make_chain(strikes, ce, pe)
+    pcr = pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)
+    # uses strikes 19500,19550,19600
+    assert math.isclose(pcr, (20 + 25 + 30) / (10 + 15 + 5))
+
+
+def test_pcr_bad_oi_and_min_count():
+    strikes = [19400, 19500, 19550, 19600]
+    ce = [10, 10, 0, 5]  # 19550 has bad OI
+    pe = [10, 20, 5, 30]
+    chain = _make_chain(strikes, ce, pe)
+    pcr = pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)
+    assert math.isclose(pcr, (20 + 30) / (10 + 5))
+
+    # only one valid strike -> nan
+    ce = [10, 0, 0]
+    pe = [20, 5, 0]
+    chain = _make_chain([19500, 19550, 19600], ce, pe)
+    assert math.isnan(pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1))
 
