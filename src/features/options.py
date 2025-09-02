@@ -183,7 +183,13 @@ def minutes_to_expiry(expiry_iso: str) -> float:
     return max(0.0, (expiry_dt - now).total_seconds()/60.0)
 
 def atm_strike(spot: float, strikes: List[int], symbol: str = "") -> int:
-    """Return the strike closest to ``spot`` with tie → higher.
+    """Return the at-the-money strike using nearest rounding rules.
+
+    The function picks the strike with the smallest distance to ``spot`` and
+    resolves equidistant ties in favour of the higher strike, matching common
+    exchange convention.  When the option chain is truncated and ``spot``
+    trades beyond the highest strike, the next valid strike is extrapolated
+    using the instrument-specific step size.
 
     Parameters
     ----------
@@ -321,12 +327,17 @@ def gamma_exposure(
     return zg, gex_map
 
 def max_pain(chain: Dict, spot: float = 0.0, step: int | None = None) -> int:
-    """Compute the max-pain strike with deterministic tie-breaking.
+    """Return the strike where option writers experience minimal loss.
 
-    Ties are resolved by choosing the strike closest to ``spot``.  When the
-    spot is beyond the best strike and the next strike is missing from the
-    chain, ``step`` is used to extrapolate upward so the value never lags the
-    underlying.
+    For each candidate strike ``K`` the total payoff of all open interest at
+    expiry is computed as
+
+    ``pain(K) = Σ OI_call(s)·max(0, K-s) + Σ OI_put(s)·max(0, s-K)``.
+    The strike with the smallest ``pain`` is the *max-pain* level.  Ties are
+    resolved by selecting the strike closest to ``spot``.  When ``spot`` lies
+    beyond the returned strike and the next level is missing from the chain,
+    ``step`` (from :data:`STEP_MAP`) is used to extrapolate upwards so the
+    value never lags the underlying.
     """
     strikes = sorted(int(k) for k in chain["strikes"])
     ce_oi = {k: chain["calls"][k]["oi"] for k in strikes}
@@ -356,6 +367,13 @@ def atm_iv_from_chain(
     symbol: str = "",
 ) -> float:
     """Infer ATM implied volatility from an option chain.
+
+    The function selects the ATM strike via :func:`atm_strike` and solves the
+    Black–Scholes implied volatility for both call and put quotes using a wide
+    bisection window (see :func:`implied_vol`).  When both sides provide a
+    usable price the IVs are averaged; otherwise the single available side is
+    returned.  Mid-price is computed from bid/ask when a liquid spread (≤0.6%)
+    exists, falling back to the last traded price if it is recent.
 
     Parameters
     ----------

@@ -38,6 +38,10 @@ class RollingZGate:
         default_factory=lambda: {"signals": {"min_volume": 0.0, "min_liquidity": float("inf")}}
     )
 
+    def __post_init__(self) -> None:
+        """Ensure the internal buffer matches the configured window size."""
+        self.history = deque(self.history, maxlen=self.window)
+
     def update(
         self, value: float, volume: float = 0.0, spread: float = 0.0
     ) -> Tuple[float, bool]:
