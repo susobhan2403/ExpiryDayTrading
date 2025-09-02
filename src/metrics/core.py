@@ -192,22 +192,49 @@ def compute_atm_iv(ce_mid: Optional[float], pe_mid: Optional[float], F: float,
     return atm_iv, diag
 
 
-def compute_iv_stats(history: Sequence[float], current: Optional[float]) -> Dict:
-    """Return IV percentile and rank without ``NaN``.
+def compute_iv_stats(
+    history: Sequence[object],
+    current: Optional[float],
+    current_tau: Optional[float] = None,
+    tau_tol: float = 1 / 365,
+) -> Dict:
+    """Return IV percentile and rank filtered by tenor.
 
-    ``history`` should contain past ATM IV observations.  ``current`` may be
-    ``None``.  The function returns ``{"percentile": float|None, "iv_rank": float|None,
-    "reasons": [...]}``.
+    ``history`` may be a sequence of floats (assumed same tenor) or a sequence
+    of ``(tau, iv)`` pairs.  ``current`` is the latest ATM IV while
+    ``current_tau`` denotes its time-to-expiry in years.  When ``current_tau``
+    is supplied only historical observations with matching tenor (within
+    ``tau_tol``) are considered.  Results never contain ``NaN``; missing values
+    are represented by ``None`` with human readable reasons.
     """
-    vals = [v for v in history if v is not None and v == v]
+
     out: Dict[str, object] = {"percentile": None, "iv_rank": None, "reasons": []}
     if current is None or current != current:
         out["reasons"].append("current_missing")
         return out
-    n = len(vals)
-    if n == 0:
+
+    vals: List[float] = []
+    if current_tau is None:
+        for v in history:
+            if isinstance(v, (int, float)) and v == v:
+                vals.append(float(v))
+            elif isinstance(v, (list, tuple)) and len(v) == 2 and v[1] == v[1]:
+                vals.append(float(v[1]))
+    else:
+        for h in history:
+            if (
+                isinstance(h, (list, tuple))
+                and len(h) == 2
+                and h[1] == h[1]
+                and abs(float(h[0]) - current_tau) <= tau_tol
+            ):
+                vals.append(float(h[1]))
+
+    if not vals:
         out["reasons"].append("no_history")
         return out
+
+    n = len(vals)
     out["percentile"] = 100.0 * sum(1 for v in vals if v < current) / n
     lo, hi = min(vals), max(vals)
     if hi - lo < 1e-12:
