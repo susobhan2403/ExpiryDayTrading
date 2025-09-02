@@ -20,12 +20,16 @@ EXPLAIN_SCHEMA: Dict[str, str] = {
     "symbol": "instrument symbol",
     "expiry": "selected weekly expiry (ISO date)",
     "step": "strike step size",
+    "tau_y": "time to expiry in years",
+    "F": "forward price used for ATM selection",
     "atm": "at-the-money strike",
-    "pcr": "put-call ratio",
-    "dpcr_z": "delta PCR z-score",
-    "vnd": "volatility normalised distance",
-    "mph_norm": "max pain drift normalised",
-    "iv_z": "implied volatility z-score",
+    "atm_iv": "at-the-money implied volatility",
+    "iv_percentile": "IV percentile over lookback window",
+    "iv_rank": "IV rank over lookback window",
+    "pcr_total": "put-call OI ratio over all strikes",
+    "pcr_band": "put-call OI ratio over active band",
+    "data_quality": "flags about input data quality",
+    "notes": "list of diagnostic notes",
 }
 
 
