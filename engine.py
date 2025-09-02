@@ -531,80 +531,16 @@ def implied_vol(price,S,K,r,T,call=True):
         else: lo = mid
     return mid
 
-def nearest_weekly_expiry(now_ist: dt.datetime) -> str:
-    d = now_ist.date()
-    # Weekly index expiries (NIFTY/BANKNIFTY) are on Thursday => weekday 3
-    days_ahead = (1 - d.weekday()) % 7
-    # After market close on expiry day, roll to next week
-    if days_ahead == 0 and now_ist.time() > dt.time(15, 30):
-        days_ahead = 7
-    return (d + dt.timedelta(days=days_ahead)).isoformat()
-
-def minutes_to_expiry(expiry_iso: str) -> float:
-    d = dt.date.fromisoformat(expiry_iso)
-    expiry_dt = IST.localize(dt.datetime(d.year,d.month,d.day,15,30))
-    now = dt.datetime.now(IST)
-    return max(0.0, (expiry_dt - now).total_seconds()/60.0)
-
-def atm_strike_with_tie_high(spot: float, strikes: List[int]) -> int:
-    """Return the smallest strike that is >= ``spot``.
-
-    Provider option chains sometimes omit far OTM strikes.  If the underlying
-    moves beyond the highest available strike our previous logic would simply
-    return that last value, under-reporting the actual ATM level.  We now
-    extrapolate using the observed strike spacing so the result always rounds up
-    to the next valid strike, matching Sensibull and other retail platforms."""
-    if not strikes:
-        return 0
-
-    strikes = sorted(int(k) for k in strikes)
-    higher = [k for k in strikes if k >= spot]
-    if higher:
-        return higher[0]
-
-    if len(strikes) >= 2:
-        step = min(b - a for a, b in zip(strikes, strikes[1:])) or 50
-    else:
-        step = 50
-    return int(math.ceil(spot / step) * step)
-
-def pcr_from_chain(chain: Dict) -> float:
-    ce = sum(v['oi'] for v in chain['calls'].values())
-    pe = sum(v['oi'] for v in chain['puts'].values())
-    return (pe/ce) if ce>0 else float('nan')
-
-def max_pain(chain: Dict) -> int:
-    strikes = sorted(chain['strikes'])
-    ce_oi = {k: chain['calls'][k]['oi'] for k in strikes}
-    pe_oi = {k: chain['puts'][k]['oi'] for k in strikes}
-    bestK, bestPain = None, float('inf')
-    for K in strikes:
-        # Option value at settlement K for strike s:
-        #   Calls -> max(0, K - s)
-        #   Puts  -> max(0, s - K)
-        pain = (
-            sum(ce_oi[s] * max(0, K - s) for s in strikes) +
-            sum(pe_oi[s] * max(0, s - K) for s in strikes)
-        )
-        if pain < bestPain: bestPain, bestK = pain, K
-    return int(bestK)
+# Use robust implementations from ``src.features.options`` for option math.
+nearest_weekly_expiry = opt.nearest_weekly_expiry
+minutes_to_expiry = opt.minutes_to_expiry
+atm_strike_with_tie_high = opt.atm_strike
+pcr_from_chain = opt.pcr_from_chain
+max_pain = opt.max_pain
 
 def atm_iv_from_chain(chain: Dict, spot: float, minutes_to_exp: float) -> float:
-    strikes = chain['strikes']
-    if not strikes: return float('nan')
-    K = atm_strike_with_tie_high(spot, strikes)
-    ce = chain['calls'].get(K); pe = chain['puts'].get(K)
-    T = max(1e-9, minutes_to_exp) / (365*24*60)
-    ivs=[]
-    for row, is_call in [(ce, True), (pe, False)]:
-        if not row: continue
-        bid, ask, ltp = row.get("bid",0), row.get("ask",0), row.get("ltp",0)
-        mid = 0.5*(bid+ask) if (bid>0 and ask>0 and (ask-bid)/max(1,K) <= 0.006) else (ltp if ltp>0 else None)
-        if mid:
-            ivs.append(implied_vol(mid, spot, K, RISK_FREE, T, call=is_call))
-    ivs=[v for v in ivs if v==v and v>0]
-    if not ivs: return float('nan')
-    return min(ivs) if len(ivs)==2 else ivs[0]
+    """Wrapper passing the configured risk-free rate to :func:`opt.atm_iv_from_chain`."""
+    return opt.atm_iv_from_chain(chain, spot, minutes_to_exp, RISK_FREE)
 
 # ---------- providers ----------
 class MarketDataProvider:
