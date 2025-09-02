@@ -167,3 +167,95 @@ def test_iv_range_spike_promotes_to_act():
         state=state,
     )
     assert any(a.action == "ACT" and a.message == "IV range spike reversal" for a in alerts3)
+
+
+def test_iv_range_spike_auto_reset():
+    """Event should clear after calm period to avoid indefinite mutes."""
+    chain = {"strikes": [], "calls": {}, "puts": {}}
+    vp = {"POC": 100.0, "VAL": 95.0, "VAH": 105.0}
+    state = {}
+
+    # Trigger spike
+    spot_spike = make_df()
+    spot_spike.iloc[-1] = [80, 120, 80, 80, 100]
+    spot5 = make_df()
+    now = dt.datetime(2024, 1, 1, 9, 30, tzinfo=IST)
+    engine.detect_spike_traps(
+        DummyProvider(),
+        "TEST",
+        now,
+        spot_spike,
+        spot5,
+        100.0,
+        1.0,
+        2.5,
+        50.0,
+        1.0,
+        25.0,
+        50.0,
+        0.0,
+        0.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        100.0,
+        0.005,
+        0.0,
+        4.0,
+        200.0,
+        80.0,
+        10.0,
+        0.0,
+        0.0,
+        0.0,
+        chain,
+        10.0,
+        100.0,
+        vp,
+        oi_flags={"pe_write_above": True},
+        state=state,
+    )
+    assert state.get("iv_range_event", {}).get("active")
+
+    # Calm readings reset after three consecutive quiet bars
+    for i in range(3):
+        now = now + dt.timedelta(minutes=1)
+        calm = make_df()
+        engine.detect_spike_traps(
+            DummyProvider(),
+            "TEST",
+            now,
+            calm,
+            spot5,
+            100.0,
+            1.0,
+            0.2,
+            50.0,
+            1.0,
+            25.0,
+            50.0,
+            0.0,
+            0.0,
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            0.005,
+            0.0,
+            4.0,
+            200.0,
+            80.0,
+            10.0,
+            0.0,
+            0.0,
+            0.0,
+            chain,
+            10.0,
+            100.0,
+            vp,
+            oi_flags={},
+            state=state,
+        )
+    assert not state.get("iv_range_event", {}).get("active")

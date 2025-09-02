@@ -224,6 +224,8 @@ def compute_pcr(oi_put: Mapping[float, float], oi_call: Mapping[float, float],
     for k in strikes:
         p = float(oi_put.get(k, 0))
         c = float(oi_call.get(k, 0))
+        if p <= 0 or c <= 0 or p != p or c != c:
+            continue
         tot_p += p
         tot_c += c
         if lo <= k <= hi:
@@ -232,7 +234,7 @@ def compute_pcr(oi_put: Mapping[float, float], oi_call: Mapping[float, float],
             band_count += 1
     res = {
         "PCR_OI_total": (tot_p / tot_c) if tot_c > 0 else float("nan"),
-        "PCR_OI_band": (band_p / band_c) if band_c > 0 else float("nan"),
+        "PCR_OI_band": (band_p / band_c) if (band_c > 0 and band_count >= 2) else float("nan"),
         "band_lo": lo,
         "band_hi": hi,
         "band_count": band_count,
