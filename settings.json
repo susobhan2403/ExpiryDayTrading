@@ -33,6 +33,10 @@
       "5": 0.05
     }
   },
+  "GATE_THRESHOLDS": {
+    "PCR_Z": 2.0,
+    "IV_Z": 2.0
+  },
   "ORCHESTRATE": {
     "SYMBOLS": "NIFTY,BANKNIFTY,SENSEX,MIDCPNIFTY",
     "MODE": "auto",
