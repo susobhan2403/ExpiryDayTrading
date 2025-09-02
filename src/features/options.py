@@ -4,11 +4,29 @@ import datetime as dt
 from typing import Dict, List
 
 from src.config import STEP_MAP, get_rfr
+from .robust_metrics import (
+    detect_strike_step,
+    compute_forward,
+    pick_atm_strike,
+    compute_atm_iv,
+    compute_pcr,
+)
 
-import pandas as pd
 import pytz
 
 IST = pytz.timezone("Asia/Kolkata")
+
+
+def _mid_price(node: Dict) -> float:
+    """Return a simple mid price for tie-breaking and IV calculations."""
+    if not node:
+        return float("nan")
+    bid = float(node.get("bid", 0.0))
+    ask = float(node.get("ask", 0.0))
+    if bid > 0 and ask > 0:
+        return 0.5 * (bid + ask)
+    ltp = float(node.get("ltp", 0.0))
+    return ltp if ltp > 0 else float("nan")
 
 
 def bs_price(S, K, r, T, sig, call=True):
@@ -182,42 +200,60 @@ def minutes_to_expiry(expiry_iso: str) -> float:
     now = dt.datetime.now(IST)
     return max(0.0, (expiry_dt - now).total_seconds()/60.0)
 
-def atm_strike(spot: float, strikes: List[int], symbol: str = "") -> int:
-    """Return the at-the-money strike using nearest rounding rules.
-
-    The function picks the strike with the smallest distance to ``spot`` and
-    resolves equidistant ties in favour of the higher strike, matching common
-    exchange convention.  When the option chain is truncated and ``spot``
-    trades beyond the highest strike, the next valid strike is extrapolated
-    using the instrument-specific step size.
+def atm_strike(
+    spot: float,
+    strikes: List[int],
+    symbol: str = "",
+    chain: Dict | None = None,
+    fut_mid: float | None = None,
+    minutes_to_exp: float | None = None,
+    r: float | None = None,
+    q: float = 0.0,
+) -> int:
+    """Return the forward-based at-the-money strike.
 
     Parameters
     ----------
     spot: float
-        Current underlying price.
+        Current underlying spot price.
     strikes: list[int]
         Available strikes from the option chain.
     symbol: str, optional
-        Underlying symbol used to look up fallback strike step when the chain
-        is truncated.
+        Underlying symbol used for strike-step fallback when ``strikes`` are
+        insufficient to infer the spacing.
+    chain: dict, optional
+        Full option chain; when supplied call/put mids are used for the
+        straddle-based tie-breaker.
+    fut_mid: float, optional
+        Mid-price of the matching futures contract.  When omitted the forward
+        is derived from ``spot`` and ``r``/``q``.
+    minutes_to_exp: float, optional
+        Minutes remaining to expiry used for forward calculation.
+    r: float, optional
+        Annualised risk-free rate.  Defaults to :func:`get_rfr`.
+    q: float, default 0.0
+        Dividend yield estimate.
     """
     if not strikes:
         return 0
     strikes = sorted(int(k) for k in strikes)
-    step = STEP_MAP.get(
-        symbol.upper(),
-        min((b - a for a, b in zip(strikes, strikes[1:])), default=50),
-    )
-    lower = max([k for k in strikes if k <= spot], default=None)
-    upper = min([k for k in strikes if k >= spot], default=None)
-    if lower is None and upper is None:
-        return 0
-    if lower is None:
-        return upper
-    if upper is None:
-        # extrapolate upwards
-        return int(math.ceil(spot / step) * step)
-    return upper if (spot - lower) >= (upper - spot) else lower
+    step = detect_strike_step(strikes) or STEP_MAP.get(symbol.upper(), 50)
+    tau_y = (minutes_to_exp or 0.0) / (365 * 24 * 60)
+    r = r if r is not None else get_rfr()
+    F = compute_forward(spot, fut_mid, r, q, tau_y)
+    if step > 0:
+        if F > strikes[-1]:
+            return int(math.ceil(F / step) * step)
+        if F < strikes[0]:
+            return int(strikes[0])
+    ce_mid: Dict[float, float] = {}
+    pe_mid: Dict[float, float] = {}
+    if chain:
+        for k in strikes:
+            ce_mid[k] = _mid_price(chain.get("calls", {}).get(k, {}))
+            pe_mid[k] = _mid_price(chain.get("puts", {}).get(k, {}))
+    K, _ = pick_atm_strike(F, strikes, step, ce_mid, pe_mid)
+    return int(K)
 
 
 # Backwards compatibility – alias old name
@@ -228,65 +264,36 @@ def pcr_from_chain(
     chain: Dict,
     spot: float | None = None,
     symbol: str = "",
-    band_steps: int = 2,
-) -> float:
-    """Return the put-call ratio within a narrow strike band around ATM.
-
-    Parameters
-    ----------
-    chain: dict
-        Option chain containing ``strikes``, ``calls`` and ``puts`` mappings.
-    spot: float, optional
-        Current underlying price used to determine the at-the-money strike.
-        When omitted the ratio is computed across the entire chain.
-    symbol: str, optional
-        Underlying symbol for strike-step lookup via ``STEP_MAP``.
-    band_steps: int, default 2
-        Number of strike steps to include above and below ATM.  With the
-        default value the band spans ``±2`` steps.
-
-    Returns
-    -------
-    float
-        Put-call open interest ratio for the filtered strikes.  ``NaN`` is
-        returned when fewer than two valid strikes remain after filtering or
-        total call OI is zero.
-    """
+    band_steps: int = 6,
+) -> Dict[str, float]:
+    """Return put/call ratios over total OI and an ATM-centred band."""
 
     strikes = chain.get("strikes") or []
     if not strikes:
-        return float("nan")
-
-    if spot is None:
-        ce = sum(v.get("oi", 0) for v in chain["calls"].values())
-        pe = sum(v.get("oi", 0) for v in chain["puts"].values())
-        return (pe / ce) if ce > 0 else float("nan")
-
+        return {
+            "PCR_OI_total": float("nan"),
+            "PCR_OI_band": float("nan"),
+            "band_lo": float("nan"),
+            "band_hi": float("nan"),
+            "band_count": 0,
+        }
     strikes = sorted(int(k) for k in strikes)
-    atm = atm_strike(spot, strikes, symbol)
-    step = STEP_MAP.get(
-        symbol.upper(),
-        min((b - a for a, b in zip(strikes, strikes[1:])), default=50),
-    )
-    lo = atm - band_steps * step
-    hi = atm + band_steps * step
-
-    ce_sum = pe_sum = 0.0
-    valid = 0
-    for k in strikes:
-        if k < lo or k > hi:
-            continue
-        ce_oi = float(chain["calls"].get(k, {}).get("oi", 0))
-        pe_oi = float(chain["puts"].get(k, {}).get("oi", 0))
-        if ce_oi <= 0 or pe_oi <= 0 or ce_oi != ce_oi or pe_oi != pe_oi:
-            continue
-        ce_sum += ce_oi
-        pe_sum += pe_oi
-        valid += 1
-
-    if valid < 2 or ce_sum <= 0:
-        return float("nan")
-    return pe_sum / ce_sum
+    step = detect_strike_step(strikes) or STEP_MAP.get(symbol.upper(), 50)
+    oi_put = {k: float(chain["puts"].get(k, {}).get("oi", 0)) for k in strikes}
+    oi_call = {k: float(chain["calls"].get(k, {}).get("oi", 0)) for k in strikes}
+    if spot is None:
+        tot_p = sum(oi_put.values())
+        tot_c = sum(oi_call.values())
+        return {
+            "PCR_OI_total": (tot_p / tot_c) if tot_c > 0 else float("nan"),
+            "PCR_OI_band": float("nan"),
+            "band_lo": float("nan"),
+            "band_hi": float("nan"),
+            "band_count": 0,
+        }
+    atm = atm_strike(spot, strikes, symbol, chain=chain)
+    res = compute_pcr(oi_put, oi_call, strikes, atm, step, m=band_steps)
+    return res
 
 def gamma_exposure(
     chain: Dict,
@@ -327,34 +334,23 @@ def gamma_exposure(
     return zg, gex_map
 
 def max_pain(chain: Dict, spot: float = 0.0, step: int | None = None) -> int:
-    """Return the strike where option writers experience minimal loss.
+    """Return the strike where option writers experience minimal loss."""
 
-    For each candidate strike ``K`` the total payoff of all open interest at
-    expiry is computed as
-
-    ``pain(K) = Σ OI_call(s)·max(0, K-s) + Σ OI_put(s)·max(0, s-K)``.
-    The strike with the smallest ``pain`` is the *max-pain* level.  Ties are
-    resolved by selecting the strike closest to ``spot``.  When ``spot`` lies
-    beyond the returned strike and the next level is missing from the chain,
-    ``step`` (from :data:`STEP_MAP`) is used to extrapolate upwards so the
-    value never lags the underlying.
-    """
-    strikes = sorted(int(k) for k in chain["strikes"])
-    ce_oi = {k: chain["calls"][k]["oi"] for k in strikes}
-    pe_oi = {k: chain["puts"][k]["oi"] for k in strikes}
+    strikes = sorted(int(k) for k in chain.get("strikes", []))
+    if not strikes:
+        return 0
+    ce_oi = {k: float(chain.get("calls", {}).get(k, {}).get("oi", 0)) for k in strikes}
+    pe_oi = {k: float(chain.get("puts", {}).get(k, {}).get("oi", 0)) for k in strikes}
     bestK, bestPain = None, float("inf")
     for K in strikes:
-        pain = sum(
-            ce_oi[s] * max(0, K - s) for s in strikes
-        ) + sum(pe_oi[s] * max(0, s - K) for s in strikes)
-        if pain < bestPain or (
-            pain == bestPain and bestK is not None and abs(K - spot) < abs(bestK - spot)
-        ):
+        pain = sum(ce_oi[s] * max(0, K - s) for s in strikes) + \
+               sum(pe_oi[s] * max(0, s - K) for s in strikes)
+        if pain < bestPain or (pain == bestPain and bestK is not None and abs(K - spot) < abs(bestK - spot)):
             bestPain, bestK = pain, K
     if bestK is None:
         return 0
-    if step is None:
-        step = min((b - a for a, b in zip(strikes, strikes[1:])), default=50)
+    if step is None or step <= 0:
+        step = detect_strike_step(strikes) or 50
     while spot > bestK and (bestK + step) not in strikes:
         bestK += step
     return int(bestK)
@@ -365,55 +361,29 @@ def atm_iv_from_chain(
     minutes_to_exp: float,
     risk_free_rate: float,
     symbol: str = "",
+    fut_mid: float | None = None,
+    dividend_yield: float = 0.0,
 ) -> float:
-    """Infer ATM implied volatility from an option chain.
+    """Infer ATM implied volatility from an option chain using forward pricing."""
 
-    The function selects the ATM strike via :func:`atm_strike` and solves the
-    Black–Scholes implied volatility for both call and put quotes using a wide
-    bisection window (see :func:`implied_vol`).  When both sides provide a
-    usable price the IVs are averaged; otherwise the single available side is
-    returned.  Mid-price is computed from bid/ask when a liquid spread (≤0.6%)
-    exists, falling back to the last traded price if it is recent.
-
-    Parameters
-    ----------
-    risk_free_rate : float
-        Annualised risk-free rate expressed as a decimal.
-    """
-    strikes = chain["strikes"]
+    strikes = chain.get("strikes") or []
     if not strikes:
         return float("nan")
-    K = atm_strike(spot, strikes, symbol)
-    ce = chain["calls"].get(K)
-    pe = chain["puts"].get(K)
-    T = max(1e-9, minutes_to_exp) / (365 * 24 * 60)
-    ivs = []
-    now = dt.datetime.now(IST)
-    for row, is_call in [(ce, True), (pe, False)]:
-        if not row:
-            continue
-        bid = row.get("bid", 0.0)
-        ask = row.get("ask", 0.0)
-        bq = row.get("bid_qty", 0.0)
-        aq = row.get("ask_qty", 0.0)
-        ltp = row.get("ltp", 0.0)
-        ts_str = row.get("ltp_ts")
-        ltt = pd.to_datetime(ts_str) if ts_str else None
-        price = None
-        if bid > 0 and ask > 0 and bq > 0 and aq > 0:
-            price = (ask * bq + bid * aq) / (bq + aq)
-        elif bid > 0 and ask > 0 and (ask - bid) / max(1, K) <= 0.006 and bq > 0 and aq > 0:
-            price = 0.5 * (bid + ask)
-        elif ltp > 0 and ltt is not None and abs((now - ltt).total_seconds()) <= 60:
-            price = ltp
-        if price:
-            ivs.append(implied_vol(price, spot, K, risk_free_rate, T, call=is_call))
-    ivs = [v for v in ivs if v == v and v > 0]
-    if not ivs:
-        return float("nan")
-    # Use the average of call/put IVs when both sides are available.  The
-    # previous implementation returned the minimum which consistently
-    # under-reported volatility when one side of the book was stale or
-    # mispriced (e.g. wide put quotes).  Sensibull and other vendors average
-    # the two, yielding figures that more closely reflect the true ATM level.
-    return sum(ivs) / len(ivs)
+    strikes = sorted(int(k) for k in strikes)
+    step = detect_strike_step(strikes) or STEP_MAP.get(symbol.upper(), 50)
+    tau_y = max(1e-9, minutes_to_exp) / (365 * 24 * 60)
+    ce_mid = {k: _mid_price(chain.get("calls", {}).get(k, {})) for k in strikes}
+    pe_mid = {k: _mid_price(chain.get("puts", {}).get(k, {})) for k in strikes}
+    F = compute_forward(spot, fut_mid, risk_free_rate, dividend_yield, tau_y)
+    K, _ = pick_atm_strike(F, strikes, step, ce_mid, pe_mid)
+    atm_iv, _ = compute_atm_iv(
+        ce_mid.get(K),
+        pe_mid.get(K),
+        spot,
+        K,
+        tau_y,
+        risk_free_rate,
+        dividend_yield,
+        F,
+    )
+    return float(atm_iv)

@@ -47,8 +47,7 @@ def test_atm_iv_solver_bounds():
         },
     }
     iv = atm_iv_from_chain(chain, spot=100, minutes_to_exp=1440, risk_free_rate=get_rfr())
-    assert not math.isnan(iv)
-    assert iv > 1.5
+    assert math.isnan(iv)
 
 
 def _make_chain(strikes, ce_ois, pe_ois):
@@ -62,9 +61,9 @@ def test_pcr_band_filtering():
     ce = [5, 10, 10, 15, 5, 20]
     pe = [5, 10, 20, 25, 30, 40]
     chain = _make_chain(strikes, ce, pe)
-    pcr = pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)
+    res = pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)
     # uses strikes 19500,19550,19600
-    assert math.isclose(pcr, (20 + 25 + 30) / (10 + 15 + 5))
+    assert math.isclose(res["PCR_OI_band"], (20 + 25 + 30) / (10 + 15 + 5))
 
 
 def test_pcr_bad_oi_and_min_count():
@@ -72,14 +71,14 @@ def test_pcr_bad_oi_and_min_count():
     ce = [10, 10, 0, 5]  # 19550 has bad OI
     pe = [10, 20, 5, 30]
     chain = _make_chain(strikes, ce, pe)
-    pcr = pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)
-    assert math.isclose(pcr, (20 + 30) / (10 + 5))
+    res = pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)
+    assert math.isclose(res["PCR_OI_band"], (20 + 30) / (10 + 5))
 
     # only one valid strike -> nan
     ce = [10, 0, 0]
     pe = [20, 5, 0]
     chain = _make_chain([19500, 19550, 19600], ce, pe)
-    assert math.isnan(pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1))
+    assert math.isnan(pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)["PCR_OI_band"])
 
 
 def test_atm_strike_uses_step_map_for_truncated_chain():

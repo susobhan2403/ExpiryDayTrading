@@ -34,6 +34,7 @@ import src.provider.kite as provider_mod
 import src.features.technicals as tech
 import src.features.options as opt
 from src.config import load_settings, save_settings, STEP_MAP, get_rfr
+from src.features.robust_metrics import detect_strike_step
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
@@ -1058,11 +1059,11 @@ def detect_spike_traps(
         return "none"
 
     if state is not None:
-        iv_state = state.setdefault("iv_range_event", {"active": False, "side": "none", "oi_flip_count": 0})
+        iv_state = state.setdefault("iv_range_event", {"active": False, "side": "none", "oi_flip_count": 0, "calm": 0})
         if not iv_state.get("active"):
             if iv_z >= 2 and range_z > 2:
                 alerts.append(AlertEvent("IGNORE", "IV range spike"))
-                iv_state.update({"active": True, "side": _oi_side(oi_flags), "oi_flip_count": 0})
+                iv_state.update({"active": True, "side": _oi_side(oi_flags), "oi_flip_count": 0, "calm": 0})
         else:
             side_now = _oi_side(oi_flags)
             initial = iv_state.get("side", "none")
@@ -1071,6 +1072,12 @@ def detect_spike_traps(
                 iv_state["oi_flip_count"] = iv_state.get("oi_flip_count", 0) + 1
             else:
                 iv_state["oi_flip_count"] = 0
+            if iv_z < 1 and range_z < 1:
+                iv_state["calm"] = iv_state.get("calm", 0) + 1
+            else:
+                iv_state["calm"] = 0
+            if iv_state.get("calm", 0) >= 3:
+                iv_state["active"] = False
             reclaimed = ((price_now >= vwap_spot) or (poc == poc and price_now >= poc))
             if (
                 iv_state.get("oi_flip_count", 0) >= 2
@@ -1787,12 +1794,27 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # Expiry sanity
     if chain["expiry"] != expiry:
         logger.warning(f"{symbol}: chain expiry mismatch ({chain['expiry']} != {expiry}) → NO-TRADE this tick.")
-    # ATM with tie-high rule
-    atm_k = opt.atm_strike(spot_now, chain["strikes"], symbol) if chain["strikes"] else None
+    # ATM using forward-based selection
+    mins_to_exp = opt.minutes_to_expiry(expiry)
+    fut_mid = float(fut_1m["close"].iloc[-1]) if not fut_1m.empty else None
+    atm_k = (
+        opt.atm_strike(
+            spot_now,
+            chain["strikes"],
+            symbol,
+            chain=chain,
+            fut_mid=fut_mid,
+            minutes_to_exp=mins_to_exp,
+            r=get_rfr(),
+        )
+        if chain["strikes"]
+        else None
+    )
 
     # Core metrics
-    step = STEP_MAP.get(symbol.upper(), 50)
-    pcr = opt.pcr_from_chain(chain, spot_now, symbol)
+    step = detect_strike_step(chain["strikes"]) or STEP_MAP.get(symbol.upper(), 50)
+    pcr_res = opt.pcr_from_chain(chain, spot_now, symbol)
+    pcr = pcr_res.get("PCR_OI_band", float("nan"))
     mp  = opt.max_pain(chain, spot_now, step)
     D   = float(spot_now - mp)
     session_hi, session_lo = float(spot_1m["high"].max()), float(spot_1m["low"].min())
@@ -1862,15 +1884,15 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
 
     # ATM IV + deltas for z-scores
     mins_to_exp = opt.minutes_to_expiry(expiry)
-    atm_iv = opt.atm_iv_from_chain(chain, spot_now, mins_to_exp, RISK_FREE)  # fraction (e.g., 0.12)
+    atm_iv = opt.atm_iv_from_chain(chain, spot_now, mins_to_exp, RISK_FREE, symbol, fut_mid=fut_mid)
     zg, gex_map = opt.gamma_exposure(chain, spot_now, mins_to_exp, atm_iv, RISK_FREE)
     far_pcr = far_atm_iv = term_iv_slope = float('nan')
     far_bull = far_bear = False
     if far_chain:
         try:
-            far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol)
+            far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol).get("PCR_OI_band", float("nan"))
             minutes_far = opt.minutes_to_expiry(far_exp) if far_exp else 0.0
-            far_atm_iv = opt.atm_iv_from_chain(far_chain, spot_now, minutes_far, RISK_FREE)
+            far_atm_iv = opt.atm_iv_from_chain(far_chain, spot_now, minutes_far, RISK_FREE, symbol, fut_mid=fut_mid)
             if atm_iv==atm_iv and far_atm_iv==far_atm_iv:
                 term_iv_slope = atm_iv - far_atm_iv
             if far_pcr==far_pcr:
@@ -1953,7 +1975,6 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # OI regime flags via MAD of ΔOI (liquidity: bid & ask must be >0)
     prev_chain = state.get("chain") or {"calls":{}, "puts":{}}
     # Dynamic banding and filters for OI analysis
-    step = STEP_MAP.get(symbol.upper(), 50)
     expiry_today = (dt.date.fromisoformat(expiry) == now.date())
     dm_above, dm_below, dm_far, dm_pin = compute_dynamic_bands(symbol, expiry_today, ATR_D, adx5, VND, D, step)
     # Persist dynamic choices for visibility
@@ -2035,8 +2056,8 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         unwind_present = any( x < -mad_k*max(1,ce_m) for x in ce_deltas.values() ) or any( x < -mad_k*max(1,pe_m) for x in pe_deltas.values() )
         # adjacent two-sided
         if atm in chain["strikes"]:
-            step = STEP_MAP.get(symbol.upper(), 50)
-            s1, s2 = atm-step, atm+step
+            step_local = step or detect_strike_step(chain["strikes"]) or STEP_MAP.get(symbol.upper(), 50)
+            s1, s2 = atm-step_local, atm+step_local
             two_sided_adjacent = ( (ce_deltas.get(s2,0)>mad_k*max(1,ce_m)) and (pe_deltas.get(s1,0)>mad_k*max(1,pe_m)) )
         total_turn = abs(w_pe) + abs(w_ce)
         dpcr = (w_pe - w_ce) / total_turn if total_turn > 0 else 0.0
@@ -2476,7 +2497,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         return mapping.get(name, name)
 
     iv_crush = (div == div and div <= 0) and (iv_pct_hint == iv_pct_hint and iv_pct_hint < 33)
-    step_sz = STEP_MAP.get(symbol.upper(), 50)
+    step_sz = step
     def suggest_spread(action: str):
         if action == "BUY_CE":
             return ("BUY", (int(atm_k + step_sz), int(atm_k + 2*step_sz)))
@@ -2644,7 +2665,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             pass
         dt_minutes = max(1.0, poll_secs/60.0)
         prev_chain_state = state.get("chain") if isinstance(state, dict) else None
-        step_sz = STEP_MAP.get(symbol.upper(), 50)
+        step_sz = step
         voi = compute_voi(prev_chain_state or {"calls":{}, "puts":{}}, {"calls": chain["calls"], "puts": chain["puts"]}, dt_minutes, atm_k or 0, step_sz)
         pin_d = pin_density(chain, atm_k or 0, step_sz, n=3)
         gex = gex_from_chain(chain, spot_now, mins_to_exp, RISK_FREE, atm_iv or 0.2)
@@ -2668,7 +2689,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         dist_to_pin = abs((atm_k or 0) - (zg if zg==zg else atm_k or 0))
         erp = erp_probability({
             "pin_density": 0 if pin_d!=pin_d else pin_d,
-            "dist_to_pin": dist_to_pin / STEP_MAP.get(symbol.upper(), 50),
+            "dist_to_pin": dist_to_pin / step,
             "ivp_low": iv_pct_hint==iv_pct_hint and iv_pct_hint < 33,
             "gex_small": abs(gex) < 1e6,
             "oi_conc_at_atm": 0.0,
