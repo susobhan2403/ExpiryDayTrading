@@ -39,6 +39,7 @@ from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
 from src.strategy.trend_consensus import TrendConsensus, TrendResult
 from src.strategy.filters import KalmanFilter1D
+from src.strategy.gates import RollingZGate, load_gate_settings
 from src.output.explain import write_explain
 
 # ---------- paths & logging ----------
@@ -131,6 +132,11 @@ SCENARIO_FLIP_DELTA = 0.15
 CONFIRM_SNAPSHOTS = 2         # require consecutive confirmations for OI/drift regimes
 MAD_K = float(os.getenv("OI_DELTA_K", "1.5"))
 TURNOVER_MIN = float(os.getenv("TURNOVER_MIN", "100000"))
+
+# Rolling z-score gates for PCR and IV
+_gate_cfg = load_gate_settings()
+PCR_GATE = RollingZGate(threshold=_gate_cfg["pcr"])
+IV_GATE = RollingZGate(threshold=_gate_cfg["iv"])
 
 ADX_LOW = int(os.getenv("ADX_THRESHOLD_LOW", "15"))
 # Min ADX increase to qualify as rising trend for breakout conditions (can be overridden via settings.json)
@@ -1611,7 +1617,7 @@ def blend_probs(rule_probs: Dict[str,float], ai_probs: Dict[str,float], adx5: fl
     return {k: round(v/s,3) for k,v in out.items()}
 
 # ---------- decision evaluation ----------
-def evaluate_decision(trend: TrendResult, threshold: Optional[float] = None) -> Tuple[DecisionResult, bool]:
+def evaluate_decision(trend: TrendResult, threshold: Optional[float] = None, muted: bool = False) -> Tuple[DecisionResult, bool]:
     """Convert TrendConsensus output into a DecisionResult and act flag.
 
     When ``threshold`` is ``None`` the confidence gate is derived from recent
@@ -1635,7 +1641,7 @@ def evaluate_decision(trend: TrendResult, threshold: Optional[float] = None) -> 
         dr.llm_confidence = dr.confidence
 
     thr = threshold if threshold is not None else dynamic_conf_threshold()
-    should_act = dr.trend_direction != "NEUTRAL" and dr.confidence >= thr
+    should_act = (not muted) and dr.trend_direction != "NEUTRAL" and dr.confidence >= thr
     CONF_HISTORY.append(dr.confidence)
     return dr, should_act
 
@@ -1951,6 +1957,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     open_trade = state.get("open_trade") if isinstance(state.get("open_trade"), dict) else None
 
     dpcr_series = state.get("dpcr_series", [])
+    PCR_GATE.history = deque(dpcr_series, maxlen=PCR_GATE.window)
 
     # Basis & VWAP relation (persist rolling series)
     basis_series = state.get("basis_series", [])
@@ -1962,12 +1969,11 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     prev_iv = state.get("atm_iv", float('nan'))
     div = (atm_iv - prev_iv) if (atm_iv==atm_iv and prev_iv==prev_iv) else float('nan')
     div_series = state.get("div_series", [])
-    if div==div: div_series.append(div)
-    div_series = div_series[-20:]
-    if len(div_series)>=5 and statistics.pstdev(div_series)>0:
-        iv_z = (div - statistics.mean(div_series))/ (statistics.pstdev(div_series)+1e-9) if div==div else 0.0
-    else:
-        iv_z = 0.0
+    IV_GATE.history = deque(div_series, maxlen=IV_GATE.window)
+    iv_z, iv_mute = IV_GATE.update(div if div == div else 0.0)
+    div_series = list(IV_GATE.history)
+    state["div_series"] = div_series
+    gate_muted = iv_mute
 
     # IV percentile based on last 60 EOD observations
     iv_hist_file = OUT_DIR / "iv_eod_history.json"
@@ -2076,13 +2082,13 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
             two_sided_adjacent = ( (ce_deltas.get(s2,0)>mad_k*max(1,ce_m)) and (pe_deltas.get(s1,0)>mad_k*max(1,pe_m)) )
         total_turn = abs(w_pe) + abs(w_ce)
         dpcr = (w_pe - w_ce) / total_turn if total_turn > 0 else 0.0
-    if dpcr==dpcr:
-        dpcr_series.append(dpcr)
-    dpcr_series = dpcr_series[-20:]
-    if len(dpcr_series) >= 5 and statistics.pstdev(dpcr_series) > 0:
-        dpcr_z = (dpcr - statistics.mean(dpcr_series)) / (statistics.pstdev(dpcr_series) + 1e-9)
+    if dpcr == dpcr:
+        dpcr_z, pcr_mute = PCR_GATE.update(dpcr)
     else:
-        dpcr_z = 0.0
+        dpcr_z, pcr_mute = 0.0, False
+    dpcr_series = list(PCR_GATE.history)
+    state["dpcr_series"] = dpcr_series
+    gate_muted = gate_muted or pcr_mute
 
     # consecutive confirmations
     conf = state.get("confirmations", {})
@@ -2220,7 +2226,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         except Exception:
             pass
     trend = tc.evaluate(spot_1m)
-    decision, should_act = evaluate_decision(trend)
+    decision, should_act = evaluate_decision(trend, muted=gate_muted)
 
     # Scoring: expiry vs non-expiry (mode override)
     if mode == "expiry":
