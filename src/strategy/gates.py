@@ -34,12 +34,17 @@ class RollingZGate:
     confirm: int = 2
     history: Deque[float] = field(default_factory=lambda: deque(maxlen=20))
     _spikes: int = 0
+    cfg: Dict[str, Dict[str, float]] = field(
+        default_factory=lambda: {"signals": {"min_volume": 0.0, "min_liquidity": float("inf")}}
+    )
 
-    def update(self, value: float) -> Tuple[float, bool]:
-        """Update series with ``value`` and return (z, muted).
+    def update(
+        self, value: float, volume: float = 0.0, spread: float = 0.0
+    ) -> Tuple[float, bool]:
+        """Update series with ``value`` and return ``(z, muted)``.
 
-        ``muted`` becomes ``True`` only after ``confirm`` consecutive
-        observations exceed ``threshold`` in absolute z-score terms.
+        Additional gating requires ``volume`` above ``min_volume`` and
+        ``spread`` below ``min_liquidity`` (percentage).
         """
         self.history.append(float(value))
         if len(self.history) >= 5 and statistics.pstdev(self.history) > 0:
@@ -48,7 +53,9 @@ class RollingZGate:
             z = (value - m) / s
         else:
             z = 0.0
-        if abs(z) >= self.threshold:
+        good_liq = spread <= self.cfg["signals"].get("min_liquidity", float("inf"))
+        good_vol = volume >= self.cfg["signals"].get("min_volume", 0.0)
+        if abs(z) >= self.threshold and good_liq and good_vol:
             self._spikes += 1
         else:
             self._spikes = 0

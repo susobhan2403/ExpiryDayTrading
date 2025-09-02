@@ -1,0 +1,25 @@
+# Global engine configuration
+risk_free_rate: 0.066
+dividend_yield: 0.0
+
+data:
+  stale_quote_sec: 3
+  quarantine_window: 30      # seconds
+  min_oi: 1
+
+signals:
+  debounce_bars: 2
+  min_volume: 1000
+  min_liquidity: 0.02        # spread %
+  regimes:
+    trend:
+      adx: [25, 100]
+      rv:  [0.0, 0.03]
+    choppy:
+      adx: [0, 20]
+      rv:  [0.0, 0.02]
+
+risk:
+  target_vol: 0.02
+  daily_loss_cap: -0.03      # -3% of capital
+  max_positions: 3
