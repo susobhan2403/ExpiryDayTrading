@@ -386,4 +386,4 @@ def atm_iv_from_chain(
         dividend_yield,
         F,
     )
-    return float(atm_iv)
+    return float(atm_iv) if atm_iv is not None else float("nan")

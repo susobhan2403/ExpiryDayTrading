@@ -33,7 +33,7 @@ from colorama import init as colorama_init, Fore, Style
 import src.provider.kite as provider_mod
 import src.features.technicals as tech
 import src.features.options as opt
-from src.config import load_settings, save_settings, STEP_MAP, get_rfr
+from src.config import load_settings, STEP_MAP, get_rfr
 from src.features.robust_metrics import detect_strike_step
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from src.ai.llm_gateway import LLMGateway
@@ -445,23 +445,6 @@ def volume_profile(df: pd.DataFrame, bins: int = 50) -> Dict[str,float]:
                 right = right_cand; cum += vol_bins[right]
     return {"POC": float(centers[poc_idx]), "VAL": float(centers[left]), "VAH": float(centers[right])}
 
-# ---------- settings helpers ----------
-def _load_settings() -> Dict:
-    path = ROOT / "settings.json"
-    try:
-        if path.exists():
-            return json.loads(path.read_text())
-    except Exception:
-        pass
-    return {}
-
-def _save_settings(cfg: Dict) -> None:
-    path = ROOT / "settings.json"
-    try:
-        path.write_text(json.dumps(cfg, indent=2))
-    except Exception:
-        pass
-
 def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: float, VND: float, D: float, step: int) -> Tuple[int,int,int,int]:
     """
     Returns: (max_above_steps, max_below_steps, far_otm_points, pin_distance_points)
@@ -512,6 +495,17 @@ def compute_dynamic_bands(symbol: str, expiry_today: bool, ATR_D: float, adx5: f
     far_pts = int(max(6*step, min(30*step, far_pts)))
     pin_pts = int(max(1*step, min(6*step, pin_pts)))
     return above, below, far_pts, pin_pts
+
+
+def _round_or_nan(value: Optional[float], ndigits: int = 3) -> float:
+    """Return ``value`` rounded to ``ndigits`` or ``nan`` for invalid inputs."""
+
+    try:
+        if value is None or value != value:
+            return float("nan")
+        return float(round(value, ndigits))
+    except Exception:
+        return float("nan")
 
 # ---------- options/math ----------
 def bs_price(S,K,r,T,sig,call=True):
@@ -1814,7 +1808,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # Core metrics
     step = detect_strike_step(chain["strikes"]) or STEP_MAP.get(symbol.upper(), 50)
     pcr_res = opt.pcr_from_chain(chain, spot_now, symbol)
-    pcr = pcr_res.get("PCR_OI_band", float("nan"))
+    pcr = pcr_res.get("PCR_OI_band")
+    if pcr is None:
+        pcr = float("nan")
     mp  = opt.max_pain(chain, spot_now, step)
     D   = float(spot_now - mp)
     session_hi, session_lo = float(spot_1m["high"].max()), float(spot_1m["low"].min())
@@ -1890,12 +1886,14 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     far_bull = far_bear = False
     if far_chain:
         try:
-            far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol).get("PCR_OI_band", float("nan"))
+            far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol).get("PCR_OI_band")
+            if far_pcr is None:
+                far_pcr = float("nan")
             minutes_far = opt.minutes_to_expiry(far_exp) if far_exp else 0.0
             far_atm_iv = opt.atm_iv_from_chain(far_chain, spot_now, minutes_far, RISK_FREE, symbol, fut_mid=fut_mid)
             if atm_iv==atm_iv and far_atm_iv==far_atm_iv:
                 term_iv_slope = atm_iv - far_atm_iv
-            if far_pcr==far_pcr:
+            if far_pcr==far_pcr and pcr==pcr:
                 far_bull = (far_pcr < pcr - 0.1)
                 far_bear = (far_pcr > pcr + 0.1)
         except Exception:
@@ -1977,15 +1975,6 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # Dynamic banding and filters for OI analysis
     expiry_today = (dt.date.fromisoformat(expiry) == now.date())
     dm_above, dm_below, dm_far, dm_pin = compute_dynamic_bands(symbol, expiry_today, ATR_D, adx5, VND, D, step)
-    # Persist dynamic choices for visibility
-    _cfg = load_settings()
-    _cfg.update({
-        "BAND_MAX_STRIKES_ABOVE": dm_above,
-        "BAND_MAX_STRIKES_BELOW": dm_below,
-        "FAR_OTM_FILTER_POINTS": dm_far,
-        "PIN_DISTANCE_POINTS": dm_pin,
-    })
-    save_settings(_cfg)
     def mad(arr):
         if not arr:
             return 0.0
@@ -2375,9 +2364,9 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
         ts=now.isoformat(), symbol=symbol, spot=float(spot_now),
         vwap_spot=float(vwap_spot), vwap_fut=float(vwap_fut),
         rsi5=float(rsi5), macd=float(macd_last), macd_signal=float(macd_sig_last), adx5=float(adx5),
-        pcr=float(round(pcr,3)) if pcr==pcr else float('nan'),
-        dpcr=float(round(dpcr,3)) if dpcr==dpcr else float('nan'),
-        dpcr_z=float(round(dpcr_z,2)),
+        pcr=_round_or_nan(pcr, 3),
+        dpcr=_round_or_nan(dpcr, 3),
+        dpcr_z=_round_or_nan(dpcr_z, 2),
         maxpain=int(mp), dist_to_mp=float(round(D,1)), atr_d=float(round(ATR_D,1)), vnd=float(round(VND,2)),
         mph_pts_per_hr=float(round(mph_pts_hr,1)) if mph_pts_hr==mph_pts_hr else float('nan'),
         mph_norm=float(round(mph_norm,2)) if mph_norm==mph_norm else float('nan'),
