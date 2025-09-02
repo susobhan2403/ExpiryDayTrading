@@ -14,6 +14,8 @@ import pathlib
 import datetime as dt
 from dataclasses import asdict
 from typing import Dict, List, Tuple
+import statistics
+import asyncio
 
 from src.config import load_settings
 
@@ -126,6 +128,98 @@ class LLMGateway:
         ]
         breakout_str = ", ".join(breakout_flags) if breakout_flags else "no breakouts"
         return f"{bias_str}; scenario {scenario}; {breakout_str}."
+
+    # ------------------ regime & thresholds ------------------
+    def classify_regime(self, metrics: Dict[str, float]) -> str:
+        """Classify market regime using simple prompt schema.
+
+        Parameters
+        ----------
+        metrics: dict
+            Dictionary of recent numeric metrics such as volatility and
+            trend indicators.
+
+        Returns
+        -------
+        str
+            Regime label like ``TRENDING`` or ``RANGING``.
+        """
+        if self.client:
+            try:  # pragma: no cover - API path
+                prompt = (
+                    "Classify the market regime as TRENDING, RANGING or VOLATILE "
+                    'given the following metrics. Respond with JSON `{"regime": "<label>"}`.'
+                )
+                content = json.dumps({"metrics": metrics})
+                resp = self.client.ChatCompletion.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": content},
+                    ],
+                )
+                data = json.loads(resp["choices"][0]["message"]["content"].strip())
+                return str(data.get("regime", "UNKNOWN")).upper()
+            except Exception:
+                pass
+        # Fallback heuristic: ADX for trendiness and VND for volatility
+        adx = float(metrics.get("adx", 0.0))
+        vnd = float(metrics.get("vnd", 0.0))
+        if adx >= 25 and vnd >= 0.5:
+            return "TRENDING"
+        if vnd > 1.5:
+            return "VOLATILE"
+        return "RANGING"
+
+    def suggest_thresholds(self, history: Dict[str, List[float]]) -> Dict[str, float]:
+        """Suggest multipliers for spike/volume gates based on recent history.
+
+        ``history`` should contain lists keyed by ``"pcr"`` and ``"iv"``.
+        Returns a mapping ``{"pcr": mult, "iv": mult}``.
+        """
+        if self.client:
+            try:  # pragma: no cover - API path
+                prompt = (
+                    "Given recent z-score histories for put-call ratio deltas and IV changes, "
+                    'suggest multipliers for spike detection thresholds as JSON `{"pcr": x, "iv": y}`'
+                )
+                content = json.dumps(history)
+                resp = self.client.ChatCompletion.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": content},
+                    ],
+                )
+                data = json.loads(resp["choices"][0]["message"]["content"].strip())
+                p_mult = float(data.get("pcr", 1.0))
+                i_mult = float(data.get("iv", 1.0))
+                return {"pcr": p_mult, "iv": i_mult}
+            except Exception:
+                pass
+        # Fallback heuristic: widen thresholds when history volatile
+        def _mult(vals: List[float]) -> float:
+            if len(vals) < 5:
+                return 1.0
+            s = statistics.pstdev(vals)
+            if s > 2.5:
+                return 1.3
+            if s < 0.8:
+                return 0.8
+            return 1.0
+
+        return {
+            "pcr": _mult(history.get("pcr", [])),
+            "iv": _mult(history.get("iv", [])),
+        }
+
+    async def aclassify_regime(self, metrics: Dict[str, float]) -> str:
+        """Async wrapper for :func:`classify_regime`."""
+        return await asyncio.to_thread(self.classify_regime, metrics)
+
+    async def asuggest_thresholds(self, history: Dict[str, List[float]]) -> Dict[str, float]:
+        """Async wrapper for :func:`suggest_thresholds`."""
+        return await asyncio.to_thread(self.suggest_thresholds, history)
 
     # ------------------ feedback logging ------------------
     def log_feedback(self, symbol: str, decision) -> None:
