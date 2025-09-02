@@ -70,7 +70,7 @@ def test_compute_iv_percentile_and_rank(tmp_path):
     assert pct == 60.0
     assert math.isclose(rank, 60.0)
     pct2, rank2 = compute_iv_percentile([0.2, 0.2, 0.2], 0.2)
-    assert math.isnan(rank2)
+    assert rank2 is None
 
 
 def test_compute_pcr():

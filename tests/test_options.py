@@ -78,7 +78,7 @@ def test_pcr_bad_oi_and_min_count():
     ce = [10, 0, 0]
     pe = [20, 5, 0]
     chain = _make_chain([19500, 19550, 19600], ce, pe)
-    assert math.isnan(pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)["PCR_OI_band"])
+    assert pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1)["PCR_OI_band"] is None
 
 
 def test_atm_strike_uses_step_map_for_truncated_chain():
