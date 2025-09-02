@@ -81,3 +81,10 @@ def test_pcr_bad_oi_and_min_count():
     chain = _make_chain([19500, 19550, 19600], ce, pe)
     assert math.isnan(pcr_from_chain(chain, spot=19550, symbol="NIFTY", band_steps=1))
 
+
+def test_atm_strike_uses_step_map_for_truncated_chain():
+    # BankNifty step size is 100; chain is missing higher strikes
+    strikes = [44000]
+    spot = 44150
+    assert atm_strike(spot, strikes, symbol="BANKNIFTY") == 44200
+

@@ -1788,17 +1788,17 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     if chain["expiry"] != expiry:
         logger.warning(f"{symbol}: chain expiry mismatch ({chain['expiry']} != {expiry}) → NO-TRADE this tick.")
     # ATM with tie-high rule
-    atm_k = opt.atm_strike_with_tie_high(spot_now, chain["strikes"]) if chain["strikes"] else None
+    atm_k = opt.atm_strike(spot_now, chain["strikes"], symbol) if chain["strikes"] else None
 
     # Core metrics
-    pcr = opt.pcr_from_chain(chain)
-    mp  = opt.max_pain(chain)
+    step = STEP_MAP.get(symbol.upper(), 50)
+    pcr = opt.pcr_from_chain(chain, spot_now, symbol)
+    mp  = opt.max_pain(chain, spot_now, step)
     D   = float(spot_now - mp)
     session_hi, session_lo = float(spot_1m["high"].max()), float(spot_1m["low"].min())
     atr = float(tech.atr(spot_1m, 14)) if len(spot_1m) else 0.0
     ATR_D = max(1.0, atr)
     VND = abs(D) / ATR_D
-    step = STEP_MAP.get(symbol.upper(), 50)
     SSD  = abs(D) / step
     PD   = 100.0 * abs(D) / max(1.0, spot_now)
 
@@ -1868,7 +1868,7 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     far_bull = far_bear = False
     if far_chain:
         try:
-            far_pcr = opt.pcr_from_chain(far_chain)
+            far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol)
             minutes_far = opt.minutes_to_expiry(far_exp) if far_exp else 0.0
             far_atm_iv = opt.atm_iv_from_chain(far_chain, spot_now, minutes_far, RISK_FREE)
             if atm_iv==atm_iv and far_atm_iv==far_atm_iv:
