@@ -18,7 +18,7 @@ Expiry Day Engine (Kite provider + Normalized Framework)
 """
 
 from __future__ import annotations
-import os, sys, json, time, math, argparse, logging, pathlib, itertools, statistics, glob
+import os, sys, json, time, math, argparse, logging, pathlib, itertools, statistics, glob, asyncio
 import datetime as dt
 from collections import deque
 from typing import Dict, List, Tuple, Optional, Any
@@ -1970,6 +1970,28 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     div = (atm_iv - prev_iv) if (atm_iv==atm_iv and prev_iv==prev_iv) else float('nan')
     div_series = state.get("div_series", [])
     IV_GATE.history = deque(div_series, maxlen=IV_GATE.window)
+
+    # ----- LLM assisted regime & gate thresholds -----
+    async def _llm_tasks() -> Tuple[str, Dict[str, float]]:
+        reg_metrics = {"vnd": VND, "adx": adx5, "rsi": rsi5, "iv_pct": iv_pct}
+        hist = {"pcr": list(PCR_GATE.history), "iv": list(IV_GATE.history)}
+        reg_task = asyncio.create_task(LLM.aclassify_regime(reg_metrics))
+        thr_task = asyncio.create_task(LLM.asuggest_thresholds(hist))
+        regime = await reg_task
+        thr = await thr_task
+        return regime, thr
+
+    try:
+        regime_label, thr_mult = asyncio.run(_llm_tasks())
+    except Exception:
+        regime_label, thr_mult = "UNKNOWN", {}
+
+    state["regime"] = regime_label
+    p_mult = float(thr_mult.get("pcr", 1.0)) if isinstance(thr_mult, dict) else 1.0
+    i_mult = float(thr_mult.get("iv", 1.0)) if isinstance(thr_mult, dict) else 1.0
+    PCR_GATE.threshold = _gate_cfg["pcr"] * p_mult
+    IV_GATE.threshold = _gate_cfg["iv"] * i_mult
+
     iv_z, iv_mute = IV_GATE.update(div if div == div else 0.0)
     div_series = list(IV_GATE.history)
     state["div_series"] = div_series
