@@ -10543,3 +10543,4 @@ SCP 0% | ERP 0% | Strategy: Neutral: Small debit or stay flat pending signals | 
 2025-09-03 21:40:17,553 INFO: ALERT: IGNORE Max pain unreliable
 2025-09-03 21:40:17,555 INFO: Iteration 1 completed in 1.70s
 2025-09-03 21:40:17,555 INFO: Run-once mode, exiting
+2025-09-03 16:28:56,164 INFO: Failed to initialize provider: No module named 'kiteconnect'
