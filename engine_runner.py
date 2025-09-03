@@ -47,8 +47,8 @@ def setup_logging() -> logging.Logger:
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     
-    # File handler
-    log_file = LOGS_DIR / "enhanced_engine.log"
+    # File handler (use same name as old engine for dashboard compatibility)
+    log_file = LOGS_DIR / "engine.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)
     
