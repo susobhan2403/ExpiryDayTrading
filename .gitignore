@@ -6,7 +6,6 @@
 __pycache__/
 
 # Logs and output
-logs/
 out/
 
 # Test files
