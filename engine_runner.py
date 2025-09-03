@@ -101,14 +101,13 @@ def create_sample_market_data(symbol: str, provider: KiteProvider) -> Optional[M
     """Create sample market data for testing."""
     try:
         # Get spot price
-        quotes = provider.get_quotes([symbol])
+        quotes = provider.get_indices_snapshot([symbol])
         if not quotes or symbol not in quotes:
             return None
         
-        quote = quotes[symbol]
-        spot = quote.get('last_price', 0.0)
+        spot = quotes[symbol]
         
-        if spot <= 0:
+        if spot <= 0 or spot != spot:  # Check for NaN
             return None
         
         # Create basic market data
