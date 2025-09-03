@@ -1,0 +1,8 @@
+scenario,orb_signal,orb_strength,volume_signal,volume_strength,oi_flow_signal,oi_flow_strength,iv_crush_signal,iv_crush_strength,price_action_signal,price_action_strength,expected_decision,expected_override
+strong_alignment,LONG,0.9,LONG,0.8,LONG,0.7,LONG,0.6,LONG,0.8,ALLOW,true
+weak_alignment,LONG,0.4,SHORT,0.3,LONG,0.2,LONG,0.1,SHORT,0.3,BLOCK,false
+conflicting_signals,LONG,0.8,SHORT,0.7,LONG,0.6,SHORT,0.5,LONG,0.4,BLOCK,false
+insufficient_strength,LONG,0.2,LONG,0.3,LONG,0.1,LONG,0.2,LONG,0.2,BLOCK,false
+three_factor_alignment,LONG,0.8,LONG,0.7,LONG,0.6,SHORT,0.2,SHORT,0.1,ALLOW,true
+two_factor_strong,LONG,0.9,LONG,0.8,SHORT,0.3,SHORT,0.2,SHORT,0.1,REDUCE,false
+single_strong_factor,LONG,0.9,SHORT,0.2,SHORT,0.1,SHORT,0.1,SHORT,0.1,BLOCK,false
