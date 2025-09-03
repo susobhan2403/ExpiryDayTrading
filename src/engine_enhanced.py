@@ -354,7 +354,8 @@ class EnhancedTradingEngine:
                 strikes=market_data.strikes,
                 step=step,
                 ce_mid=market_data.call_mids,
-                pe_mid=market_data.put_mids
+                pe_mid=market_data.put_mids,
+                spot=market_data.spot
             )
             
             if atm_strike == 0:
@@ -377,13 +378,28 @@ class EnhancedTradingEngine:
             # IV percentile computation
             iv_percentile = None
             iv_rank = None
-            if atm_iv and self.iv_history:
-                iv_percentile, iv_rank, percentile_diag = compute_iv_percentile_enhanced(
-                    history=self.iv_history,
-                    current=atm_iv,
-                    current_tau=tau_years,
-                    tau_tol=7.0/365.0  # 1 week tolerance
-                )
+            if atm_iv:
+                if self.iv_history and len(self.iv_history) >= 3:  # Need at least 3 data points
+                    iv_percentile, iv_rank, percentile_diag = compute_iv_percentile_enhanced(
+                        history=self.iv_history,
+                        current=atm_iv,
+                        current_tau=tau_years,
+                        tau_tol=7.0/365.0  # 1 week tolerance
+                    )
+                else:
+                    # When insufficient historical data, provide reasonable defaults
+                    # Based on Indian market conditions: low IV typically 10-20%, high IV 30-50%
+                    if atm_iv < 0.15:  # Very low IV
+                        iv_percentile = 5.0
+                    elif atm_iv < 0.20:  # Low IV 
+                        iv_percentile = 20.0
+                    elif atm_iv < 0.30:  # Normal IV
+                        iv_percentile = 50.0
+                    elif atm_iv < 0.40:  # High IV
+                        iv_percentile = 80.0
+                    else:  # Very high IV
+                        iv_percentile = 95.0
+                    iv_rank = iv_percentile
             
             # PCR computation
             pcr_results, pcr_diag = compute_pcr_enhanced(
