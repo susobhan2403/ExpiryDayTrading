@@ -33,7 +33,10 @@ class EnhancedRegime:
     
     def is_tradeable(self) -> bool:
         """Check if regime supports active trading."""
-        return self.liquidity in ["EXCELLENT", "GOOD"] and self.volatility != "LOW"
+        # Made less restrictive - allow FAIR liquidity and LOW volatility in some cases
+        liquidity_ok = self.liquidity in ["EXCELLENT", "GOOD", "FAIR"]
+        volatility_ok = self.volatility != "LOW" or self.is_trending()  # Allow low vol if trending
+        return liquidity_ok and volatility_ok
 
 
 @dataclass
@@ -63,15 +66,16 @@ class MultiFactorSignal:
         """Return list of signals that agree on direction."""
         signals = {}
         
-        if self.orb_signal and self.orb_strength > 0.3:
+        # Lowered thresholds from 0.3 to 0.2 to allow more signals to qualify
+        if self.orb_signal and self.orb_strength > 0.2:
             signals["ORB"] = self.orb_signal
-        if self.volume_signal and self.volume_strength > 0.3:
+        if self.volume_signal and self.volume_strength > 0.2:
             signals["VOLUME"] = self.volume_signal
-        if self.oi_flow_signal and self.oi_flow_strength > 0.3:
+        if self.oi_flow_signal and self.oi_flow_strength > 0.2:
             signals["OI_FLOW"] = self.oi_flow_signal
-        if self.iv_crush_signal and self.iv_crush_strength > 0.3:
+        if self.iv_crush_signal and self.iv_crush_strength > 0.2:
             signals["IV_CRUSH"] = self.iv_crush_signal
-        if self.price_action_signal and self.price_action_strength > 0.3:
+        if self.price_action_signal and self.price_action_strength > 0.2:
             signals["PRICE_ACTION"] = self.price_action_signal
         
         # Find consensus direction
@@ -87,15 +91,16 @@ class MultiFactorSignal:
         """Return all signals above strength threshold, regardless of direction."""
         signals = []
         
-        if self.orb_signal and self.orb_strength > 0.3:
+        # Lowered thresholds from 0.3 to 0.2 to allow more signals to qualify
+        if self.orb_signal and self.orb_strength > 0.2:
             signals.append("ORB")
-        if self.volume_signal and self.volume_strength > 0.3:
+        if self.volume_signal and self.volume_strength > 0.2:
             signals.append("VOLUME")
-        if self.oi_flow_signal and self.oi_flow_strength > 0.3:
+        if self.oi_flow_signal and self.oi_flow_strength > 0.2:
             signals.append("OI_FLOW")
-        if self.iv_crush_signal and self.iv_crush_strength > 0.3:
+        if self.iv_crush_signal and self.iv_crush_strength > 0.2:
             signals.append("IV_CRUSH")
-        if self.price_action_signal and self.price_action_strength > 0.3:
+        if self.price_action_signal and self.price_action_strength > 0.2:
             signals.append("PRICE_ACTION")
         
         return signals
@@ -285,8 +290,8 @@ def apply_enhanced_gates(
         ])
         return decision
     
-    # Rule 3: Multi-factor override (3+ aligned signals with good strength)
-    if len(aligned_signals) >= 3 and alignment_strength >= 0.6:
+    # Rule 3: Multi-factor override (reduce threshold to allow more valid trades)
+    if len(aligned_signals) >= 2 and alignment_strength >= 0.4:  # Lowered from 3 signals and 0.6 strength
         decision.muted = False
         decision.override_triggered = True
         decision.primary_reason = "multi_factor_alignment_override"
@@ -314,8 +319,8 @@ def apply_enhanced_gates(
         
         return decision
     
-    # Rule 4: Strong single-factor signals with regime support
-    if alignment_strength >= 0.8 and len(aligned_signals) >= 2:
+    # Rule 4: Strong single-factor signals with regime support (reduce thresholds)
+    if alignment_strength >= 0.6 and len(aligned_signals) >= 1:  # Lowered from 0.8 and 2 signals
         if regime.is_trending() and consensus_direction:
             # Check if direction aligns with regime trend
             trend_aligned = (
