@@ -37,11 +37,14 @@ DEFAULT_POLL_SECS = 60
 
 
 def setup_logging() -> logging.Logger:
-    """Setup logging configuration."""
+    """Setup logging configuration to match dashboard expectations."""
     LOGS_DIR.mkdir(exist_ok=True)
     
     logger = logging.getLogger("enhanced_engine")
     logger.setLevel(logging.INFO)
+    
+    # Clear any existing handlers
+    logger.handlers.clear()
     
     # Console handler
     console_handler = logging.StreamHandler()
@@ -52,9 +55,10 @@ def setup_logging() -> logging.Logger:
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)
     
-    # Formatter
+    # Formatter to match expected dashboard format
+    # Expected: "2025-09-02 10:41:23,870 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=60s | mode=auto"
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s INFO: %(message)s'
     )
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
@@ -81,18 +85,20 @@ def is_market_open() -> bool:
 
 
 def get_next_expiry(symbol: str) -> dt.datetime:
-    """Get next expiry for the symbol."""
-    # This is a simplified implementation
-    # In reality, this would fetch from provider or config
+    """Get next expiry for the symbol using correct NSE rules."""
+    from src.features.options import nearest_weekly_expiry
+    
     now = dt.datetime.now(IST)
+    expiry_iso = nearest_weekly_expiry(now, symbol)
+    expiry_date = dt.date.fromisoformat(expiry_iso)
     
-    # For weekly options, find next Thursday
-    days_ahead = 3 - now.weekday()  # Thursday = 3
-    if days_ahead <= 0:  # Already past Thursday this week
-        days_ahead += 7
-    
-    next_expiry = now + dt.timedelta(days=days_ahead)
-    expiry = next_expiry.replace(hour=15, minute=30, second=0, microsecond=0)
+    # Convert to datetime with 15:30 IST expiry time
+    expiry = IST.localize(dt.datetime(
+        expiry_date.year, 
+        expiry_date.month, 
+        expiry_date.day, 
+        15, 30, 0
+    ))
     
     return expiry
 
@@ -140,9 +146,6 @@ def run_engine_loop(
 ) -> None:
     """Run the main engine loop."""
     
-    logger.info(f"Starting enhanced engine for symbols: {symbols}")
-    logger.info(f"Provider: {provider_name}, Poll: {poll_seconds}s, Mode: {mode}")
-    
     # Initialize provider
     if provider_name.upper() != "KITE":
         logger.error("Only KITE provider is supported")
@@ -165,13 +168,15 @@ def run_engine_loop(
                 min_tau_hours=2.0
             )
             engines[symbol] = engine
-            logger.info(f"Initialized engine for {symbol}, expiry: {expiry}")
         except Exception as e:
             logger.error(f"Failed to initialize engine for {symbol}: {e}")
     
     if not engines:
         logger.error("No engines initialized successfully")
         sys.exit(1)
+    
+    # Log engine startup in expected format
+    logger.info(f"Engine started | provider={provider_name} | symbols={symbols} | poll={poll_seconds}s | mode={mode}")
     
     # Main loop
     iteration = 0

@@ -167,24 +167,72 @@ def risk_reversal_25(
         out.update({"rr": float(iv_c - iv_p), "k_call": int(best_call), "k_put": int(best_put), "iv_call": float(iv_c), "iv_put": float(iv_p)})
     return out
 
+def nearest_monthly_expiry(now_ist: dt.datetime, symbol: str) -> str:
+    """
+    Calculate the nearest monthly expiry which falls on the last Tuesday of the month.
+    Used for BANKNIFTY and MIDCPNIFTY which don't have weekly expiries.
+    """
+    d = now_ist.date()
+    
+    # Start with current month
+    year, month = d.year, d.month
+    
+    # Find last Tuesday of current month
+    last_day = (dt.date(year, month + 1, 1) - dt.timedelta(days=1)) if month < 12 else dt.date(year, 12, 31)
+    
+    # Find the last Tuesday by working backwards from last day
+    last_tuesday = None
+    for day_offset in range(7):  # Check last 7 days of month
+        check_date = last_day - dt.timedelta(days=day_offset)
+        if check_date.weekday() == 1:  # Tuesday = 1
+            last_tuesday = check_date
+            break
+    
+    # If we haven't passed the monthly expiry yet, use current month
+    if last_tuesday and (d < last_tuesday or (d == last_tuesday and now_ist.time() <= dt.time(15, 30))):
+        return last_tuesday.isoformat()
+    
+    # Otherwise, move to next month
+    if month == 12:
+        year += 1
+        month = 1
+    else:
+        month += 1
+    
+    # Find last Tuesday of next month
+    last_day = (dt.date(year, month + 1, 1) - dt.timedelta(days=1)) if month < 12 else dt.date(year, 12, 31)
+    
+    for day_offset in range(7):
+        check_date = last_day - dt.timedelta(days=day_offset)
+        if check_date.weekday() == 1:  # Tuesday = 1
+            return check_date.isoformat()
+    
+    # Fallback (should never reach here)
+    return (d + dt.timedelta(days=30)).isoformat()
+
+
 def nearest_weekly_expiry(now_ist: dt.datetime, symbol: str) -> str:
     """
     Dynamic weekly expiry by symbol with rule changes from Sep 2025:
     - NIFTY: Tuesday from 2025-09-01 (was Thursday before)
     - SENSEX: Thursday from 2025-09-01 (was Tuesday before)
+    - BANKNIFTY, MIDCPNIFTY: No weekly expiry, use monthly expiry (last Tuesday of month)
     - Others: default Thursday unless specialized later
     """
-    d = now_ist.date()
     sym = (symbol or "").upper()
+    
+    # BANKNIFTY and MIDCPNIFTY only have monthly expiries
+    if sym in ("BANKNIFTY", "MIDCPNIFTY"):
+        return nearest_monthly_expiry(now_ist, symbol)
+    
+    d = now_ist.date()
     eff = dt.date(2025, 9, 1)
     # default Thursday
     weekday_target = 3
     # Weekly mapping by index
     if sym == "NIFTY":
         weekday_target = 1 if d >= eff else 3  # Tue after eff else Thu
-    elif sym == "BANKNIFTY":
-        weekday_target = 1  # Tue
-    elif sym in ("FINNIFTY", "MIDCPNIFTY"):
+    elif sym in ("FINNIFTY",):
         weekday_target = 1  # Tue
     elif sym == "SENSEX":
         weekday_target = 3 if d >= eff else 1  # Thu after eff else Tue
