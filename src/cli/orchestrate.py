@@ -98,7 +98,7 @@ class Orchestrator:
         print('[orchestrate] started aggregator: interval', self.aggregate_interval, 's')
 
     def start_engine(self):
-        cmd = [sys.executable, str(ROOT / 'engine.py'),
+        cmd = [sys.executable, str(ROOT / 'engine_runner.py'),
                '--symbols', ','.join(self.symbols),
                '--provider', self.provider,
                '--poll-seconds', str(self.poll_seconds),
