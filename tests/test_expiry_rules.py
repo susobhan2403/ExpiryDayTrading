@@ -31,14 +31,28 @@ def test_sensex_before_sep2025_is_tuesday():
     assert wd(exp) == 1
 
 
-def test_banknifty_after_sep2025_is_tuesday():
-    now = aware(2026,1,2,10,0)
+def test_banknifty_monthly_expiry():
+    # BANKNIFTY should use monthly expiry (last Tuesday of month)
+    now = aware(2026,1,2,10,0)  # Jan 2, 2026 (Thursday)
     exp = nearest_weekly_expiry(now, 'BANKNIFTY')
-    assert wd(exp) == 1
+    assert wd(exp) == 1  # Should be Tuesday
+    exp_date = dt.date.fromisoformat(exp)
+    # Should be last Tuesday of January 2026
+    assert exp_date.month == 1 and exp_date.year == 2026
+    # Verify it's the last Tuesday of the month
+    next_tuesday = exp_date + dt.timedelta(days=7)
+    assert next_tuesday.month == 2  # Next Tuesday should be in next month
 
 
-def test_midcpnifty_after_sep2025_is_tuesday():
-    now = aware(2026,1,2,10,0)
+def test_midcpnifty_monthly_expiry():
+    # MIDCPNIFTY should use monthly expiry (last Tuesday of month)
+    now = aware(2026,1,2,10,0)  # Jan 2, 2026 (Thursday)
     exp = nearest_weekly_expiry(now, 'MIDCPNIFTY')
-    assert wd(exp) == 1
+    assert wd(exp) == 1  # Should be Tuesday
+    exp_date = dt.date.fromisoformat(exp)
+    # Should be last Tuesday of January 2026
+    assert exp_date.month == 1 and exp_date.year == 2026
+    # Verify it's the last Tuesday of the month
+    next_tuesday = exp_date + dt.timedelta(days=7)
+    assert next_tuesday.month == 2  # Next Tuesday should be in next month
 
