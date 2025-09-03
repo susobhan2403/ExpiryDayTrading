@@ -8,3 +8,6 @@ __pycache__/
 # Logs and output
 logs/
 out/
+
+# Test files
+test_dashboard_compatibility.py
