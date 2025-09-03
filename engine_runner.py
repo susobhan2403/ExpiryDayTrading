@@ -128,9 +128,26 @@ def _create_realistic_fallback_data(symbol: str, spot: float) -> MarketData:
         # OI distribution - higher near ATM, realistic asymmetry for PCR
         base_oi = max(1000, 15000 - distance_from_spot * 10)
         
-        # Create slight put bias for realistic PCR > 1.0
-        call_oi[strike] = int(base_oi * (0.9 + 0.2 * min(1.0, distance_from_spot / 200)))
-        put_oi[strike] = int(base_oi * (1.1 + 0.3 * min(1.0, distance_from_spot / 200)))
+        # Create index-specific PCR patterns based on market characteristics
+        if symbol == "MIDCPNIFTY":
+            # MIDCPNIFTY: More balanced, target PCR around 1.12
+            call_multiplier = 0.95 + 0.15 * min(1.0, distance_from_spot / 200)
+            put_multiplier = 1.05 + 0.2 * min(1.0, distance_from_spot / 200)
+        elif symbol == "BANKNIFTY":
+            # BANKNIFTY: More volatile, slightly higher put bias, target PCR around 1.15-1.20
+            call_multiplier = 0.92 + 0.18 * min(1.0, distance_from_spot / 200)
+            put_multiplier = 1.08 + 0.25 * min(1.0, distance_from_spot / 200)
+        elif symbol == "SENSEX":
+            # SENSEX: Similar to NIFTY but slightly different, target PCR around 1.10-1.15
+            call_multiplier = 0.94 + 0.16 * min(1.0, distance_from_spot / 200)
+            put_multiplier = 1.06 + 0.22 * min(1.0, distance_from_spot / 200)
+        else:  # NIFTY and others
+            # NIFTY: Balanced market, target PCR around 1.08-1.18
+            call_multiplier = 0.93 + 0.17 * min(1.0, distance_from_spot / 200)
+            put_multiplier = 1.07 + 0.23 * min(1.0, distance_from_spot / 200)
+        
+        call_oi[strike] = int(base_oi * call_multiplier)
+        put_oi[strike] = int(base_oi * put_multiplier)
     
     return MarketData(
         timestamp=dt.datetime.now(IST),
