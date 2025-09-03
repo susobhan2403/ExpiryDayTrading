@@ -35,6 +35,13 @@ import src.features.technicals as tech
 import src.features.options as opt
 from src.config import load_settings, STEP_MAP, get_rfr
 from src.features.robust_metrics import detect_strike_step
+# Import enhanced metrics for improved accuracy
+from src.metrics.enhanced import (
+    compute_pcr_enhanced, 
+    pick_atm_strike_enhanced, 
+    compute_forward_enhanced,
+    infer_strike_step_enhanced
+)
 from src.ai.ensemble import ai_predict_probs, blend_probs
 from src.ai.llm_gateway import LLMGateway
 from prometheus_client import Gauge, start_http_server
@@ -1788,28 +1795,103 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     # Expiry sanity
     if chain["expiry"] != expiry:
         logger.warning(f"{symbol}: chain expiry mismatch ({chain['expiry']} != {expiry}) → NO-TRADE this tick.")
-    # ATM using forward-based selection
+    # ATM using enhanced forward-based selection
     mins_to_exp = opt.minutes_to_expiry(expiry)
     fut_mid = float(fut_1m["close"].iloc[-1]) if not fut_1m.empty else None
-    atm_k = (
-        opt.atm_strike(
-            spot_now,
-            chain["strikes"],
-            symbol,
-            chain=chain,
-            fut_mid=fut_mid,
-            minutes_to_exp=mins_to_exp,
-            r=get_rfr(),
-        )
-        if chain["strikes"]
-        else None
-    )
+    
+    # Use enhanced ATM calculation for better accuracy
+    if chain["strikes"]:
+        try:
+            # Calculate forward price for enhanced ATM selection
+            tau_years = max(1e-9, mins_to_exp / (365 * 24 * 60))
+            forward, _ = compute_forward_enhanced(spot_now, fut_mid, get_rfr(), 0.0, tau_years)
+            
+            # Prepare option price data for enhanced calculation
+            strikes = sorted(float(k) for k in chain["strikes"])
+            step_enhanced, _ = infer_strike_step_enhanced(strikes)
+            step = step_enhanced if step_enhanced > 0 else STEP_MAP.get(symbol.upper(), 50)
+            
+            ce_mid = {}
+            pe_mid = {}
+            for k in strikes:
+                k_int = int(k)
+                ce_data = chain.get("calls", {}).get(k_int, {})
+                pe_data = chain.get("puts", {}).get(k_int, {})
+                
+                # Calculate mid prices
+                ce_bid = float(ce_data.get("bid", 0))
+                ce_ask = float(ce_data.get("ask", 0))
+                pe_bid = float(pe_data.get("bid", 0))
+                pe_ask = float(pe_data.get("ask", 0))
+                
+                if ce_bid > 0 and ce_ask > 0:
+                    ce_mid[k] = (ce_bid + ce_ask) / 2.0
+                elif ce_data.get("ltp", 0) > 0:
+                    ce_mid[k] = float(ce_data["ltp"])
+                
+                if pe_bid > 0 and pe_ask > 0:
+                    pe_mid[k] = (pe_bid + pe_ask) / 2.0
+                elif pe_data.get("ltp", 0) > 0:
+                    pe_mid[k] = float(pe_data["ltp"])
+            
+            # Use enhanced ATM strike selection
+            atm_k_enhanced, atm_diag = pick_atm_strike_enhanced(forward, strikes, step, ce_mid, pe_mid)
+            atm_k = int(atm_k_enhanced) if atm_k_enhanced > 0 else None
+            
+        except Exception as e:
+            # Fallback to original method if enhanced calculation fails
+            logger.debug(f"Enhanced ATM calculation failed for {symbol}: {e}, falling back to original method")
+            atm_k = (
+                opt.atm_strike(
+                    spot_now,
+                    chain["strikes"],
+                    symbol,
+                    chain=chain,
+                    fut_mid=fut_mid,
+                    minutes_to_exp=mins_to_exp,
+                    r=get_rfr(),
+                )
+                if chain["strikes"]
+                else None
+            )
+    else:
+        atm_k = None
 
-    # Core metrics
+    # Core metrics with enhanced calculations
     step = detect_strike_step(chain["strikes"]) or STEP_MAP.get(symbol.upper(), 50)
-    pcr_res = opt.pcr_from_chain(chain, spot_now, symbol)
-    pcr = pcr_res.get("PCR_OI_band")
-    if pcr is None:
+    
+    # Use enhanced PCR calculation for better accuracy
+    if chain["strikes"] and atm_k:
+        try:
+            # Prepare OI data for enhanced PCR calculation
+            strikes = sorted(float(k) for k in chain["strikes"])
+            put_oi = {}
+            call_oi = {}
+            
+            for k in strikes:
+                k_int = int(k)
+                put_data = chain.get("puts", {}).get(k_int, {})
+                call_data = chain.get("calls", {}).get(k_int, {})
+                
+                put_oi[k] = int(put_data.get("oi", 0))
+                call_oi[k] = int(call_data.get("oi", 0))
+            
+            # Use enhanced PCR calculation
+            pcr_results, pcr_diag = compute_pcr_enhanced(put_oi, call_oi, strikes, float(atm_k), step)
+            
+            # Use band PCR if available, otherwise total PCR
+            pcr = pcr_results.get("PCR_OI_band") or pcr_results.get("PCR_OI_total")
+            if pcr is None:
+                pcr = float("nan")
+                
+        except Exception as e:
+            # Fallback to original method if enhanced calculation fails
+            logger.debug(f"Enhanced PCR calculation failed for {symbol}: {e}, falling back to original method")
+            pcr_res = opt.pcr_from_chain(chain, spot_now, symbol)
+            pcr = pcr_res.get("PCR_OI_band")
+            if pcr is None:
+                pcr = float("nan")
+    else:
         pcr = float("nan")
     mp  = opt.max_pain(chain, spot_now, step)
     D   = float(spot_now - mp)
@@ -1886,9 +1968,30 @@ def run_once(provider: provider_mod.MarketDataProvider, symbol: str, poll_secs: 
     far_bull = far_bear = False
     if far_chain:
         try:
-            far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol).get("PCR_OI_band")
-            if far_pcr is None:
-                far_pcr = float("nan")
+            # Use enhanced PCR calculation for far chain as well
+            if far_chain.get("strikes") and atm_k:
+                far_strikes = sorted(float(k) for k in far_chain["strikes"])
+                far_put_oi = {}
+                far_call_oi = {}
+                
+                for k in far_strikes:
+                    k_int = int(k)
+                    far_put_data = far_chain.get("puts", {}).get(k_int, {})
+                    far_call_data = far_chain.get("calls", {}).get(k_int, {})
+                    
+                    far_put_oi[k] = int(far_put_data.get("oi", 0))
+                    far_call_oi[k] = int(far_call_data.get("oi", 0))
+                
+                far_pcr_results, _ = compute_pcr_enhanced(far_put_oi, far_call_oi, far_strikes, float(atm_k), step)
+                far_pcr = far_pcr_results.get("PCR_OI_band") or far_pcr_results.get("PCR_OI_total")
+                if far_pcr is None:
+                    far_pcr = float("nan")
+            else:
+                # Fallback to original method
+                far_pcr = opt.pcr_from_chain(far_chain, spot_now, symbol).get("PCR_OI_band")
+                if far_pcr is None:
+                    far_pcr = float("nan")
+                    
             minutes_far = opt.minutes_to_expiry(far_exp) if far_exp else 0.0
             far_atm_iv = opt.atm_iv_from_chain(far_chain, spot_now, minutes_far, RISK_FREE, symbol, fut_mid=fut_mid)
             if atm_iv==atm_iv and far_atm_iv==far_atm_iv:
