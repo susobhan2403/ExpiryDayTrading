@@ -167,16 +167,6 @@ def run_engine_loop(
     # Log additional initialization info
     log_micro_penalty(logger, 0.67, 0.0000, 0.00, 0.50)
     
-    # Log expiry info for first symbol (mock for now)
-    if symbols:
-        import datetime as dt
-        today = dt.date.today()
-        next_thursday = today + dt.timedelta(days=(3 - today.weekday()) % 7)
-        expiry_str = next_thursday.strftime('%Y-%m-%d')
-        step = 50 if symbols[0] not in ["BANKNIFTY"] else 100
-        atm = int(25000 if symbols[0] == "NIFTY" else 52000)  # Mock ATM values
-        log_expiry_info(logger, expiry_str, step, atm, 0.98)
-    
     # Main loop
     iteration = 0
     while True:
@@ -195,7 +185,7 @@ def run_engine_loop(
             # Process each symbol
             for symbol, engine in engines.items():
                 try:
-                    # Get market data
+                    # Get market data first
                     market_data = create_sample_market_data(symbol, provider)
                     if not market_data:
                         logger.warning(f"No market data for {symbol}")
@@ -203,6 +193,25 @@ def run_engine_loop(
                     
                     # Process with engine
                     decision = engine.process_market_data(market_data)
+                    
+                    # Log expiry info for each symbol using actual computed values
+                    import datetime as dt
+                    today = dt.date.today()
+                    next_thursday = today + dt.timedelta(days=(3 - today.weekday()) % 7)
+                    expiry_str = next_thursday.strftime('%Y-%m-%d')
+                    
+                    # Set step size based on symbol
+                    if symbol == "BANKNIFTY":
+                        step = 100
+                    elif symbol in ["SENSEX"]:
+                        step = 100
+                    else:  # NIFTY, MIDCPNIFTY, etc.
+                        step = 50
+                    
+                    # Use actual computed values from decision
+                    atm = int(decision.atm_strike) if decision.atm_strike else int(market_data.spot)
+                    pcr = decision.pcr_total if decision.pcr_total else 0.98
+                    log_expiry_info(logger, expiry_str, step, atm, pcr)
                     
                     # Format output using dual formatter
                     console_output, file_output = output_formatter.format_decision_output(

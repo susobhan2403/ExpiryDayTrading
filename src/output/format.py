@@ -76,7 +76,7 @@ def format_output_line(
                 ("Price above VWAP", above_vwap),
                 ("ADX >= 18 (trend strength)", trend_strong),
                 ("OI flow supports up (PE write, CE unwind)", bull_flow),
-                ("PCR momentum up (Δz >= 0.5)", bull_pcr),
+                ("PCR momentum up (dz >= 0.5)", bull_pcr),
                 ("MACD(5m) cross up", macd_up),
                 ("MaxPain drift up (norm >= thr)", bull_drift),
             ]
@@ -85,7 +85,7 @@ def format_output_line(
                 ("Price below VWAP", below_vwap),
                 ("ADX >= 18 (trend strength)", trend_strong),
                 ("OI flow supports down (CE write, PE unwind)", bear_flow),
-                ("PCR momentum down (Δz <= -0.5)", bear_pcr),
+                ("PCR momentum down (dz <= -0.5)", bear_pcr),
                 ("MACD(5m) cross down", macd_dn),
                 ("MaxPain drift down (norm <= -thr)", bear_drift),
             ]
@@ -102,7 +102,8 @@ def format_output_line(
     met = sum(1 for _, ok in conds if ok)
 
     def tick(ok: bool) -> str:
-        return (Fore.GREEN + "\u2714" + Style.RESET_ALL) if ok else (Fore.RED + "\u2718" + Style.RESET_ALL)
+        # Use ASCII characters instead of Unicode to avoid cp1252 encoding issues on Windows
+        return (Fore.GREEN + "[Y]" + Style.RESET_ALL) if ok else (Fore.RED + "[N]" + Style.RESET_ALL)
 
     cond_lines = []
     for idx, (name, ok) in enumerate(conds, start=1):
@@ -117,8 +118,8 @@ def format_output_line(
     vwap_fut_print = int(vwap_fut) if not math.isnan(vwap_fut) else "NA"
     header = f"{now.strftime('%H:%M')} IST | {symbol} {spot_print} | VWAP(fut) {vwap_fut_print}"
     l1 = f"D={int(D)} | ATR_D={int(ATR_D)} | VND={snap.get('vnd')} | SSD={snap.get('ssd')} | PD={snap.get('pdist_pct')}%"
-    l2 = f"PCR {snap.get('pcr')} (Δz={snap.get('dpcr_z')}) | MaxPain {mp} | Drift {snap.get('mph_pts_per_hr')}/hr (norm {snap.get('mph_norm')})"
-    l3 = f"ATM {atm_k} IV {snap.get('atm_iv')}% (ΔIV_z={snap.get('iv_z')}) | Basis {snap.get('basis')}"
+    l2 = f"PCR {snap.get('pcr')} (dz={snap.get('dpcr_z')}) | MaxPain {mp} | Drift {snap.get('mph_pts_per_hr')}/hr (norm {snap.get('mph_norm')})"
+    l3 = f"ATM {atm_k} IV {snap.get('atm_iv')}% (dIV_z={snap.get('iv_z')}) | Basis {snap.get('basis')}"
     l4 = f"Scenario: {top_disp} {int(probs[top]*100)}%" + (f" (alt: {alt_name} {alt_pct}%)" if alt_name else "")
 
     if side == "BUY" and spread:
@@ -141,7 +142,7 @@ def format_output_line(
                 ("Close back below VWAP", below_vwap),
                 ("ADX weakening (<16)", adx5 < 16),
                 ("OI flips bearish (CE write, PE unwind)", bear_flow),
-                ("PCR momentum down (Δz <= -0.5)", bear_pcr),
+                ("PCR momentum down (dz <= -0.5)", bear_pcr),
                 ("MACD(5m) cross down", macd_dn),
                 ("MaxPain drift down (norm <= -thr)", bear_drift),
             ]
@@ -150,7 +151,7 @@ def format_output_line(
                 ("Close back above VWAP", above_vwap),
                 ("ADX weakening (<16)", adx5 < 16),
                 ("OI flips bullish (PE write, CE unwind)", bull_flow),
-                ("PCR momentum up (Δz >= 0.5)", bull_pcr),
+                ("PCR momentum up (dz >= 0.5)", bull_pcr),
                 ("MACD(5m) cross up", macd_up),
                 ("MaxPain drift up (norm >= thr)", bull_drift),
             ]
