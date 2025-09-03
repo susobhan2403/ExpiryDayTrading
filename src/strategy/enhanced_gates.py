@@ -82,32 +82,46 @@ class MultiFactorSignal:
             return long_signals
         else:
             return short_signals
+            
+    def get_all_active_signals(self) -> List[str]:
+        """Return all signals above strength threshold, regardless of direction."""
+        signals = []
+        
+        if self.orb_signal and self.orb_strength > 0.3:
+            signals.append("ORB")
+        if self.volume_signal and self.volume_strength > 0.3:
+            signals.append("VOLUME")
+        if self.oi_flow_signal and self.oi_flow_strength > 0.3:
+            signals.append("OI_FLOW")
+        if self.iv_crush_signal and self.iv_crush_strength > 0.3:
+            signals.append("IV_CRUSH")
+        if self.price_action_signal and self.price_action_strength > 0.3:
+            signals.append("PRICE_ACTION")
+        
+        return signals
     
     def get_consensus_direction(self) -> Optional[Literal["LONG", "SHORT"]]:
         """Get consensus direction from aligned signals."""
-        aligned = self.get_aligned_signals()
-        if not aligned:
+        # Get all signals above threshold and check for ties
+        signals = {}
+        
+        if self.orb_signal and self.orb_strength > 0.3:
+            signals["ORB"] = self.orb_signal
+        if self.volume_signal and self.volume_strength > 0.3:
+            signals["VOLUME"] = self.volume_signal
+        if self.oi_flow_signal and self.oi_flow_strength > 0.3:
+            signals["OI_FLOW"] = self.oi_flow_signal
+        if self.iv_crush_signal and self.iv_crush_strength > 0.3:
+            signals["IV_CRUSH"] = self.iv_crush_signal
+        if self.price_action_signal and self.price_action_strength > 0.3:
+            signals["PRICE_ACTION"] = self.price_action_signal
+        
+        if not signals:
             return None
         
-        # Check which direction has more signals
-        signal_dirs = []
-        for signal_name in aligned:
-            if signal_name == "ORB" and self.orb_signal:
-                signal_dirs.append(self.orb_signal)
-            elif signal_name == "VOLUME" and self.volume_signal:
-                signal_dirs.append(self.volume_signal)
-            elif signal_name == "OI_FLOW" and self.oi_flow_signal:
-                signal_dirs.append(self.oi_flow_signal)
-            elif signal_name == "IV_CRUSH" and self.iv_crush_signal:
-                signal_dirs.append(self.iv_crush_signal)
-            elif signal_name == "PRICE_ACTION" and self.price_action_signal:
-                signal_dirs.append(self.price_action_signal)
-        
-        if not signal_dirs:
-            return None
-        
-        long_count = sum(1 for d in signal_dirs if d == "LONG")
-        short_count = sum(1 for d in signal_dirs if d == "SHORT")
+        # Count directions
+        long_count = sum(1 for direction in signals.values() if direction == "LONG")
+        short_count = sum(1 for direction in signals.values() if direction == "SHORT")
         
         if long_count > short_count:
             return "LONG"
@@ -162,6 +176,7 @@ def detect_enhanced_regime(
         trend = "FLAT"
     
     # Volatility regime based on IV percentile
+    iv_percentile = iv_percentile or 50.0  # Default to 50 if None
     if iv_percentile > 80:
         volatility = "HIGH"
     elif iv_percentile > 60:
@@ -284,6 +299,13 @@ def apply_enhanced_gates(
         elif regime.volatility == "HIGH":
             decision.size_factor = 0.8  # Reduce size in high vol
             decision.risk_adjustments["high_vol"] = -0.2
+        elif tau_hours < 0.4:  # Near expiry - reduce size even for overrides
+            if tau_hours < 0.15:  # Critical expiry
+                decision.size_factor = 0.5
+                decision.risk_adjustments["critical_expiry"] = -0.5
+            else:  # Near expiry
+                decision.size_factor = 0.7
+                decision.risk_adjustments["near_expiry"] = -0.3
         else:
             decision.size_factor = 1.0
         
@@ -312,20 +334,33 @@ def apply_enhanced_gates(
     # Rule 5: Standard confirmation requirement
     if confirming_bars >= min_confirm_bars and consensus_direction:
         # Additional checks for expiry proximity
-        if tau_hours < 2.0:  # Less than 2 hours to expiry
-            # Require stronger signals near expiry
-            if alignment_strength >= 0.7 and len(aligned_signals) >= 2:
+        if tau_hours < 0.4:  # Less than 24 minutes to expiry
+            # Require stronger signals near expiry - need 3+ signals OR very high strength
+            if (alignment_strength >= 0.8 and len(aligned_signals) >= 3) or alignment_strength >= 0.9:
                 decision.muted = False
                 decision.primary_reason = "confirmed_signals_near_expiry"
-                decision.size_factor = 0.7  # Reduce size near expiry
-                decision.risk_adjustments["near_expiry"] = -0.3
+                # More restrictive size reduction for very close expiry
+                if tau_hours < 0.15:  # Less than 9 minutes
+                    decision.size_factor = 0.5
+                    decision.risk_adjustments["critical_expiry"] = -0.5
+                else:  # 9-24 minutes
+                    decision.size_factor = 0.7
+                    decision.risk_adjustments["near_expiry"] = -0.3
             else:
                 decision.primary_reason = "insufficient_strength_near_expiry"
                 decision.supporting_factors.append(f"tau_hours_{tau_hours:.1f}")
+                decision.supporting_factors.append(f"need_3plus_signals_or_90pct_strength")
         else:
             decision.muted = False
             decision.primary_reason = "standard_confirmation"
-            decision.size_factor = 1.0
+            
+            # Size adjustments based on signal count and strength
+            if len(aligned_signals) == 2 and alignment_strength >= 0.8:
+                # Strong two-factor signals - reduce size slightly
+                decision.size_factor = 0.8
+                decision.risk_adjustments["two_factor_strong"] = -0.2
+            else:
+                decision.size_factor = 1.0
         
         decision.supporting_factors.extend(aligned_signals)
         decision.confidence = alignment_strength

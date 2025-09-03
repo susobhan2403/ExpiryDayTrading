@@ -86,12 +86,12 @@ def emit_comprehensive_explain(
         
         # Market regime
         "regime": {
-            "trend": regime.trend,
-            "volatility": regime.volatility,
-            "liquidity": regime.liquidity,
-            "momentum": regime.momentum,
-            "is_trending": regime.is_trending(),
-            "is_tradeable": regime.is_tradeable()
+            "trend": regime.trend if regime else None,
+            "volatility": regime.volatility if regime else None,
+            "liquidity": regime.liquidity if regime else None,
+            "momentum": regime.momentum if regime else None,
+            "is_trending": regime.is_trending() if regime else None,
+            "is_tradeable": regime.is_tradeable() if regime else None
         },
         
         # Signal analysis

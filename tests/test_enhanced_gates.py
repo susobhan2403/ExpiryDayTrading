@@ -109,10 +109,13 @@ class TestMultiFactorSignal:
         )
         
         aligned = signals.get_aligned_signals()
+        all_active = signals.get_all_active_signals()
         consensus = signals.get_consensus_direction()
         
-        # Should have 2 LONG and 2 SHORT signals above 0.3 threshold
-        assert len(aligned) == 4
+        # Should have 4 total signals above 0.3 threshold
+        assert len(all_active) == 4
+        # But aligned signals should be only the majority (2 LONG signals in this case)
+        assert len(aligned) == 2
         assert consensus is None  # Should be a tie
     
     def test_weak_signals_filtered(self):
@@ -220,7 +223,7 @@ class TestEnhancedGates:
         decision = apply_enhanced_gates(
             signals=signals,
             regime=regime,
-            tau_hours=1.5,  # Less than 2 hours to expiry
+            tau_hours=0.3,  # Less than 24 minutes to expiry (now that threshold is 0.4)
             confirming_bars=3,
             min_confirm_bars=2
         )

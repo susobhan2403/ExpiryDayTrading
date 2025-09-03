@@ -228,7 +228,7 @@ class EnhancedTradingEngine:
             regime = detect_enhanced_regime(
                 trend_score=trend_score,
                 adx=market_data.adx,
-                iv_percentile=metrics_result.get("iv_percentile", 50.0),
+                iv_percentile=metrics_result.get("iv_percentile") or 50.0,  # Handle None values
                 spread_bps=market_data.spread_bps,
                 volume_ratio=market_data.volume_ratio,
                 momentum_score=market_data.momentum_score
@@ -294,7 +294,7 @@ class EnhancedTradingEngine:
         # Time-based flags
         if tau_hours < 0.1:
             flags.append("expiry_too_close")
-        elif tau_hours < 0.5:
+        elif tau_hours < 0.25:  # Less than 15 minutes
             flags.append("near_expiry_warning")
         
         # Market data flags
