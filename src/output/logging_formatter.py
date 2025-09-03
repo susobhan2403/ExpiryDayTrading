@@ -73,11 +73,11 @@ class DualOutputFormatter:
             "vnd": 0.5,  # Mock VND since signals are not directly accessible
             "ssd": 0.5,  # Mock SSD
             "pdist_pct": 0.1,  # Mock PD
-            "pcr": decision.pcr_total or 1.0,
+            "pcr": decision.pcr_total or 1.0,  # Use actual PCR
             "dpcr_z": 0.0,  # Mock PCR change
             "mph_pts_per_hr": 0.0,  # Mock max pain drift
             "mph_norm": 0.0,  # Mock normalized drift
-            "atm_iv": decision.atm_iv or 0.15,  # Use actual or mock IV
+            "atm_iv": (decision.atm_iv * 100) if decision.atm_iv else 15.0,  # Use actual ATM IV as percentage
             "iv_z": 0.0,  # Mock IV z-score
             "basis": (vwap_fut - spot_now) if vwap_fut else 0.0,  # Basis calculation
         }
@@ -85,13 +85,68 @@ class DualOutputFormatter:
         mp = int(decision.atm_strike or spot_now)  # Max pain as ATM
         atm_k = int(decision.atm_strike or spot_now)
         
-        # Create scenario probabilities from decision confidence
+        # Get IV percentile early since it's used in scenario logic
+        iv_pct_hint = decision.iv_percentile if decision.iv_percentile is not None else 50.0  # Use actual IV percentile
+        
+        # Create more realistic scenario probabilities based on market regime and indicators
         confidence = decision.confidence or 0.0
-        probs = {
-            "Squeeze Continuation (One-way)": confidence,
-            "Short-Cover Reversion Up": 1.0 - confidence,
-        }
-        top = "Squeeze Continuation (One-way)" if confidence > 0.5 else "Short-Cover Reversion Up"
+        regime = decision.market_regime
+        
+        # Determine dominant scenario based on market regime and IV conditions
+        iv_crush = iv_pct_hint < 33
+        high_vol = iv_pct_hint > 67
+        
+        if regime and hasattr(regime, 'volatility_regime'):
+            if iv_crush and regime.volatility_regime == "LOW":
+                top = "Pin & decay day (IV crush)"
+                probs = {
+                    "Pin & decay day (IV crush)": 0.75,
+                    "Short-cover reversion up": 0.15,
+                    "Bear migration": 0.05,
+                    "Squeeze continuation (one-way)": 0.05,
+                }
+            elif high_vol and regime.volatility_regime == "HIGH":
+                top = "Squeeze continuation (one-way)"
+                probs = {
+                    "Squeeze continuation (one-way)": 0.60,
+                    "Event knee-jerk then revert": 0.25,
+                    "Short-cover reversion up": 0.10,
+                    "Bear migration": 0.05,
+                }
+            elif decision.direction == "LONG":
+                top = "Bull migration / gamma carry"
+                probs = {
+                    "Bull migration / gamma carry": 0.50,
+                    "Short-cover reversion up": 0.30,
+                    "Pin & decay day (IV crush)": 0.15,
+                    "Squeeze continuation (one-way)": 0.05,
+                }
+            elif decision.direction == "SHORT":
+                top = "Bear migration"
+                probs = {
+                    "Bear migration": 0.55,
+                    "Event knee-jerk then revert": 0.25,
+                    "Pin & decay day (IV crush)": 0.15,
+                    "Short-cover reversion up": 0.05,
+                }
+            else:
+                top = "Short-cover reversion up"
+                probs = {
+                    "Short-cover reversion up": 0.45,
+                    "Pin & decay day (IV crush)": 0.25,
+                    "Bear migration": 0.15,
+                    "Bull migration / gamma carry": 0.10,
+                    "Squeeze continuation (one-way)": 0.05,
+                }
+        else:
+            # Fallback for when regime is not available
+            top = "Short-cover reversion up"
+            probs = {
+                "Short-cover reversion up": 0.60,
+                "Pin & decay day (IV crush)": 0.20,
+                "Bear migration": 0.10,
+                "Squeeze continuation (one-way)": 0.10,
+            }
         
         # Create trading plan from decision
         tp = {
@@ -112,7 +167,7 @@ class DualOutputFormatter:
         vwap_spot = spot_now * 0.998  # Mock VWAP slightly below spot
         adx5 = market_data.adx or 15.0
         div = 0.0  # Mock IV divergence
-        iv_pct_hint = (decision.iv_percentile or 50.0)
+        # iv_pct_hint is already defined above
         macd_last = market_data.momentum_score or 0.0
         macd_sig_last = 0.0  # Mock MACD signal
         VND = snap["vnd"]

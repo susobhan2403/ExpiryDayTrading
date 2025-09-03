@@ -431,29 +431,29 @@ class EnhancedTradingEngine:
     ) -> MultiFactorSignal:
         """Construct multi-factor signal alignment."""
         
-        # Volume signal
+        # Volume signal - improved thresholds and logic
         volume_signal = None
         volume_strength = 0.0
-        if market_data.volume_ratio > 1.5:
+        if market_data.volume_ratio > 1.2:  # Lowered from 1.5 to be less restrictive
             volume_signal = "LONG"  # High volume generally bullish
-            volume_strength = min(1.0, (market_data.volume_ratio - 1.0) / 2.0)
-        elif market_data.volume_ratio < 0.7:
+            volume_strength = min(1.0, (market_data.volume_ratio - 0.8) / 1.2)  # Better scaling
+        elif market_data.volume_ratio < 0.8:  # Raised from 0.7 to be less restrictive
             volume_signal = "SHORT"
-            volume_strength = min(1.0, (1.0 - market_data.volume_ratio) / 0.5)
+            volume_strength = min(1.0, (1.2 - market_data.volume_ratio) / 0.4)  # Better scaling
         
-        # OI flow signal (simplified - would need actual flow calculation)
+        # OI flow signal - improved thresholds and logic
         oi_flow_signal = None
         oi_flow_strength = 0.0
         total_call_oi = sum(market_data.call_oi.values())
         total_put_oi = sum(market_data.put_oi.values())
         if total_call_oi > 0 and total_put_oi > 0:
             pcr = total_put_oi / total_call_oi
-            if pcr < 0.8:  # Low PCR suggests bullish
+            if pcr < 0.9:  # Raised from 0.8 to be less restrictive
                 oi_flow_signal = "LONG"
-                oi_flow_strength = min(1.0, (0.8 - pcr) / 0.3)
-            elif pcr > 1.2:  # High PCR suggests bearish
+                oi_flow_strength = min(1.0, (1.1 - pcr) / 0.4)  # Better scaling
+            elif pcr > 1.1:  # Lowered from 1.2 to be less restrictive
                 oi_flow_signal = "SHORT"
-                oi_flow_strength = min(1.0, (pcr - 1.2) / 0.5)
+                oi_flow_strength = min(1.0, (pcr - 1.1) / 0.4)  # Better scaling
         
         # IV crush signal
         iv_crush_signal = None
@@ -466,12 +466,12 @@ class EnhancedTradingEngine:
             iv_crush_signal = "LONG"  # Low IV suggests buying premium
             iv_crush_strength = min(1.0, (20 - iv_percentile) / 20)
         
-        # Price action signal (simplified)
+        # Price action signal - improved thresholds
         price_action_signal = None
         price_action_strength = 0.0
-        if abs(market_data.momentum_score) > 0.3:
+        if abs(market_data.momentum_score) > 0.15:  # Lowered from 0.3 to be less restrictive
             price_action_signal = "LONG" if market_data.momentum_score > 0 else "SHORT"
-            price_action_strength = min(1.0, abs(market_data.momentum_score))
+            price_action_strength = min(1.0, abs(market_data.momentum_score) * 2.0)  # Better scaling
         
         return MultiFactorSignal(
             orb_signal=orb_signal,
