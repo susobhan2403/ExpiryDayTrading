@@ -91,9 +91,10 @@ def compute_forward_enhanced(spot: float, fut_mid: Optional[float], r: float, q:
 
 
 def pick_atm_strike_enhanced(F: float, strikes: Sequence[float], step: int,
-                           ce_mid: Mapping[float, float], pe_mid: Mapping[float, float]) -> Tuple[float, Dict]:
-    """Enhanced ATM strike selection using forward price with Indian market tie-breaking."""
-    diag = {"F": F, "method": "forward_based", "candidates": [], "tie_break": None}
+                           ce_mid: Mapping[float, float], pe_mid: Mapping[float, float], 
+                           spot: Optional[float] = None) -> Tuple[float, Dict]:
+    """Enhanced ATM strike selection balancing spot and forward price for Indian markets."""
+    diag = {"F": F, "spot": spot, "method": "balanced_spot_forward", "candidates": [], "tie_break": None}
     
     valid, reason = validate_inputs(F)
     if not valid:
@@ -105,9 +106,22 @@ def pick_atm_strike_enhanced(F: float, strikes: Sequence[float], step: int,
         diag["reason"] = "no_valid_strikes"
         return 0.0, diag
     
-    # Find strikes closest to forward
-    lower = max([k for k in ks if k <= F], default=None)
-    upper = min([k for k in ks if k >= F], default=None)
+    # For Indian markets, prioritize spot over forward when they diverge significantly
+    reference_price = F  # Default to forward
+    if spot is not None and abs(spot - F) / max(spot, F) > 0.01:  # 1% divergence threshold
+        divergence_pct = abs(spot - F) / max(spot, F)
+        if divergence_pct > 0.03:  # 3% or more divergence - heavily favor spot
+            reference_price = 0.9 * spot + 0.1 * F
+            diag["method"] = "heavily_weighted_spot"
+        else:  # 1-3% divergence - moderately favor spot
+            reference_price = 0.7 * spot + 0.3 * F
+            diag["method"] = "weighted_spot_forward"
+        diag["reference_price"] = reference_price
+        diag["spot_forward_divergence"] = divergence_pct
+    
+    # Find strikes closest to reference price
+    lower = max([k for k in ks if k <= reference_price], default=None)
+    upper = min([k for k in ks if k >= reference_price], default=None)
     
     diag["lower_candidate"] = lower
     diag["upper_candidate"] = upper
@@ -124,18 +138,18 @@ def pick_atm_strike_enhanced(F: float, strikes: Sequence[float], step: int,
         diag["candidates"] = [lower]
         return lower, diag
     
-    # Check if one is clearly closer
-    diff_lower = abs(F - lower)
-    diff_upper = abs(upper - F)
+    # Check if one is clearly closer to reference price
+    diff_lower = abs(reference_price - lower)
+    diff_upper = abs(upper - reference_price)
     
     if diff_lower < diff_upper:
         diag["candidates"] = [lower]
-        diag["selection_reason"] = "closer_to_forward"
+        diag["selection_reason"] = "closer_to_reference"
         return lower, diag
     
     if diff_upper < diff_lower:
         diag["candidates"] = [upper]
-        diag["selection_reason"] = "closer_to_forward"
+        diag["selection_reason"] = "closer_to_reference"
         return upper, diag
     
     # Tie-breaking using straddle comparison (Indian market convention)
