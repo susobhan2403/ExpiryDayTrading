@@ -88,8 +88,8 @@ def get_next_expiry(symbol: str) -> dt.datetime:
     return expiry
 
 
-def create_sample_market_data(symbol: str, provider: KiteProvider) -> Optional[MarketData]:
-    """Create sample market data for testing."""
+def create_market_data_with_options(symbol: str, provider: KiteProvider, expiry_iso: str) -> Optional[MarketData]:
+    """Create market data with real options chain data."""
     try:
         # Get spot price
         quotes = provider.get_indices_snapshot([symbol])
@@ -101,19 +101,80 @@ def create_sample_market_data(symbol: str, provider: KiteProvider) -> Optional[M
         if spot <= 0 or spot != spot:  # Check for NaN
             return None
         
-        # Create basic market data
-        timestamp = dt.datetime.now(IST)
+        # Get options chain data
+        try:
+            chain = provider.get_option_chain(symbol, expiry_iso)
+        except Exception as e:
+            logging.getLogger("enhanced_engine").warning(f"Failed to get option chain for {symbol}: {e}")
+            # Fallback to basic data if options chain fails
+            return MarketData(
+                timestamp=dt.datetime.now(IST),
+                index=symbol,
+                spot=spot,
+                futures_mid=spot * 1.001,
+                strikes=list(range(int(spot - 500), int(spot + 500), 50)),
+                call_mids={},
+                put_mids={},
+                call_oi={},
+                put_oi={}
+            )
+        
+        # Extract data from chain
+        strikes = chain.get('strikes', [])
+        call_mids = {}
+        put_mids = {}
+        call_oi = {}
+        put_oi = {}
+        
+        # Process calls
+        for strike, data in chain.get('calls', {}).items():
+            if isinstance(data, dict):
+                bid = data.get('bid', 0.0)
+                ask = data.get('ask', 0.0)
+                ltp = data.get('ltp', 0.0)
+                
+                # Calculate mid price
+                if bid > 0 and ask > 0:
+                    mid = (bid + ask) / 2.0
+                elif ltp > 0:
+                    mid = ltp
+                else:
+                    mid = 0.0
+                    
+                call_mids[strike] = mid
+                call_oi[strike] = data.get('oi', 0)
+        
+        # Process puts
+        for strike, data in chain.get('puts', {}).items():
+            if isinstance(data, dict):
+                bid = data.get('bid', 0.0)
+                ask = data.get('ask', 0.0)
+                ltp = data.get('ltp', 0.0)
+                
+                # Calculate mid price
+                if bid > 0 and ask > 0:
+                    mid = (bid + ask) / 2.0
+                elif ltp > 0:
+                    mid = ltp
+                else:
+                    mid = 0.0
+                    
+                put_mids[strike] = mid
+                put_oi[strike] = data.get('oi', 0)
+        
+        # Get futures price (simplified for now)
+        futures_mid = spot * 1.001
         
         return MarketData(
-            timestamp=timestamp,
+            timestamp=dt.datetime.now(IST),
             index=symbol,
             spot=spot,
-            futures_mid=spot * 1.001,  # Simplified
-            strikes=[spot - 100, spot - 50, spot, spot + 50, spot + 100],
-            call_mids={},
-            put_mids={},
-            call_oi={},
-            put_oi={}
+            futures_mid=futures_mid,
+            strikes=strikes,
+            call_mids=call_mids,
+            put_mids=put_mids,
+            call_oi=call_oi,
+            put_oi=put_oi
         )
     
     except Exception as e:
@@ -185,8 +246,9 @@ def run_engine_loop(
             # Process each symbol
             for symbol, engine in engines.items():
                 try:
-                    # Get market data first
-                    market_data = create_sample_market_data(symbol, provider)
+                    # Get market data with real options chain
+                    expiry_iso = engine.expiry.strftime('%Y-%m-%d')
+                    market_data = create_market_data_with_options(symbol, provider, expiry_iso)
                     if not market_data:
                         logger.warning(f"No market data for {symbol}")
                         continue
@@ -194,11 +256,8 @@ def run_engine_loop(
                     # Process with engine
                     decision = engine.process_market_data(market_data)
                     
-                    # Log expiry info for each symbol using actual computed values
-                    import datetime as dt
-                    today = dt.date.today()
-                    next_thursday = today + dt.timedelta(days=(3 - today.weekday()) % 7)
-                    expiry_str = next_thursday.strftime('%Y-%m-%d')
+                    # Log expiry info for each symbol using actual computed expiry
+                    expiry_str = engine.expiry.strftime('%Y-%m-%d')
                     
                     # Set step size based on symbol
                     if symbol == "BANKNIFTY":
