@@ -125,3 +125,4 @@
 2025-09-03 22:19:37,215 INFO: ALERT: IGNORE Max pain unreliable
 2025-09-03 22:19:37,216 INFO: Iteration 1 completed in 1.70s
 2025-09-03 22:19:37,216 INFO: Run-once mode, exiting
+2025-09-03 17:36:31,741 INFO: Failed to initialize provider: No module named 'kiteconnect'
