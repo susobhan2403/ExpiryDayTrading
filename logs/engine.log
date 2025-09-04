@@ -644,3 +644,68 @@
 2025-09-04 17:38:48,794 INFO: ALERT: IGNORE Max pain unreliable
 2025-09-04 17:38:48,794 INFO: Iteration 1 completed in 4.79s
 2025-09-04 17:38:48,795 INFO: Run-once mode, exiting
+2025-09-04 17:40:44,627 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-09-04 17:40:44,627 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-04 17:40:44,627 INFO: Processing iteration 1
+2025-09-04 17:40:45,466 INFO: PCR calculation returned None for NIFTY, using synthetic fallback
+2025-09-04 17:40:45,466 INFO: expiry=2025-09-09 step=50 atm=24734 pcr=1.18
+2025-09-04 17:40:45,466 INFO: 23:10 IST | NIFTY 24734.30 | VWAP(fut) 24759
+2025-09-04 17:40:45,467 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-04 17:40:45,467 INFO: PCR 1.1757825101948347 (dz=0.0) | MaxPain 24734 | Drift 0.0/hr (norm 0.0)
+2025-09-04 17:40:45,467 INFO: ATM None IV 20.0% (dIV_z=0.0) | Basis 24.734299999996438
+2025-09-04 17:40:45,467 INFO: Scenario: Short-Cover Reversion Up 60% (alt: Pin and Decay 20%)
+2025-09-04 17:40:45,467 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-04 17:40:45,467 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-04 17:40:45,467 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-04 17:40:45,467 INFO: 2. ADX < low (chop) - [N]
+2025-09-04 17:40:45,467 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-04 17:40:45,467 INFO: 4. IV crushing (div<=0, pctile<33) - [N]
+2025-09-04 17:40:45,467 INFO: Final Verdict: Hold
+2025-09-04 17:40:45,467 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-04 17:40:46,058 INFO: PCR calculation returned None for BANKNIFTY, using synthetic fallback
+2025-09-04 17:40:46,058 INFO: expiry=2025-09-30 step=100 atm=54075 pcr=1.20
+2025-09-04 17:40:46,058 INFO: 23:10 IST | BANKNIFTY 54075.45 | VWAP(fut) 54129
+2025-09-04 17:40:46,058 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-04 17:40:46,058 INFO: PCR 1.2048772932070504 (dz=0.0) | MaxPain 54075 | Drift 0.0/hr (norm 0.0)
+2025-09-04 17:40:46,058 INFO: ATM None IV 20.0% (dIV_z=0.0) | Basis 54.075449999996636
+2025-09-04 17:40:46,058 INFO: Scenario: Short-Cover Reversion Up 60% (alt: Pin and Decay 20%)
+2025-09-04 17:40:46,058 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-04 17:40:46,058 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-04 17:40:46,058 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-04 17:40:46,059 INFO: 2. ADX < low (chop) - [N]
+2025-09-04 17:40:46,059 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-04 17:40:46,059 INFO: 4. IV crushing (div<=0, pctile<33) - [N]
+2025-09-04 17:40:46,059 INFO: Final Verdict: Hold
+2025-09-04 17:40:46,059 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-04 17:40:48,177 INFO: PCR calculation returned None for SENSEX, using synthetic fallback
+2025-09-04 17:40:48,177 INFO: expiry=2025-09-11 step=100 atm=80718 pcr=1.16
+2025-09-04 17:40:48,178 INFO: 23:10 IST | SENSEX 80718.01 | VWAP(fut) 80798
+2025-09-04 17:40:48,178 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-04 17:40:48,178 INFO: PCR 1.159244038260255 (dz=0.0) | MaxPain 80718 | Drift 0.0/hr (norm 0.0)
+2025-09-04 17:40:48,178 INFO: ATM None IV 20.0% (dIV_z=0.0) | Basis 80.71800999999687
+2025-09-04 17:40:48,178 INFO: Scenario: Short-Cover Reversion Up 60% (alt: Pin and Decay 20%)
+2025-09-04 17:40:48,178 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-04 17:40:48,178 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-04 17:40:48,178 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-04 17:40:48,178 INFO: 2. ADX < low (chop) - [N]
+2025-09-04 17:40:48,178 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-04 17:40:48,178 INFO: 4. IV crushing (div<=0, pctile<33) - [N]
+2025-09-04 17:40:48,178 INFO: Final Verdict: Hold
+2025-09-04 17:40:48,178 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-04 17:40:48,893 INFO: PCR calculation returned None for MIDCPNIFTY, using synthetic fallback
+2025-09-04 17:40:48,893 INFO: expiry=2025-09-30 step=50 atm=12738 pcr=1.12
+2025-09-04 17:40:48,894 INFO: 23:10 IST | MIDCPNIFTY 12738.80 | VWAP(fut) 12751
+2025-09-04 17:40:48,894 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-04 17:40:48,894 INFO: PCR 1.1182568194537217 (dz=0.0) | MaxPain 12738 | Drift 0.0/hr (norm 0.0)
+2025-09-04 17:40:48,894 INFO: ATM None IV 20.0% (dIV_z=0.0) | Basis 12.738799999999173
+2025-09-04 17:40:48,894 INFO: Scenario: Short-Cover Reversion Up 60% (alt: Pin and Decay 20%)
+2025-09-04 17:40:48,894 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-04 17:40:48,894 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-04 17:40:48,894 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-04 17:40:48,894 INFO: 2. ADX < low (chop) - [N]
+2025-09-04 17:40:48,894 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-04 17:40:48,894 INFO: 4. IV crushing (div<=0, pctile<33) - [N]
+2025-09-04 17:40:48,894 INFO: Final Verdict: Hold
+2025-09-04 17:40:48,894 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-04 17:40:48,894 INFO: Iteration 1 completed in 4.27s
+2025-09-04 17:40:48,895 INFO: Run-once mode, exiting
