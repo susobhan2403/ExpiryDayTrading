@@ -249,7 +249,9 @@ class KiteProvider(MarketDataProvider):
     def get_option_chain(self, symbol: str, expiry: str) -> Dict:
         chain_df, exp_sel = self._nearest_weekly_chain_df(symbol)
         if exp_sel != expiry:
-            raise RuntimeError(f"Expiry mismatch chain={exp_sel} selected={expiry}")
+            logger.warning(f"Using nearest available expiry {exp_sel} instead of requested {expiry} for {symbol}")
+            # Use the nearest available expiry instead of failing
+            expiry = exp_sel
         # Resolve exchange prefix dynamically (NFO vs BFO)
         seg = str(chain_df["segment"].iloc[0]) if not chain_df.empty else "NFO-OPT"
         prefix = "BFO" if "BFO" in seg else "NFO"
