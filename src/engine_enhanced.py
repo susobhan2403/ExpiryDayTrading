@@ -455,46 +455,85 @@ class EnhancedTradingEngine:
     def _compute_enhanced_metrics(
         self, market_data: MarketData, tau_years: float, tau_hours: float
     ) -> Dict[str, Any]:
-        """Compute enhanced metrics with full diagnostics."""
+        """Compute enhanced metrics using standard mathematical formulas."""
         result = {"success": False}
         
         try:
-            # Use Sensibull-compatible calculation methodology for zero tolerance accuracy
-            from src.calculations.sensibull_compat import calculate_all_sensibull_metrics
+            # Import standard calculation modules
+            from src.calculations.max_pain import calculate_max_pain_with_validation
+            from src.calculations.atm import calculate_atm_with_validation, detect_strike_step_precise
+            from src.calculations.pcr import calculate_pcr_with_validation
+            from src.calculations.iv import calculate_atm_iv_with_validation
             
-            # Calculate all metrics using Sensibull methodology
-            sensibull_results = calculate_all_sensibull_metrics(
-                spot=market_data.spot,
+            # Detect step size using mathematical analysis
+            step = detect_strike_step_precise(market_data.strikes)
+            if step is None:
+                # Default step sizes per Indian market standards
+                step = 100 if market_data.index.upper() in ["BANKNIFTY", "SENSEX"] else 50
+            
+            # Calculate Max Pain using standard pain minimization algorithm
+            max_pain, mp_status = calculate_max_pain_with_validation(
                 strikes=market_data.strikes,
                 call_oi=market_data.call_oi,
                 put_oi=market_data.put_oi,
-                call_mids=market_data.call_mids,
-                put_mids=market_data.put_mids,
-                symbol=market_data.index,
-                futures_mid=market_data.futures_mid
+                spot=market_data.spot,
+                step=step
             )
             
-            if not sensibull_results["success"]:
-                errors = "; ".join(sensibull_results["errors"])
-                result["reason"] = f"sensibull_calculation_failed: {errors}"
+            # Calculate ATM using forward price methodology
+            atm_strike, forward, atm_status = calculate_atm_with_validation(
+                spot=market_data.spot,
+                strikes=market_data.strikes,
+                risk_free_rate=get_rfr(),  # Use standard RBI-based rate
+                dividend_yield=0.015,      # Standard index dividend yield
+                time_to_expiry_years=tau_years,
+                futures_mid=market_data.futures_mid,
+                call_mids=market_data.call_mids,
+                put_mids=market_data.put_mids,
+                symbol=market_data.index
+            )
+            
+            if atm_strike is None:
+                result["reason"] = f"atm_calculation_failed: {atm_status}"
                 return result
             
-            # Extract calculated values
-            step = sensibull_results["step"]
-            forward = sensibull_results["forward"]
-            atm_strike = sensibull_results["atm"]
-            max_pain = sensibull_results["max_pain"]
-            pcr_total = sensibull_results["pcr"]
-            pcr_band = None  # Sensibull uses total PCR
-            atm_iv = sensibull_results["atm_iv"]
+            # Calculate PCR using total chain methodology
+            pcr_result, pcr_status = calculate_pcr_with_validation(
+                call_oi=market_data.call_oi,
+                put_oi=market_data.put_oi,
+                atm_strike=atm_strike,
+                step=step,
+                band_width=6  # Calculate both total and band PCR
+            )
             
-            if atm_iv is not None:
-                atm_iv = atm_iv / 100.0  # Convert back to decimal for internal use
+            if pcr_result and 'pcr_total' in pcr_result:
+                pcr_total = pcr_result['pcr_total']
+                pcr_band = pcr_result.get('pcr_band')
+            else:
+                result["reason"] = f"pcr_calculation_failed: {pcr_status}"
+                return result
             
-            self.logger.info(f"Sensibull-compatible calculations completed:")
+            # Calculate ATM IV using Black-Scholes methodology
+            atm_iv = None
+            if atm_strike is not None:
+                call_price = market_data.call_mids.get(atm_strike)
+                put_price = market_data.put_mids.get(atm_strike)
+                
+                if call_price is not None or put_price is not None:
+                    atm_iv, iv_status = calculate_atm_iv_with_validation(
+                        call_price=call_price,
+                        put_price=put_price,
+                        forward_price=forward,
+                        atm_strike=atm_strike,
+                        time_to_expiry_years=tau_years,
+                        risk_free_rate=get_rfr()
+                    )
+            
+            self.logger.info(f"Standard mathematical calculations completed:")
             self.logger.info(f"  Max Pain: {max_pain}, ATM: {atm_strike}, PCR: {pcr_total:.3f}, ATM IV: {atm_iv*100:.1f}%" if atm_iv else f"  Max Pain: {max_pain}, ATM: {atm_strike}, PCR: {pcr_total:.3f}, ATM IV: N/A")
             
-            # IV percentile computation (simplified for Sensibull compatibility)
+            
+            # IV percentile computation using standard methodology
             iv_percentile = None
             iv_rank = None
             if atm_iv:
@@ -507,19 +546,9 @@ class EnhancedTradingEngine:
                         tau_tol=7.0/365.0
                     )
                 else:
-                    # Simplified IV percentile estimation for Sensibull compatibility
-                    iv_pct = atm_iv * 100  # Convert to percentage
-                    if iv_pct < 10:
-                        iv_percentile = 10.0
-                    elif iv_pct < 15:
-                        iv_percentile = 30.0
-                    elif iv_pct < 20:
-                        iv_percentile = 50.0
-                    elif iv_pct < 25:
-                        iv_percentile = 70.0
-                    else:
-                        iv_percentile = 90.0
-                    iv_rank = iv_percentile
+                    # Use mathematical percentile estimation when no history available
+                    iv_rank = 50.0  # Default to median when no historical context
+                    iv_percentile = 50.0
             
             # Success
             result.update({
@@ -534,10 +563,10 @@ class EnhancedTradingEngine:
                 "pcr_band": pcr_band,
                 "max_pain": max_pain,
                 "diagnostics": {
-                    "sensibull_max_pain": sensibull_results["max_pain_status"],
-                    "sensibull_atm": sensibull_results["atm_status"],
-                    "sensibull_pcr": sensibull_results["pcr_status"],
-                    "sensibull_iv": sensibull_results["atm_iv_status"]
+                    "max_pain_status": mp_status,
+                    "atm_status": atm_status,
+                    "pcr_status": pcr_status,
+                    "iv_status": iv_status if atm_iv else "no_price_data"
                 }
             })
             
