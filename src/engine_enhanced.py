@@ -411,6 +411,12 @@ class EnhancedTradingEngine:
                 m=6  # ±6 strikes from ATM
             )
             
+            # Log PCR diagnostics if calculation failed
+            if pcr_results.get("PCR_OI_total") is None:
+                total_call_oi = sum(market_data.call_oi.values())
+                total_put_oi = sum(market_data.put_oi.values())
+                self.logger.warning(f"PCR calculation returned None - Total Call OI: {total_call_oi}, Total Put OI: {total_put_oi}, Reason: {pcr_diag.get('total_pcr_reason', 'unknown')}")
+            
             # Success
             result.update({
                 "success": True,

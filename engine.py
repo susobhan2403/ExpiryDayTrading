@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 """
+⚠️  DEPRECATED: Legacy Expiry Day Engine
+====================================
+
+This file contains the legacy monolithic implementation of the trading engine.
+It has been superseded by the modular architecture:
+
+- Use `engine_runner.py` as the main entry point
+- Enhanced engine: `src/engine_enhanced.py`  
+- Modern option chain builder: `src/provider/option_chain_builder.py`
+- Improved KiteProvider: `src/provider/kite.py`
+
+This file is kept for reference but may be removed in future versions.
+All new development should use the modular `src/` components.
+
+====================================
+
 Expiry Day Engine (Kite provider + Normalized Framework)
 - Uses Zerodha Kite data with SAME auth flow: reads .kite_session.json made by your existing get_access_token.py
 - Env: KITE_API_KEY required here (KITE_API_SECRET only used by your auth script)
