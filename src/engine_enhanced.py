@@ -311,7 +311,7 @@ class EnhancedTradingEngine:
                 tau_hours=tau_hours,
                 processing_time_ms=(time.perf_counter() - start_time) * 1000,
                 scenario=f"{pretty_scenario} {int(top_prob * 100)}%",
-                reason=gate_decision.reason if gate_decision.muted else None
+                reason=gate_decision.primary_reason if gate_decision.muted else None
             )
             
             # Update IV history

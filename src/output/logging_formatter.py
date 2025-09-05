@@ -98,54 +98,61 @@ class DualOutputFormatter:
         confidence = decision.confidence or 0.0
         regime = decision.market_regime
         
-        # Determine dominant scenario based on market regime and IV conditions
-        iv_crush = iv_pct_hint < 33
-        high_vol = iv_pct_hint > 67
-        
-        if regime and hasattr(regime, 'volatility_regime'):
-            if iv_crush and regime.volatility_regime == "LOW":
-                top = "Pin & decay day (IV crush)"
-                probs = {
-                    "Pin & decay day (IV crush)": 0.75,
-                    "Short-cover reversion up": 0.15,
-                    "Bear migration": 0.05,
-                    "Squeeze continuation (one-way)": 0.05,
-                }
-            elif high_vol and regime.volatility_regime == "HIGH":
-                top = "Squeeze continuation (one-way)"
-                probs = {
-                    "Squeeze continuation (one-way)": 0.60,
-                    "Event knee-jerk then revert": 0.25,
-                    "Short-cover reversion up": 0.10,
-                    "Bear migration": 0.05,
-                }
-            elif decision.direction == "LONG":
-                top = "Bull migration / gamma carry"
-                probs = {
-                    "Bull migration / gamma carry": 0.50,
-                    "Short-cover reversion up": 0.30,
-                    "Pin & decay day (IV crush)": 0.15,
-                    "Squeeze continuation (one-way)": 0.05,
-                }
-            elif decision.direction == "SHORT":
-                top = "Bear migration"
-                probs = {
-                    "Bear migration": 0.55,
-                    "Event knee-jerk then revert": 0.25,
-                    "Pin & decay day (IV crush)": 0.15,
-                    "Short-cover reversion up": 0.05,
-                }
+        # Use actual scenario from enhanced engine if available, otherwise create mock scenarios
+        if decision.scenario:
+            # Parse the scenario string like "Pin and Decay (IV crush) 24%"
+            scenario_parts = decision.scenario.split(' ')
+            if scenario_parts and '%' in scenario_parts[-1]:
+                try:
+                    prob_str = scenario_parts[-1].rstrip('%')
+                    top_prob = float(prob_str) / 100.0
+                    scenario_name = ' '.join(scenario_parts[:-1])
+                    
+                    # Create probability distribution with top scenario having the actual probability
+                    # and distribute remaining probability among other scenarios
+                    remaining_prob = 1.0 - top_prob
+                    other_scenarios = [
+                        "Short-cover reversion up",
+                        "Bear migration", 
+                        "Bull migration / gamma carry",
+                        "Pin & decay day (IV crush)",
+                        "Squeeze continuation (one-way)",
+                        "Event knee-jerk then revert"
+                    ]
+                    
+                    # Remove the top scenario from others list if it's in there
+                    if scenario_name in other_scenarios:
+                        other_scenarios.remove(scenario_name)
+                    
+                    probs = {scenario_name: top_prob}
+                    
+                    # Distribute remaining probability equally among other scenarios
+                    if other_scenarios and remaining_prob > 0:
+                        other_prob = remaining_prob / len(other_scenarios)
+                        for other in other_scenarios:
+                            probs[other] = other_prob
+                    
+                    top = scenario_name
+                    
+                except (ValueError, IndexError):
+                    # Fallback to default if parsing fails
+                    top = "Short-cover reversion up"
+                    probs = {
+                        "Short-cover reversion up": 0.60,
+                        "Pin & decay day (IV crush)": 0.20,
+                        "Bear migration": 0.10,
+                        "Squeeze continuation (one-way)": 0.10,
+                    }
             else:
-                top = "Short-cover reversion up"
+                # Use scenario name as-is if no percentage found
+                top = decision.scenario
                 probs = {
-                    "Short-cover reversion up": 0.45,
-                    "Pin & decay day (IV crush)": 0.25,
-                    "Bear migration": 0.15,
-                    "Bull migration / gamma carry": 0.10,
-                    "Squeeze continuation (one-way)": 0.05,
+                    decision.scenario: 0.80,
+                    "Short-cover reversion up": 0.10,
+                    "Pin & decay day (IV crush)": 0.10,
                 }
         else:
-            # Fallback for when regime is not available
+            # Fallback to mock scenarios when no scenario is available
             top = "Short-cover reversion up"
             probs = {
                 "Short-cover reversion up": 0.60,
