@@ -83,7 +83,7 @@ class DualOutputFormatter:
         }
         
         # Use actual computed values or fallback to realistic values when calculations fail
-        mp = int(decision.atm_strike) if decision.atm_strike else int(spot_now)  # Max pain as ATM or spot
+        mp = int(decision.max_pain) if decision.max_pain else int(spot_now)  # Use actual max pain, not ATM
         atm_k = int(decision.atm_strike) if decision.atm_strike else None  # ATM strike or None
         
         # If ATM IV failed to calculate but we have data, provide a reasonable default

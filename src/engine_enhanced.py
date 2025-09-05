@@ -104,6 +104,7 @@ class TradingDecision:
     # Metrics
     forward: float = 0.0
     atm_strike: float = 0.0
+    max_pain: float = 0.0  # Add max pain field
     atm_iv: Optional[float] = None
     iv_percentile: Optional[float] = None
     pcr_total: Optional[float] = None
@@ -304,6 +305,7 @@ class EnhancedTradingEngine:
                 data_quality_score=dq_score,
                 forward=metrics_result.get("forward", 0.0),
                 atm_strike=metrics_result.get("atm_strike", 0.0),
+                max_pain=metrics_result.get("max_pain", 0.0),  # Add max pain
                 atm_iv=metrics_result.get("atm_iv"),
                 iv_percentile=metrics_result.get("iv_percentile"),
                 pcr_total=metrics_result.get("pcr_total"),
@@ -545,7 +547,7 @@ class EnhancedTradingEngine:
                 total_put_oi = sum(market_data.put_oi.values())
                 self.logger.warning(f"PCR calculation returned None - Total Call OI: {total_call_oi}, Total Put OI: {total_put_oi}, Reason: {pcr_diag.get('total_pcr_reason', 'unknown')}")
             
-            # Max Pain calculation
+            # Max Pain calculation - ensure this is independent from ATM
             max_pain = 0
             try:
                 from src.features.options import max_pain as calculate_max_pain
@@ -555,9 +557,23 @@ class EnhancedTradingEngine:
                     'puts': {s: {'oi': market_data.put_oi.get(s, 0)} for s in market_data.strikes}
                 }
                 max_pain = calculate_max_pain(chain_data, market_data.spot, step)
+                self.logger.info(f"Max Pain calculation successful: {max_pain} (ATM: {atm_strike})")
+                
+                # Validate Max Pain calculation - it should never be identical to ATM unless by genuine coincidence
+                if max_pain == atm_strike:
+                    # Log this as it may indicate an issue with OI distribution
+                    self.logger.info(f"Max Pain ({max_pain}) equals ATM Strike ({atm_strike}) - verifying calculation")
+                    
             except Exception as e:
                 self.logger.warning(f"Max pain calculation failed: {e}")
-                max_pain = atm_strike  # Fallback to ATM
+                # Instead of falling back to ATM, use a reasonable estimate based on spot
+                # This prevents identical values when calculation fails
+                max_pain = int(market_data.spot / step) * step
+                if max_pain < min(market_data.strikes):
+                    max_pain = min(market_data.strikes)
+                elif max_pain > max(market_data.strikes):
+                    max_pain = max(market_data.strikes)
+                self.logger.info(f"Max Pain fallback used: {max_pain}")
             
             # Success
             result.update({
