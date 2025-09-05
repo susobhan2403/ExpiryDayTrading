@@ -63,11 +63,14 @@ class MarketData:
     call_volumes: Dict[float, int] = None
     put_volumes: Dict[float, int] = None
     
-    # Technical indicators
+    # Technical indicators (legacy fields)
     adx: float = 15.0
     volume_ratio: float = 1.0
     spread_bps: float = 10.0
     momentum_score: float = 0.0
+    
+    # Comprehensive technical analysis
+    technical_signal: Optional[Dict[str, any]] = None
     
     def __post_init__(self):
         """Initialize default empty containers."""
@@ -178,6 +181,13 @@ class EnhancedTradingEngine:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.WARNING)  # Only warnings and errors
+        
+        # Initialize technical signal generator (will be set by calling code)
+        self._technical_signal_generator = None
+    
+    def set_technical_signal_generator(self, generator):
+        """Set the technical signal generator for enhanced analysis."""
+        self._technical_signal_generator = generator
     
     def process_market_data(
         self,
@@ -245,6 +255,27 @@ class EnhancedTradingEngine:
                     current_time,
                     processing_time_ms=(time.perf_counter() - start_time) * 1000
                 )
+            
+            # Generate technical signals if generator is available
+            technical_signal = None
+            if self._technical_signal_generator:
+                try:
+                    comprehensive_signal = self._technical_signal_generator.generate_comprehensive_signal(market_data.index)
+                    if comprehensive_signal:
+                        technical_signal = {
+                            'signal': comprehensive_signal.overall_signal,
+                            'confidence': comprehensive_signal.overall_confidence,
+                            'strength': comprehensive_signal.overall_strength,
+                            'consensus': comprehensive_signal.consensus_score,
+                            'risk_score': comprehensive_signal.risk_score,
+                            'timeframes': len(comprehensive_signal.timeframe_signals)
+                        }
+                        # Update market data with technical analysis
+                        market_data.technical_signal = technical_signal
+                        self.logger.info(f"Technical signal: {technical_signal['signal']} "
+                                       f"(confidence: {technical_signal['confidence']:.3f})")
+                except Exception as e:
+                    self.logger.warning(f"Technical signal generation failed: {e}")
             
             # Multi-factor signal construction
             signals = self._construct_signals(
@@ -628,7 +659,21 @@ class EnhancedTradingEngine:
             price_action_signal = "LONG" if market_data.momentum_score > 0 else "SHORT"
             price_action_strength = min(1.0, abs(market_data.momentum_score) * 2.0)  # Better scaling
         
-        return MultiFactorSignal(
+        # Technical analysis signal integration
+        tech_signal = None
+        tech_strength = 0.0
+        if market_data.technical_signal:
+            tech_data = market_data.technical_signal
+            if tech_data['signal'] in ['BUY', 'SELL']:
+                tech_signal = "LONG" if tech_data['signal'] == 'BUY' else "SHORT"
+                # Weight technical confidence by consensus and strength
+                tech_strength = tech_data['confidence'] * tech_data['consensus']
+                # Adjust for risk - higher risk reduces confidence
+                tech_strength *= (1.0 - tech_data['risk_score'] * 0.3)
+                tech_strength = max(0.0, min(1.0, tech_strength))
+        
+        # Enhanced signal construction with technical analysis
+        signals = MultiFactorSignal(
             orb_signal=orb_signal,
             orb_strength=orb_strength,
             volume_signal=volume_signal,
@@ -644,6 +689,37 @@ class EnhancedTradingEngine:
             iv_percentile=iv_percentile or 50.0,
             orb_breakout_size=orb_breakout_size
         )
+        
+        # Add technical signal as an additional factor if available
+        if tech_signal and tech_strength > 0.1:  # Minimum threshold for consideration
+            # Boost existing aligned signals or add new signal dimension
+            if hasattr(signals, '_technical_signal'):
+                signals._technical_signal = tech_signal
+                signals._technical_strength = tech_strength
+            else:
+                # For backward compatibility, enhance the strongest aligned signal
+                aligned_signals = []
+                if price_action_signal == tech_signal:
+                    aligned_signals.append(('price_action', price_action_strength))
+                if volume_signal == tech_signal:
+                    aligned_signals.append(('volume', volume_strength))
+                if oi_flow_signal == tech_signal:
+                    aligned_signals.append(('oi_flow', oi_flow_strength))
+                
+                # Enhance the strongest aligned signal
+                if aligned_signals:
+                    strongest = max(aligned_signals, key=lambda x: x[1])
+                    signal_type = strongest[0]
+                    enhancement = tech_strength * 0.3  # Technical analysis adds 30% boost
+                    
+                    if signal_type == 'price_action':
+                        signals.price_action_strength = min(1.0, signals.price_action_strength + enhancement)
+                    elif signal_type == 'volume':
+                        signals.volume_strength = min(1.0, signals.volume_strength + enhancement)
+                    elif signal_type == 'oi_flow':
+                        signals.oi_flow_strength = min(1.0, signals.oi_flow_strength + enhancement)
+        
+        return signals
     
     def _create_no_trade_decision(
         self, reason: str, timestamp: dt.datetime, processing_time_ms: float
