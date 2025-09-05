@@ -7,6 +7,8 @@ import pandas as pd
 import pytz
 import logging
 
+from .option_chain_builder import OptionChainBuilder, convert_to_legacy_format
+
 IST = pytz.timezone("Asia/Kolkata")
 logger = logging.getLogger("engine")
 
@@ -14,6 +16,7 @@ class MarketDataProvider:
     def get_spot_ohlcv(self, symbol: str, interval: str, lookback_minutes: int) -> pd.DataFrame: ...
     def get_futures_ohlcv(self, symbol: str, interval: str, expiry: str, lookback_minutes: int) -> pd.DataFrame: ...
     def get_option_chain(self, symbol: str, expiry: str) -> Dict: ...
+    def get_option_chains(self, symbol: str, expiries: List[str]) -> Dict[str, Dict]: ...
     def get_indices_snapshot(self, symbols: List[str]) -> Dict[str, float]: ...
 
 class KiteProvider(MarketDataProvider):
@@ -47,6 +50,9 @@ class KiteProvider(MarketDataProvider):
         self._nfo = None
         self._nse = None
         self._index_cache: Dict[str, float] = {}
+        
+        # Initialize option chain builder (lazy loaded)
+        self._option_chain_builder: Optional[OptionChainBuilder] = None
 
     def _instruments(self, exch: str) -> pd.DataFrame:
         if exch=="NFO":
@@ -246,67 +252,8 @@ class KiteProvider(MarketDataProvider):
         fut = self._nearest_future_row(symbol)
         return self._hist(int(fut["instrument_token"]), interval, lookback_minutes, is_future=True)
 
-    def get_option_chain(self, symbol: str, expiry: str) -> Dict:
-        chain_df, exp_sel = self._nearest_weekly_chain_df(symbol)
-        if exp_sel != expiry:
-            logger.warning(f"Using nearest available expiry {exp_sel} instead of requested {expiry} for {symbol}")
-            # Use the nearest available expiry instead of failing
-            expiry = exp_sel
-        # Resolve exchange prefix dynamically (NFO vs BFO)
-        seg = str(chain_df["segment"].iloc[0]) if not chain_df.empty else "NFO-OPT"
-        prefix = "BFO" if "BFO" in seg else "NFO"
-        syms = [f"{prefix}:{ts}" for ts in chain_df["tradingsymbol"].tolist()]
-        chain = {"symbol": symbol, "expiry": expiry, "strikes": sorted(chain_df["strike"].unique()),
-                 "calls": {}, "puts": {}}
-
-        batches = [syms[i:i+450] for i in range(0, len(syms), 450)]
-        q: Dict[str, Dict] = {}
-
-        async def gather_quotes() -> None:
-            loop = asyncio.get_running_loop()
-            for j in range(0, len(batches), 3):
-                group = batches[j:j+3]
-                tasks = [loop.run_in_executor(None, self.kite.quote, b) for b in group]
-                res = await asyncio.gather(*tasks, return_exceptions=True)
-                for r in res:
-                    if isinstance(r, dict):
-                        q.update(r)
-                if j + 3 < len(batches):
-                    await asyncio.sleep(1)
-
-        if batches:
-            asyncio.run(gather_quotes())
-
-        for v in q.values():
-            tok = v["instrument_token"]
-            row = chain_df[chain_df["instrument_token"]==tok]
-            if row.empty: continue
-            strike = int(row.iloc[0]["strike"])
-            typ = row.iloc[0]["instrument_type"]
-            bid=ask=ltp=bid_q=ask_q=0.0
-            dep = v.get("depth")
-            if dep and dep.get("buy") and dep.get("sell"):
-                try:
-                    bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
-                    bid_q = float(dep["buy"][0].get("quantity",0)); ask_q = float(dep["sell"][0].get("quantity",0))
-                except Exception:
-                    pass
-            ltp = float(v.get("last_price") or 0.0)
-            ltt = v.get("last_trade_time")
-            try:
-                ltt = pd.to_datetime(ltt).tz_localize(dt.timezone.utc).tz_convert(IST)
-            except Exception:
-                ltt = None
-            oi  = int(v.get("oi") or v.get("open_interest") or 0)
-            node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask,
-                    "bid_qty": bid_q, "ask_qty": ask_q,
-                    "ltp_ts": ltt.isoformat() if ltt else None}
-            if typ=="CE": chain["calls"][strike]=node
-            else: chain["puts"][strike]=node
-        for k in chain["strikes"]:
-            chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
-            chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
-        return chain
+    # Old get_option_chain method removed - replaced with OptionChainBuilder
+    # This method has been deprecated as part of the option chain architecture redesign
 
     def get_indices_snapshot(self, symbols: List[str]) -> Dict[str, float]:
         """Return the latest spot price for each index.
@@ -341,102 +288,126 @@ class KiteProvider(MarketDataProvider):
                 out[s] = self._index_cache.get(s, float("nan"))
         return out
 
+    # Old get_option_chains method removed - replaced with OptionChainBuilder
+    # This method has been deprecated as part of the option chain architecture redesign
+
+    def _get_option_chain_builder(self) -> OptionChainBuilder:
+        """Get or create option chain builder instance."""
+        if self._option_chain_builder is None:
+            # Load NFO instruments for option chain building
+            nfo_instruments = self._instruments("NFO")
+            # Also load BFO for SENSEX if needed
+            bfo_instruments = self._instruments("BFO") 
+            
+            # Combine instruments DataFrames
+            combined_instruments = pd.concat([nfo_instruments, bfo_instruments], ignore_index=True)
+            
+            self._option_chain_builder = OptionChainBuilder(self.kite, combined_instruments)
+            logger.info("Initialized OptionChainBuilder with instruments data")
+        
+        return self._option_chain_builder
+
+    def get_option_chain(self, symbol: str, expiry: str) -> Dict:
+        """Build option chain using new OptionChainBuilder architecture.
+        
+        This method provides backward compatibility with the legacy format
+        while using the improved option chain building architecture.
+        """
+        try:
+            # Get current spot price for strike range calculation
+            quotes = self.get_indices_snapshot([symbol])
+            if not quotes or symbol not in quotes:
+                logger.warning(f"Could not get spot price for {symbol}")
+                return {"symbol": symbol, "expiry": expiry, "strikes": [], "calls": {}, "puts": {}}
+            
+            spot_price = quotes[symbol]
+            if spot_price <= 0 or spot_price != spot_price:  # Check for invalid/NaN
+                logger.warning(f"Invalid spot price {spot_price} for {symbol}")
+                return {"symbol": symbol, "expiry": expiry, "strikes": [], "calls": {}, "puts": {}}
+            
+            # Build option chain using new architecture
+            builder = self._get_option_chain_builder()
+            option_chain = builder.build_chain(symbol, expiry, spot_price)
+            
+            if option_chain is None:
+                logger.warning(f"Failed to build option chain for {symbol} {expiry}")
+                return {"symbol": symbol, "expiry": expiry, "strikes": [], "calls": {}, "puts": {}}
+            
+            # Convert to legacy format for backward compatibility
+            legacy_chain = convert_to_legacy_format(option_chain)
+            
+            logger.info(f"Built option chain for {symbol} {expiry}: {len(legacy_chain['strikes'])} strikes, "
+                       f"quality: {option_chain.data_quality_score:.1%}")
+            
+            return legacy_chain
+            
+        except Exception as e:
+            logger.error(f"Error building option chain for {symbol} {expiry}: {e}")
+            return {"symbol": symbol, "expiry": expiry, "strikes": [], "calls": {}, "puts": {}}
+
     def get_option_chains(self, symbol: str, expiries: List[str]) -> Dict[str, Dict]:
-        """Throttle-friendly multi-expiry option chains.
+        """Build multiple option chains using new OptionChainBuilder architecture.
+        
         Returns mapping expiry->chain dict (same schema as get_option_chain).
         """
-        chains: Dict[str, Dict] = {}
+        chains = {}
+        
         if not expiries:
             return chains
-        sym = symbol.upper()
-        # choose exchange segment by symbol
-        ex = "BFO" if sym=="SENSEX" else "NFO"
-        seg = f"{ex}-OPT"
-        inst = self._instruments(ex).copy()
-        df = inst[(inst["name"] == sym) & (inst["segment"] == seg)].copy()
-        if df.empty:
-            return chains
-        df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
-        exp_dates = set()
-        for e in expiries:
-            try:
-                exp_dates.add(pd.to_datetime(e).date())
-            except Exception:
-                pass
-        by_exp = {e: df[df["expiry"]==e].copy() for e in exp_dates}
-        # Build a combined symbol list and quote in batches
-        syms_all: List[str] = []
-        exp_for_ts: Dict[str, dt.date] = {}
-        for e, dfe in by_exp.items():
-            dfe["strike"] = dfe["strike"].astype(int)
-            for ts in dfe["tradingsymbol"].tolist():
-                syms_all.append(f"{ex}:{ts}")
-                exp_for_ts[ts] = e
-        # quote in chunks
-        q_all: Dict[str, Dict] = {}
-        for i in range(0, len(syms_all), 400):
-            try:
-                q = self.kite.quote(syms_all[i:i+400])
-                q_all.update(q)
-            except Exception:
-                continue
-        # Build chains per expiry
-        for e, dfe in by_exp.items():
-            chain = {"symbol": symbol, "expiry": e.isoformat(), "strikes": sorted(dfe["strike"].unique()),
-                     "calls": {}, "puts": {}}
-            for sym_key, v in q_all.items():
-                ts = sym_key.split(":",1)[1] if ":" in sym_key else sym_key
-                # map ts -> row
-                row = dfe[dfe["tradingsymbol"] == ts]
-                if row.empty: continue
-                strike = int(row.iloc[0]["strike"])
-                typ = row.iloc[0]["instrument_type"]
-                bid=ask=ltp=bid_q=ask_q=0.0
-                dep = v.get("depth")
-                if dep and dep.get("buy") and dep.get("sell"):
-                    try:
-                        bid = float(dep["buy"][0]["price"]); ask = float(dep["sell"][0]["price"])
-                        bid_q = float(dep["buy"][0].get("quantity",0)); ask_q = float(dep["sell"][0].get("quantity",0))
-                    except Exception:
-                        pass
-                ltp = float(v.get("last_price") or 0.0)
-                ltt = v.get("last_trade_time")
+        
+        try:
+            # Get current spot price
+            quotes = self.get_indices_snapshot([symbol])
+            if not quotes or symbol not in quotes:
+                logger.warning(f"Could not get spot price for {symbol}")
+                return chains
+            
+            spot_price = quotes[symbol]
+            if spot_price <= 0 or spot_price != spot_price:
+                logger.warning(f"Invalid spot price {spot_price} for {symbol}")
+                return chains
+            
+            # Build chains for each expiry
+            builder = self._get_option_chain_builder()
+            
+            for expiry in expiries:
                 try:
-                    ltt = pd.to_datetime(ltt).tz_localize(dt.timezone.utc).tz_convert(IST)
-                except Exception:
-                    ltt = None
-                oi  = int(v.get("oi") or v.get("open_interest") or 0)
-                node = {"oi": oi, "ltp": ltp, "bid": bid, "ask": ask,
-                        "bid_qty": bid_q, "ask_qty": ask_q,
-                        "ltp_ts": ltt.isoformat() if ltt else None}
-                if typ=="CE": chain["calls"][strike]=node
-                else: chain["puts"][strike]=node
-            # ensure all strikes have nodes
-            for k in chain["strikes"]:
-                chain["calls"].setdefault(k, {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
-                chain["puts"].setdefault(k,  {"oi":0,"ltp":0.0,"bid":0.0,"ask":0.0,"bid_qty":0.0,"ask_qty":0.0,"ltp_ts":None})
-            chains[e.isoformat()] = chain
-        return chains
+                    option_chain = builder.build_chain(symbol, expiry, spot_price)
+                    if option_chain is not None:
+                        legacy_chain = convert_to_legacy_format(option_chain)
+                        chains[expiry] = legacy_chain
+                    else:
+                        logger.warning(f"Failed to build chain for {symbol} {expiry}")
+                        
+                except Exception as e:
+                    logger.error(f"Error building chain for {symbol} {expiry}: {e}")
+                    continue
+            
+            logger.info(f"Built {len(chains)} option chains for {symbol} from {len(expiries)} requested expiries")
+            return chains
+            
+        except Exception as e:
+            logger.error(f"Error building option chains for {symbol}: {e}")
+            return chains
 
-    # Public helper: earliest upcoming expiry used by option chain selection
+    # Public helper: earliest upcoming expiry used by option chain selection  
     def get_current_expiry_date(self, symbol: str) -> str:
-        _, exp_sel = self._nearest_weekly_chain_df(symbol)
-        return exp_sel
+        """Get current expiry date using OptionChainBuilder for consistency."""
+        try:
+            builder = self._get_option_chain_builder()
+            expiry = builder.get_nearest_expiry(symbol)
+            return expiry if expiry else ""
+        except Exception as e:
+            logger.error(f"Error getting current expiry for {symbol}: {e}")
+            return ""
 
     # Public helper: first N upcoming expiries (weekly+monthly), string ISO dates
     def get_upcoming_expiries(self, symbol: str, n: int = 3) -> list[str]:
-        sym = symbol.upper()
-        if sym=="SENSEX":
-            ex = "BFO"; seg = "BFO-OPT"
-        else:
-            ex = "NFO"; seg = "NFO-OPT"
-        inst = self._instruments(ex).copy()
-        if inst.empty:
+        """Get upcoming expiries using OptionChainBuilder for consistency."""
+        try:
+            builder = self._get_option_chain_builder()
+            expiries = builder.get_available_expiries(symbol)
+            return expiries[:max(1, n)]
+        except Exception as e:
+            logger.error(f"Error getting upcoming expiries for {symbol}: {e}")
             return []
-        df = inst[(inst["name"] == sym) & (inst["segment"] == seg)].copy()
-        if df.empty:
-            return []
-        df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
-        today = dt.datetime.now(IST).date()
-        exps = sorted([e for e in df["expiry"].unique() if e >= today])
-        return [e.isoformat() for e in exps[:max(1,n)]]
