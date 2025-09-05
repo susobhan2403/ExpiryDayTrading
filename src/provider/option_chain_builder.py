@@ -81,14 +81,15 @@ class InstrumentFilter:
         exchange = "BFO" if symbol == "SENSEX" else "NFO"
         segment = f"{exchange}-OPT"
         
-        # Filter by symbol, segment, and expiry
+        # Memory optimization: use vectorized operations
         mask = (
             (self.instruments_df["name"] == symbol) &
             (self.instruments_df["segment"] == segment) &
             (self.instruments_df["expiry"] == expiry_date)
         )
         
-        filtered_df = self.instruments_df[mask].copy()
+        # Apply filter in one operation
+        filtered_df = self.instruments_df.loc[mask].copy()
         
         if filtered_df.empty:
             logger.warning(f"No option instruments found for {symbol} expiry {expiry_date}")
@@ -101,7 +102,7 @@ class InstrumentFilter:
                 (filtered_df["strike"] >= min_strike) &
                 (filtered_df["strike"] <= max_strike)
             )
-            filtered_df = filtered_df[strike_mask]
+            filtered_df = filtered_df.loc[strike_mask]
         
         logger.info(f"Found {len(filtered_df)} option instruments for {symbol} {expiry_date}")
         return filtered_df
@@ -318,21 +319,28 @@ class OptionChainBuilder:
         self.instrument_filter = InstrumentFilter(instruments_df)
         self.quote_batcher = QuoteBatcher(kite_client)
         self.build_count = 0
+        
+        # Performance optimization: cache frequently used data
+        self._expiry_cache = {}
+        self._last_cache_time = 0
+        self._cache_ttl = 300  # 5 minutes cache TTL
     
     def build_chain(
         self, 
         symbol: str, 
         expiry: str,
         spot_price: float,
-        strike_range_pct: float = 0.20  # ±20% around spot by default
+        strike_range_pct: float = 0.20,  # ±20% around spot by default
+        max_strikes: int = 100  # Performance limit on strikes
     ) -> Optional[OptionChain]:
-        """Build option chain for symbol/expiry.
+        """Build option chain for symbol/expiry with performance optimizations.
         
         Args:
             symbol: Index symbol (e.g., "NIFTY", "BANKNIFTY")
             expiry: Target expiry in YYYY-MM-DD format
             spot_price: Current spot price for strike range calculation
             strike_range_pct: Percentage range around spot to include (e.g., 0.20 = ±20%)
+            max_strikes: Maximum number of strikes to process (performance limit)
         
         Returns:
             OptionChain instance or None if build failed
@@ -358,6 +366,13 @@ class OptionChainBuilder:
                 logger.warning(f"No instruments found for {symbol} {expiry}")
                 return None
             
+            # Performance optimization: limit strikes if too many
+            if len(instruments_df) > max_strikes * 2:  # *2 for CE and PE
+                logger.info(f"Limiting strikes for {symbol} from {len(instruments_df)} to {max_strikes * 2} instruments")
+                # Keep strikes closest to spot
+                instruments_df['distance_from_spot'] = abs(instruments_df['strike'] - spot_price)
+                instruments_df = instruments_df.nsmallest(max_strikes * 2, 'distance_from_spot').drop('distance_from_spot', axis=1)
+            
             # Build trading symbols list for quote requests
             exchange = "BFO" if symbol.upper() == "SENSEX" else "NFO"
             trading_symbols = [
@@ -382,7 +397,7 @@ class OptionChainBuilder:
             return None
     
     def get_available_expiries(self, symbol: str, min_days_ahead: int = 0) -> List[str]:
-        """Get available expiry dates for symbol.
+        """Get available expiry dates for symbol with caching for performance.
         
         Args:
             symbol: Index symbol
@@ -391,12 +406,26 @@ class OptionChainBuilder:
         Returns:
             List of expiry dates in YYYY-MM-DD format
         """
+        # Performance optimization: use cache for expiry data
+        current_time = time.time()
+        cache_key = f"{symbol}_{min_days_ahead}"
+        
+        if (cache_key in self._expiry_cache and 
+            current_time - self._last_cache_time < self._cache_ttl):
+            return self._expiry_cache[cache_key]
+        
         min_expiry = None
         if min_days_ahead > 0:
             min_expiry = (dt.datetime.now(IST).date() + dt.timedelta(days=min_days_ahead))
         
         expiry_dates = self.instrument_filter.get_available_expiries(symbol, min_expiry)
-        return [d.isoformat() for d in expiry_dates]
+        expiry_list = [d.isoformat() for d in expiry_dates]
+        
+        # Cache the result
+        self._expiry_cache[cache_key] = expiry_list
+        self._last_cache_time = current_time
+        
+        return expiry_list
     
     def get_nearest_expiry(self, symbol: str) -> Optional[str]:
         """Get the nearest available expiry for symbol."""

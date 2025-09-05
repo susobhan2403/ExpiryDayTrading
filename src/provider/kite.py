@@ -115,39 +115,7 @@ class KiteProvider(MarketDataProvider):
             return int(m.iloc[0]["instrument_token"])
         return None
 
-    def _nearest_weekly_chain_df(self, symbol: str) -> Tuple[pd.DataFrame, str]:
-        sym = symbol.upper()
-        if sym=="SENSEX":
-            ex = "BFO"; seg = "BFO-OPT"
-        else:
-            ex = "NFO"; seg = "NFO-OPT"
-        inst = self._instruments(ex).copy()
-        df = inst[(inst["name"] == sym) & (inst["segment"] == seg)].copy()
-        if df.empty:
-            raise RuntimeError(f"No options for {symbol}")
-        df["expiry"] = pd.to_datetime(df["expiry"]).dt.date
-        now_ist = dt.datetime.now(IST)
-        today = now_ist.date()
-        weekly = sorted(e for e in df["expiry"].unique() if e >= today)[:5]
-        if now_ist.time() > dt.time(15, 30):
-            weekly = [e for e in weekly if e > today]
-        if not weekly:
-            raise RuntimeError("No future expiries")
-
-        # Remove monthly expiries: any expiry followed by a gap >7 days
-        monthly = {
-            weekly[i]
-            for i in range(len(weekly) - 1)
-            if (weekly[i + 1] - weekly[i]).days > 7
-        }
-        weekly = [e for e in weekly if e not in monthly]
-        if not weekly:
-            raise RuntimeError("No future weekly expiries")
-
-        expiry = weekly[0]
-        chain = df[df["expiry"] == expiry].copy()
-        chain["strike"] = chain["strike"].astype(int)
-        return chain, expiry.isoformat()
+    # Legacy method removed - functionality replaced by OptionChainBuilder.get_available_expiries()
 
     def _nearest_future_row(self, symbol: str) -> pd.Series:
         sym = symbol.upper()
