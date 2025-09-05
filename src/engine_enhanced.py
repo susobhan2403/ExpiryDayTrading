@@ -459,139 +459,67 @@ class EnhancedTradingEngine:
         result = {"success": False}
         
         try:
-            # Strike step inference
-            step, step_diag = infer_strike_step_enhanced(market_data.strikes)
-            if step == 0:
-                result["reason"] = f"strike_step_inference_failed: {step_diag.get('reason', 'unknown')}"
-                return result
+            # Use Sensibull-compatible calculation methodology for zero tolerance accuracy
+            from src.calculations.sensibull_compat import calculate_all_sensibull_metrics
             
-            # Forward price computation using precise calculation
-            from src.calculations.atm import calculate_forward_price
-            forward = calculate_forward_price(
+            # Calculate all metrics using Sensibull methodology
+            sensibull_results = calculate_all_sensibull_metrics(
                 spot=market_data.spot,
-                risk_free_rate=self.risk_free_rate,
-                dividend_yield=self.dividend_yield,
-                time_to_expiry_years=tau_years,
+                strikes=market_data.strikes,
+                call_oi=market_data.call_oi,
+                put_oi=market_data.put_oi,
+                call_mids=market_data.call_mids,
+                put_mids=market_data.put_mids,
+                symbol=market_data.index,
                 futures_mid=market_data.futures_mid
             )
             
-            if forward <= 0:
-                result["reason"] = "forward_computation_failed"
-                return result
-
-            # ATM strike selection using precise calculation
-            from src.calculations.atm import calculate_atm_with_validation
-            atm_result, forward_calc, status = calculate_atm_with_validation(
-                spot=market_data.spot,
-                strikes=market_data.strikes,
-                risk_free_rate=self.risk_free_rate,
-                dividend_yield=self.dividend_yield,
-                time_to_expiry_years=tau_years,
-                futures_mid=market_data.futures_mid,
-                call_mids=market_data.call_mids,
-                put_mids=market_data.put_mids,
-                symbol=market_data.index
-            )
-            
-            if atm_result is None:
-                result["reason"] = f"atm_selection_failed: {status}"
+            if not sensibull_results["success"]:
+                errors = "; ".join(sensibull_results["errors"])
+                result["reason"] = f"sensibull_calculation_failed: {errors}"
                 return result
             
-            atm_strike = atm_result
-            forward = forward_calc  # Use the forward from ATM calculation
+            # Extract calculated values
+            step = sensibull_results["step"]
+            forward = sensibull_results["forward"]
+            atm_strike = sensibull_results["atm"]
+            max_pain = sensibull_results["max_pain"]
+            pcr_total = sensibull_results["pcr"]
+            pcr_band = None  # Sensibull uses total PCR
+            atm_iv = sensibull_results["atm_iv"]
             
-            # ATM IV computation using precise calculation
-            ce_mid = market_data.call_mids.get(atm_strike)
-            pe_mid = market_data.put_mids.get(atm_strike)
+            if atm_iv is not None:
+                atm_iv = atm_iv / 100.0  # Convert back to decimal for internal use
             
-            from src.calculations.iv import calculate_atm_iv_with_validation
-            atm_iv, iv_status = calculate_atm_iv_with_validation(
-                call_price=ce_mid,
-                put_price=pe_mid,
-                forward_price=forward,
-                atm_strike=atm_strike,
-                time_to_expiry_years=tau_years,
-                risk_free_rate=self.risk_free_rate
-            )
+            self.logger.info(f"Sensibull-compatible calculations completed:")
+            self.logger.info(f"  Max Pain: {max_pain}, ATM: {atm_strike}, PCR: {pcr_total:.3f}, ATM IV: {atm_iv*100:.1f}%" if atm_iv else f"  Max Pain: {max_pain}, ATM: {atm_strike}, PCR: {pcr_total:.3f}, ATM IV: N/A")
             
-            if atm_iv is None:
-                self.logger.warning(f"ATM IV calculation failed: {iv_status}")
-                # R3 COMPLIANCE: Don't use synthetic IV, continue with None
-            
-            # IV percentile computation
+            # IV percentile computation (simplified for Sensibull compatibility)
             iv_percentile = None
             iv_rank = None
             if atm_iv:
-                if self.iv_history and len(self.iv_history) >= 3:  # Need at least 3 data points
+                if self.iv_history and len(self.iv_history) >= 3:
+                    from src.metrics.enhanced import compute_iv_percentile_enhanced
                     iv_percentile, iv_rank, percentile_diag = compute_iv_percentile_enhanced(
                         history=self.iv_history,
                         current=atm_iv,
                         current_tau=tau_years,
-                        tau_tol=7.0/365.0  # 1 week tolerance
+                        tau_tol=7.0/365.0
                     )
                 else:
-                    # When insufficient historical data, provide reasonable defaults
-                    # Based on Indian market conditions: low IV typically 10-20%, high IV 30-50%
-                    if atm_iv < 0.15:  # Very low IV
-                        iv_percentile = 5.0
-                    elif atm_iv < 0.20:  # Low IV 
-                        iv_percentile = 20.0
-                    elif atm_iv < 0.30:  # Normal IV
+                    # Simplified IV percentile estimation for Sensibull compatibility
+                    iv_pct = atm_iv * 100  # Convert to percentage
+                    if iv_pct < 10:
+                        iv_percentile = 10.0
+                    elif iv_pct < 15:
+                        iv_percentile = 30.0
+                    elif iv_pct < 20:
                         iv_percentile = 50.0
-                    elif atm_iv < 0.40:  # High IV
-                        iv_percentile = 80.0
-                    else:  # Very high IV
-                        iv_percentile = 95.0
+                    elif iv_pct < 25:
+                        iv_percentile = 70.0
+                    else:
+                        iv_percentile = 90.0
                     iv_rank = iv_percentile
-            
-            # PCR computation using precise calculation
-            from src.calculations.pcr import calculate_pcr_with_validation
-            pcr_result, pcr_status = calculate_pcr_with_validation(
-                call_oi=market_data.call_oi,
-                put_oi=market_data.put_oi,
-                atm_strike=atm_strike,
-                step=step,
-                band_width=6  # ±6 strikes from ATM
-            )
-            
-            pcr_total = None
-            pcr_band = None
-            if pcr_result is not None:
-                pcr_total = pcr_result.get('pcr_total')
-                pcr_band = pcr_result.get('pcr_band')
-                self.logger.info(f"Precise PCR calculation - Total: {pcr_total:.3f}, Band: {pcr_band:.3f if pcr_band else 'N/A'}")
-            else:
-                self.logger.error(f"PCR calculation failed: {pcr_status}")
-                # R3 COMPLIANCE: NO synthetic PCR data
-                result["reason"] = f"pcr_calculation_failed: {pcr_status}"
-                return result
-            
-            # Max Pain calculation using precise implementation
-            max_pain = 0
-            try:
-                from src.calculations.max_pain import calculate_max_pain_with_validation
-                
-                max_pain_result, status = calculate_max_pain_with_validation(
-                    strikes=market_data.strikes,
-                    call_oi=market_data.call_oi,
-                    put_oi=market_data.put_oi,
-                    spot=market_data.spot,
-                    step=step
-                )
-                
-                if max_pain_result is not None:
-                    max_pain = max_pain_result
-                    self.logger.info(f"Precise Max Pain calculation: {max_pain} (ATM: {atm_strike}) - Status: {status}")
-                else:
-                    # R3 COMPLIANCE: NO fallback synthetic data - fail the calculation
-                    result["reason"] = f"max_pain_calculation_failed: {status}"
-                    return result
-                    
-            except Exception as e:
-                self.logger.error(f"Critical Max Pain calculation failure: {e}")
-                # R3 COMPLIANCE: NO synthetic fallback allowed
-                result["reason"] = f"max_pain_calculation_error: {str(e)}"
-                return result
             
             # Success
             result.update({
@@ -606,11 +534,10 @@ class EnhancedTradingEngine:
                 "pcr_band": pcr_band,
                 "max_pain": max_pain,
                 "diagnostics": {
-                    "step": step_diag,
-                    "atm_calculation": status,
-                    "iv_calculation": iv_status,
-                    "pcr_calculation": pcr_status,
-                    "max_pain_calculation": status
+                    "sensibull_max_pain": sensibull_results["max_pain_status"],
+                    "sensibull_atm": sensibull_results["atm_status"],
+                    "sensibull_pcr": sensibull_results["pcr_status"],
+                    "sensibull_iv": sensibull_results["atm_iv_status"]
                 }
             })
             
