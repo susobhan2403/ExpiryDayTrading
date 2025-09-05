@@ -7,3 +7,4 @@ pytz>=2023.3
 requests>=2.31
 lightgbm>=4.6.0
 kiteconnect>=5.0.1
+scipy>=1.10.0

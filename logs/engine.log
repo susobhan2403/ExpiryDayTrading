@@ -770,3 +770,647 @@
 2025-09-05 18:55:13,220 INFO: ALERT: IGNORE Max pain unreliable
 2025-09-05 18:55:13,221 INFO: Iteration 1 completed in 2.67s
 2025-09-05 18:55:13,222 INFO: Run-once mode, exiting
+2025-09-05 15:27:08,795 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:27:08,795 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:27:08,795 INFO: Processing iteration 1
+2025-09-05 15:27:13,219 INFO: expiry=2025-09-09 step=50 atm=24750 pcr=0.77
+2025-09-05 15:27:13,220 INFO: 20:57 IST | NIFTY 24741.00 | VWAP(fut) 24765
+2025-09-05 15:27:13,220 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:27:13,220 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:27:13,220 INFO: ATM 24750 IV 8.134124322343176% (dIV_z=0.0) | Basis 24.740999999998166
+2025-09-05 15:27:13,220 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:27:13,220 INFO: Action: TRADE | BUY 24800 CE / 24850 CE
+2025-09-05 15:27:13,220 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:27:13,220 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:27:13,220 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:27:13,220 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:27:13,220 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:27:13,220 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:27:13,220 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:27:13,220 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:27:13,220 INFO: 1. Close back below VWAP
+2025-09-05 15:27:13,220 INFO: 2. ADX weakening (<16)
+2025-09-05 15:27:13,221 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:27:13,221 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:27:13,221 INFO: 5. MACD(5m) cross down
+2025-09-05 15:27:13,221 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:27:13,221 INFO: Final Verdict: Hold
+2025-09-05 15:27:13,221 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:27:14,356 INFO: expiry=2025-09-30 step=100 atm=54200 pcr=0.88
+2025-09-05 15:27:14,356 INFO: 20:57 IST | BANKNIFTY 54114.55 | VWAP(fut) 54168
+2025-09-05 15:27:14,356 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:27:14,356 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54200 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:27:14,356 INFO: ATM 54200 IV 10.504379997305808% (dIV_z=0.0) | Basis 54.11454999999114
+2025-09-05 15:27:14,356 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:27:14,356 INFO: Action: TRADE | BUY 54300 CE / 54400 CE
+2025-09-05 15:27:14,356 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:27:14,356 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:27:14,356 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:27:14,356 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:27:14,356 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:27:14,357 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:27:14,357 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:27:14,357 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:27:14,357 INFO: 1. Close back below VWAP
+2025-09-05 15:27:14,357 INFO: 2. ADX weakening (<16)
+2025-09-05 15:27:14,357 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:27:14,357 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:27:14,357 INFO: 5. MACD(5m) cross down
+2025-09-05 15:27:14,357 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:27:14,357 INFO: Final Verdict: Hold
+2025-09-05 15:27:14,357 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:27:14,357 INFO: Iteration 1 completed in 5.56s
+2025-09-05 15:27:14,357 INFO: Run-once mode, exiting
+2025-09-05 15:27:24,224 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:27:24,224 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:27:24,225 INFO: Processing iteration 1
+2025-09-05 15:27:27,194 INFO: expiry=2025-09-30 step=100 atm=54200 pcr=0.88
+2025-09-05 15:27:27,194 INFO: 20:57 IST | BANKNIFTY 54114.55 | VWAP(fut) 54168
+2025-09-05 15:27:27,194 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:27:27,194 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54200 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:27:27,194 INFO: ATM 54200 IV 10.504411217586402% (dIV_z=0.0) | Basis 54.11454999999114
+2025-09-05 15:27:27,194 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:27:27,194 INFO: Action: TRADE | BUY 54300 CE / 54400 CE
+2025-09-05 15:27:27,194 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:27:27,194 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:27:27,194 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:27:27,194 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:27:27,194 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:27:27,194 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:27:27,194 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:27:27,194 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:27:27,194 INFO: 1. Close back below VWAP
+2025-09-05 15:27:27,194 INFO: 2. ADX weakening (<16)
+2025-09-05 15:27:27,194 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:27:27,194 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:27:27,195 INFO: 5. MACD(5m) cross down
+2025-09-05 15:27:27,195 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:27:27,195 INFO: Final Verdict: Hold
+2025-09-05 15:27:27,195 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:27:27,195 INFO: Iteration 1 completed in 2.97s
+2025-09-05 15:27:27,195 INFO: Run-once mode, exiting
+2025-09-05 15:29:00,885 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:29:00,885 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:29:00,885 INFO: Processing iteration 1
+2025-09-05 15:29:03,220 INFO: expiry=2025-09-09 step=50 atm=24750 pcr=0.77
+2025-09-05 15:29:03,220 INFO: 20:59 IST | NIFTY 24741.00 | VWAP(fut) 24765
+2025-09-05 15:29:03,220 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:29:03,220 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:29:03,220 INFO: ATM 24750 IV 8.13549515353795% (dIV_z=0.0) | Basis 24.740999999998166
+2025-09-05 15:29:03,220 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:29:03,220 INFO: Action: TRADE | BUY 24800 CE / 24850 CE
+2025-09-05 15:29:03,220 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:29:03,220 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:29:03,220 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:29:03,220 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:29:03,220 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:29:03,220 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:29:03,220 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:29:03,220 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:29:03,220 INFO: 1. Close back below VWAP
+2025-09-05 15:29:03,220 INFO: 2. ADX weakening (<16)
+2025-09-05 15:29:03,220 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:29:03,221 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:29:03,221 INFO: 5. MACD(5m) cross down
+2025-09-05 15:29:03,221 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:29:03,221 INFO: Final Verdict: Hold
+2025-09-05 15:29:03,221 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:29:05,346 INFO: expiry=2025-09-30 step=100 atm=54200 pcr=0.88
+2025-09-05 15:29:05,346 INFO: 20:59 IST | BANKNIFTY 54114.55 | VWAP(fut) 54168
+2025-09-05 15:29:05,346 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:29:05,346 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54200 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:29:05,346 INFO: ATM 54200 IV 10.504649922523244% (dIV_z=0.0) | Basis 54.11454999999114
+2025-09-05 15:29:05,346 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:29:05,346 INFO: Action: TRADE | BUY 54300 CE / 54400 CE
+2025-09-05 15:29:05,346 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:29:05,347 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:29:05,347 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:29:05,347 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:29:05,347 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:29:05,347 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:29:05,347 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:29:05,347 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:29:05,347 INFO: 1. Close back below VWAP
+2025-09-05 15:29:05,347 INFO: 2. ADX weakening (<16)
+2025-09-05 15:29:05,347 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:29:05,347 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:29:05,347 INFO: 5. MACD(5m) cross down
+2025-09-05 15:29:05,347 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:29:05,347 INFO: Final Verdict: Hold
+2025-09-05 15:29:05,347 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:29:05,347 INFO: Iteration 1 completed in 4.46s
+2025-09-05 15:29:05,347 INFO: Run-once mode, exiting
+2025-09-05 15:29:14,247 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:29:14,247 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:29:14,247 INFO: Processing iteration 1
+2025-09-05 15:29:17,539 INFO: expiry=2025-09-30 step=100 atm=54200 pcr=0.88
+2025-09-05 15:29:17,539 INFO: 20:59 IST | BANKNIFTY 54114.55 | VWAP(fut) 54168
+2025-09-05 15:29:17,539 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:29:17,539 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54200 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:29:17,539 INFO: ATM 54200 IV 10.504679575411021% (dIV_z=0.0) | Basis 54.11454999999114
+2025-09-05 15:29:17,539 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:29:17,539 INFO: Action: TRADE | BUY 54300 CE / 54400 CE
+2025-09-05 15:29:17,539 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:29:17,539 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:29:17,539 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:29:17,539 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:29:17,539 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:29:17,539 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:29:17,539 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:29:17,539 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:29:17,539 INFO: 1. Close back below VWAP
+2025-09-05 15:29:17,539 INFO: 2. ADX weakening (<16)
+2025-09-05 15:29:17,539 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:29:17,540 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:29:17,540 INFO: 5. MACD(5m) cross down
+2025-09-05 15:29:17,540 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:29:17,540 INFO: Final Verdict: Hold
+2025-09-05 15:29:17,540 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:29:17,540 INFO: Iteration 1 completed in 3.29s
+2025-09-05 15:29:17,540 INFO: Run-once mode, exiting
+2025-09-05 15:30:45,236 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=60s | mode=auto
+2025-09-05 15:30:45,236 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:30:45,236 INFO: Processing iteration 1
+2025-09-05 15:30:47,187 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:30:47,187 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:30:47,188 INFO: expiry=2025-09-30 step=100 atm=54300 pcr=1.25
+2025-09-05 15:30:47,188 INFO: 21:00 IST | BANKNIFTY 54114.55 | VWAP(fut) 54303
+2025-09-05 15:30:47,188 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:30:47,189 INFO: PCR 1.2509525053986768 (dz=0.0) | MaxPain 54300 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:30:47,189 INFO: ATM 54300 IV 2.93603311016088% (dIV_z=0.0) | Basis 189.40092500000173
+2025-09-05 15:30:47,189 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:30:47,189 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:30:47,189 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:30:47,189 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:30:47,189 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:30:47,189 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:30:47,189 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:30:47,189 INFO: Final Verdict: Hold
+2025-09-05 15:30:47,189 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:30:48,270 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:30:48,270 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:30:48,271 INFO: expiry=2025-09-09 step=50 atm=24800 pcr=1.21
+2025-09-05 15:30:48,271 INFO: 21:00 IST | NIFTY 24741.00 | VWAP(fut) 24778
+2025-09-05 15:30:48,271 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:30:48,271 INFO: PCR 1.2144905781756774 (dz=0.0) | MaxPain 24800 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:30:48,271 INFO: ATM 24800 IV 11.98387647282049% (dIV_z=0.0) | Basis 37.11150000000271
+2025-09-05 15:30:48,271 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:30:48,271 INFO: Action: TRADE | BUY 24850 CE / 24900 CE
+2025-09-05 15:30:48,271 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:30:48,271 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:30:48,271 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:30:48,271 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:30:48,271 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:30:48,271 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:30:48,271 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:30:48,271 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:30:48,271 INFO: 1. Close back below VWAP
+2025-09-05 15:30:48,271 INFO: 2. ADX weakening (<16)
+2025-09-05 15:30:48,271 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:30:48,271 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:30:48,272 INFO: 5. MACD(5m) cross down
+2025-09-05 15:30:48,272 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:30:48,272 INFO: Final Verdict: Hold
+2025-09-05 15:30:48,272 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:30:48,272 INFO: Iteration 1 completed in 3.04s
+2025-09-05 15:30:48,272 INFO: Run-once mode, exiting
+2025-09-05 15:32:02,382 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:32:02,382 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:32:02,382 INFO: Processing iteration 1
+2025-09-05 15:32:04,998 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:32:04,998 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:32:04,998 INFO: expiry=2025-09-30 step=100 atm=54300 pcr=1.25
+2025-09-05 15:32:04,999 INFO: 21:02 IST | BANKNIFTY 54114.55 | VWAP(fut) 54303
+2025-09-05 15:32:04,999 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:32:04,999 INFO: PCR 1.2509525053986768 (dz=0.0) | MaxPain 54300 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:32:04,999 INFO: ATM 54300 IV 2.936086006895547% (dIV_z=0.0) | Basis 189.40092500000173
+2025-09-05 15:32:04,999 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:32:04,999 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:32:04,999 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:32:04,999 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:32:04,999 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:32:04,999 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:32:04,999 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:32:04,999 INFO: Final Verdict: Hold
+2025-09-05 15:32:04,999 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:32:04,999 INFO: Iteration 1 completed in 2.62s
+2025-09-05 15:32:04,999 INFO: Run-once mode, exiting
+2025-09-05 15:32:13,081 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:32:13,081 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:32:13,081 INFO: Processing iteration 1
+2025-09-05 15:32:14,882 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:32:14,883 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:32:14,883 INFO: expiry=2025-09-30 step=100 atm=54300 pcr=1.25
+2025-09-05 15:32:14,884 INFO: 21:02 IST | BANKNIFTY 54114.55 | VWAP(fut) 54303
+2025-09-05 15:32:14,884 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:32:14,884 INFO: PCR 1.2509525053986768 (dz=0.0) | MaxPain 54300 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:32:14,884 INFO: ATM 54300 IV 2.9360927270335693% (dIV_z=0.0) | Basis 189.40092500000173
+2025-09-05 15:32:14,884 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:32:14,884 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:32:14,884 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:32:14,884 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:32:14,884 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:32:14,884 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:32:14,884 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:32:14,884 INFO: Final Verdict: Hold
+2025-09-05 15:32:14,884 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:32:14,884 INFO: Iteration 1 completed in 1.80s
+2025-09-05 15:32:14,884 INFO: Run-once mode, exiting
+2025-09-05 15:32:22,684 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:32:22,684 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:32:22,684 INFO: Processing iteration 1
+2025-09-05 15:32:24,400 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:32:24,400 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:32:24,400 INFO: expiry=2025-09-30 step=100 atm=54300 pcr=1.25
+2025-09-05 15:32:24,401 INFO: 21:02 IST | BANKNIFTY 54114.55 | VWAP(fut) 54303
+2025-09-05 15:32:24,401 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:32:24,401 INFO: PCR 1.2509525053986768 (dz=0.0) | MaxPain 54300 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:32:24,401 INFO: ATM 54300 IV 2.9360991971351087% (dIV_z=0.0) | Basis 189.40092500000173
+2025-09-05 15:32:24,401 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:32:24,401 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:32:24,401 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:32:24,401 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:32:24,401 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:32:24,401 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:32:24,401 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:32:24,401 INFO: Final Verdict: Hold
+2025-09-05 15:32:24,401 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:32:24,401 INFO: Iteration 1 completed in 1.72s
+2025-09-05 15:32:24,401 INFO: Run-once mode, exiting
+2025-09-05 15:35:02,064 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY'] | poll=60s | mode=auto
+2025-09-05 15:35:02,064 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:35:02,064 INFO: Processing iteration 1
+2025-09-05 15:35:03,854 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:35:03,854 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:35:03,855 INFO: expiry=2025-09-30 step=100 atm=54300 pcr=1.25
+2025-09-05 15:35:03,855 INFO: 21:05 IST | BANKNIFTY 54114.55 | VWAP(fut) 54303
+2025-09-05 15:35:03,855 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:03,855 INFO: PCR 1.2509525053986768 (dz=0.0) | MaxPain 54200 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:03,855 INFO: ATM 54300 IV 2.936207607486436% (dIV_z=0.0) | Basis 189.40092500000173
+2025-09-05 15:35:03,855 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:35:03,855 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:35:03,855 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:35:03,855 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:35:03,855 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:35:03,855 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:35:03,855 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:35:03,855 INFO: Final Verdict: Hold
+2025-09-05 15:35:03,855 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:05,123 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:35:05,123 INFO: FORCING fallback data usage for testing purposes
+2025-09-05 15:35:05,124 INFO: expiry=2025-09-09 step=50 atm=24800 pcr=1.21
+2025-09-05 15:35:05,124 INFO: 21:05 IST | NIFTY 24741.00 | VWAP(fut) 24778
+2025-09-05 15:35:05,124 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:05,124 INFO: PCR 1.2144905781756774 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:05,124 INFO: ATM 24800 IV 11.988597377439952% (dIV_z=0.0) | Basis 37.11150000000271
+2025-09-05 15:35:05,124 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:35:05,124 INFO: Action: TRADE | BUY 24850 CE / 24900 CE
+2025-09-05 15:35:05,124 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:35:05,125 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:35:05,125 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:35:05,125 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:35:05,125 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:35:05,125 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:35:05,125 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:35:05,125 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:35:05,125 INFO: 1. Close back below VWAP
+2025-09-05 15:35:05,125 INFO: 2. ADX weakening (<16)
+2025-09-05 15:35:05,125 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:35:05,125 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:35:05,125 INFO: 5. MACD(5m) cross down
+2025-09-05 15:35:05,125 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:35:05,125 INFO: Final Verdict: Hold
+2025-09-05 15:35:05,125 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:05,125 INFO: Iteration 1 completed in 3.06s
+2025-09-05 15:35:05,125 INFO: Run-once mode, exiting
+2025-09-05 15:35:28,409 INFO: Engine started | provider=KITE | symbols=['BANKNIFTY', 'NIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:35:28,409 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:35:28,409 INFO: Processing iteration 1
+2025-09-05 15:35:30,874 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:35:30,879 INFO: expiry=2025-09-30 step=100 atm=54400 pcr=0.88
+2025-09-05 15:35:30,879 INFO: 21:05 IST | BANKNIFTY 54114.55 | VWAP(fut) 54381
+2025-09-05 15:35:30,879 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:30,879 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54600 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:30,879 INFO: ATM 54400 IV 10.328567439010246% (dIV_z=0.0) | Basis 266.8662739725987
+2025-09-05 15:35:30,879 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:35:30,879 INFO: Action: TRADE | BUY 54500 CE / 54600 CE
+2025-09-05 15:35:30,879 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:35:30,879 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:35:30,879 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:35:30,879 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:35:30,880 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:35:30,880 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:35:30,880 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:35:30,880 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:35:30,880 INFO: 1. Close back below VWAP
+2025-09-05 15:35:30,880 INFO: 2. ADX weakening (<16)
+2025-09-05 15:35:30,880 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:35:30,880 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:35:30,880 INFO: 5. MACD(5m) cross down
+2025-09-05 15:35:30,880 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:35:30,880 INFO: Final Verdict: Hold
+2025-09-05 15:35:30,880 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:32,425 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:35:32,429 INFO: expiry=2025-09-09 step=50 atm=24850 pcr=0.77
+2025-09-05 15:35:32,429 INFO: 21:05 IST | NIFTY 24741.00 | VWAP(fut) 24863
+2025-09-05 15:35:32,429 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:32,429 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:32,429 INFO: ATM 24850 IV 8.675777419440607% (dIV_z=0.0) | Basis 122.01041095890105
+2025-09-05 15:35:32,429 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:35:32,429 INFO: Action: TRADE | BUY 24900 CE / 24950 CE
+2025-09-05 15:35:32,429 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:35:32,429 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:35:32,429 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:35:32,429 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:35:32,429 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:35:32,429 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:35:32,430 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:35:32,430 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:35:32,430 INFO: 1. Close back below VWAP
+2025-09-05 15:35:32,430 INFO: 2. ADX weakening (<16)
+2025-09-05 15:35:32,430 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:35:32,430 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:35:32,430 INFO: 5. MACD(5m) cross down
+2025-09-05 15:35:32,430 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:35:32,430 INFO: Final Verdict: Hold
+2025-09-05 15:35:32,430 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:33,455 INFO: Got real option chain data for SENSEX with 100 strikes
+2025-09-05 15:35:33,460 INFO: expiry=2025-09-11 step=100 atm=81100 pcr=1.35
+2025-09-05 15:35:33,460 INFO: 21:05 IST | SENSEX 80710.76 | VWAP(fut) 81108
+2025-09-05 15:35:33,460 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:33,460 INFO: PCR 1.3452755373692962 (dz=0.0) | MaxPain 82000 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:33,460 INFO: ATM 81100 IV 9.264164500255777% (dIV_z=0.0) | Basis 398.02566575341916
+2025-09-05 15:35:33,460 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:35:33,460 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:35:33,460 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:35:33,460 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:35:33,460 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:35:33,460 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:35:33,460 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:35:33,460 INFO: Final Verdict: Hold
+2025-09-05 15:35:33,460 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:34,532 INFO: Got real option chain data for MIDCPNIFTY with 100 strikes
+2025-09-05 15:35:34,537 INFO: expiry=2025-09-30 step=50 atm=12850 pcr=1.09
+2025-09-05 15:35:34,537 INFO: 21:05 IST | MIDCPNIFTY 12778.15 | VWAP(fut) 12841
+2025-09-05 15:35:34,537 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:34,537 INFO: PCR 1.0910605376101197 (dz=0.0) | MaxPain 12800 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:34,537 INFO: ATM 12850 IV 15.474896727721257% (dIV_z=0.0) | Basis 63.015534246575044
+2025-09-05 15:35:34,537 INFO: Scenario: Pin and Decay (IV crush) 35% (alt: Short-Cover Reversion Up 10%)
+2025-09-05 15:35:34,538 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:35:34,538 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:35:34,538 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:35:34,538 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:35:34,538 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:35:34,538 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:35:34,538 INFO: Final Verdict: Hold
+2025-09-05 15:35:34,538 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:34,538 INFO: Iteration 1 completed in 6.13s
+2025-09-05 15:35:34,538 INFO: Run-once mode, exiting
+2025-09-05 15:35:48,061 INFO: Engine started | provider=KITE | symbols=['NIFTY'] | poll=60s | mode=auto
+2025-09-05 15:35:48,061 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:35:48,061 INFO: Processing iteration 1
+2025-09-05 15:35:51,039 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:35:51,042 INFO: expiry=2025-09-09 step=50 atm=24850 pcr=0.77
+2025-09-05 15:35:51,043 INFO: 21:05 IST | NIFTY 24741.00 | VWAP(fut) 24863
+2025-09-05 15:35:51,043 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:35:51,043 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:35:51,043 INFO: ATM 24850 IV 8.676025177413186% (dIV_z=0.0) | Basis 122.01041095890105
+2025-09-05 15:35:51,043 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:35:51,043 INFO: Action: TRADE | BUY 24900 CE / 24950 CE
+2025-09-05 15:35:51,043 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:35:51,043 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:35:51,043 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:35:51,043 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:35:51,043 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:35:51,043 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:35:51,043 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:35:51,043 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:35:51,043 INFO: 1. Close back below VWAP
+2025-09-05 15:35:51,043 INFO: 2. ADX weakening (<16)
+2025-09-05 15:35:51,043 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:35:51,043 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:35:51,043 INFO: 5. MACD(5m) cross down
+2025-09-05 15:35:51,043 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:35:51,043 INFO: Final Verdict: Hold
+2025-09-05 15:35:51,043 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:35:51,044 INFO: Iteration 1 completed in 2.98s
+2025-09-05 15:35:51,044 INFO: Run-once mode, exiting
+2025-09-05 15:37:51,880 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:37:51,880 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:37:51,880 INFO: Processing iteration 1
+2025-09-05 15:37:53,543 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:37:53,547 INFO: expiry=2025-09-09 step=50 atm=24850 pcr=0.77
+2025-09-05 15:37:53,547 INFO: 21:07 IST | NIFTY 24741.00 | VWAP(fut) 24863
+2025-09-05 15:37:53,547 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:37:53,547 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:37:53,547 INFO: ATM 24850 IV 8.677656286780968% (dIV_z=0.0) | Basis 122.01041095890105
+2025-09-05 15:37:53,547 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:37:53,547 INFO: Action: TRADE | BUY 24900 CE / 24950 CE
+2025-09-05 15:37:53,547 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:37:53,547 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:37:53,547 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:37:53,547 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:37:53,547 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:37:53,547 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:37:53,547 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:37:53,547 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:37:53,547 INFO: 1. Close back below VWAP
+2025-09-05 15:37:53,547 INFO: 2. ADX weakening (<16)
+2025-09-05 15:37:53,547 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:37:53,548 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:37:53,548 INFO: 5. MACD(5m) cross down
+2025-09-05 15:37:53,548 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:37:53,548 INFO: Final Verdict: Hold
+2025-09-05 15:37:53,548 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:37:55,420 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:37:55,425 INFO: expiry=2025-09-30 step=100 atm=54400 pcr=0.88
+2025-09-05 15:37:55,425 INFO: 21:07 IST | BANKNIFTY 54114.55 | VWAP(fut) 54381
+2025-09-05 15:37:55,425 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:37:55,425 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54600 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:37:55,425 INFO: ATM 54400 IV 10.328913176226703% (dIV_z=0.0) | Basis 266.8662739725987
+2025-09-05 15:37:55,426 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:37:55,426 INFO: Action: TRADE | BUY 54500 CE / 54600 CE
+2025-09-05 15:37:55,426 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:37:55,426 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:37:55,426 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:37:55,426 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:37:55,426 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:37:55,426 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:37:55,426 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:37:55,426 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:37:55,426 INFO: 1. Close back below VWAP
+2025-09-05 15:37:55,426 INFO: 2. ADX weakening (<16)
+2025-09-05 15:37:55,426 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:37:55,426 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:37:55,426 INFO: 5. MACD(5m) cross down
+2025-09-05 15:37:55,426 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:37:55,426 INFO: Final Verdict: Hold
+2025-09-05 15:37:55,426 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:37:56,692 INFO: Got real option chain data for SENSEX with 100 strikes
+2025-09-05 15:37:56,697 INFO: expiry=2025-09-11 step=100 atm=81100 pcr=1.35
+2025-09-05 15:37:56,697 INFO: 21:07 IST | SENSEX 80710.76 | VWAP(fut) 81108
+2025-09-05 15:37:56,698 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:37:56,698 INFO: PCR 1.3452755373692962 (dz=0.0) | MaxPain 82000 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:37:56,698 INFO: ATM 81100 IV 9.265493605470457% (dIV_z=0.0) | Basis 398.02566575341916
+2025-09-05 15:37:56,698 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:37:56,698 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:37:56,698 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:37:56,698 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:37:56,698 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:37:56,698 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:37:56,698 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:37:56,698 INFO: Final Verdict: Hold
+2025-09-05 15:37:56,698 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:37:57,741 INFO: Got real option chain data for MIDCPNIFTY with 100 strikes
+2025-09-05 15:37:57,746 INFO: expiry=2025-09-30 step=50 atm=12850 pcr=1.09
+2025-09-05 15:37:57,746 INFO: 21:07 IST | MIDCPNIFTY 12778.15 | VWAP(fut) 12841
+2025-09-05 15:37:57,746 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:37:57,746 INFO: PCR 1.0910605376101197 (dz=0.0) | MaxPain 12800 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:37:57,746 INFO: ATM 12850 IV 15.475409940443072% (dIV_z=0.0) | Basis 63.015534246575044
+2025-09-05 15:37:57,747 INFO: Scenario: Pin and Decay (IV crush) 35% (alt: Short-Cover Reversion Up 10%)
+2025-09-05 15:37:57,747 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:37:57,747 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:37:57,747 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:37:57,747 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:37:57,747 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:37:57,747 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:37:57,747 INFO: Final Verdict: Hold
+2025-09-05 15:37:57,747 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:37:57,747 INFO: Iteration 1 completed in 5.87s
+2025-09-05 15:37:57,747 INFO: Run-once mode, exiting
+2025-09-05 15:38:48,274 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY', 'SENSEX', 'MIDCPNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:38:48,274 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:38:48,274 INFO: Processing iteration 1
+2025-09-05 15:38:51,586 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:38:51,590 INFO: expiry=2025-09-09 step=50 atm=24850 pcr=0.77
+2025-09-05 15:38:51,591 INFO: 21:08 IST | NIFTY 24741.00 | VWAP(fut) 24863
+2025-09-05 15:38:51,591 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:38:51,591 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:38:51,591 INFO: ATM 24850 IV 8.67842944377839% (dIV_z=0.0) | Basis 122.01041095890105
+2025-09-05 15:38:51,591 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:38:51,591 INFO: Action: TRADE | BUY 24900 CE / 24950 CE
+2025-09-05 15:38:51,591 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:38:51,591 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:38:51,591 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:38:51,591 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:38:51,591 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:38:51,591 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:38:51,591 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:38:51,591 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:38:51,591 INFO: 1. Close back below VWAP
+2025-09-05 15:38:51,591 INFO: 2. ADX weakening (<16)
+2025-09-05 15:38:51,591 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:38:51,591 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:38:51,591 INFO: 5. MACD(5m) cross down
+2025-09-05 15:38:51,591 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:38:51,591 INFO: Final Verdict: Hold
+2025-09-05 15:38:51,591 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:38:53,638 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:38:53,643 INFO: expiry=2025-09-30 step=100 atm=54400 pcr=0.88
+2025-09-05 15:38:53,643 INFO: 21:08 IST | BANKNIFTY 54114.55 | VWAP(fut) 54381
+2025-09-05 15:38:53,643 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:38:53,643 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54600 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:38:53,643 INFO: ATM 54400 IV 10.329052436124508% (dIV_z=0.0) | Basis 266.8662739725987
+2025-09-05 15:38:53,643 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:38:53,643 INFO: Action: TRADE | BUY 54500 CE / 54600 CE
+2025-09-05 15:38:53,643 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:38:53,643 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:38:53,643 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:38:53,644 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:38:53,644 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:38:53,644 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:38:53,644 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:38:53,644 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:38:53,644 INFO: 1. Close back below VWAP
+2025-09-05 15:38:53,644 INFO: 2. ADX weakening (<16)
+2025-09-05 15:38:53,644 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:38:53,644 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:38:53,644 INFO: 5. MACD(5m) cross down
+2025-09-05 15:38:53,644 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:38:53,644 INFO: Final Verdict: Hold
+2025-09-05 15:38:53,644 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:38:56,076 INFO: Got real option chain data for SENSEX with 100 strikes
+2025-09-05 15:38:56,081 INFO: expiry=2025-09-11 step=100 atm=81100 pcr=1.35
+2025-09-05 15:38:56,082 INFO: 21:08 IST | SENSEX 80710.76 | VWAP(fut) 81108
+2025-09-05 15:38:56,082 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:38:56,082 INFO: PCR 1.3452755373692962 (dz=0.0) | MaxPain 82000 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:38:56,082 INFO: ATM 81100 IV 9.266044800121133% (dIV_z=0.0) | Basis 398.02566575341916
+2025-09-05 15:38:56,082 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:38:56,082 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:38:56,082 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:38:56,082 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:38:56,082 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:38:56,082 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:38:56,082 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:38:56,082 INFO: Final Verdict: Hold
+2025-09-05 15:38:56,082 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:38:58,612 INFO: Got real option chain data for MIDCPNIFTY with 100 strikes
+2025-09-05 15:38:58,617 INFO: expiry=2025-09-30 step=50 atm=12850 pcr=1.09
+2025-09-05 15:38:58,617 INFO: 21:08 IST | MIDCPNIFTY 12778.15 | VWAP(fut) 12841
+2025-09-05 15:38:58,617 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:38:58,618 INFO: PCR 1.0910605376101197 (dz=0.0) | MaxPain 12800 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:38:58,618 INFO: ATM 12850 IV 15.475628097540135% (dIV_z=0.0) | Basis 63.015534246575044
+2025-09-05 15:38:58,618 INFO: Scenario: Pin and Decay (IV crush) 35% (alt: Short-Cover Reversion Up 10%)
+2025-09-05 15:38:58,618 INFO: Action: NO-TRADE | confidence below threshold
+2025-09-05 15:38:58,618 INFO: Enter when atleast 3 of below 4 are satisfied:
+2025-09-05 15:38:58,618 INFO: 1. VND < pin norm (range-bound) - [N]
+2025-09-05 15:38:58,618 INFO: 2. ADX < low (chop) - [N]
+2025-09-05 15:38:58,618 INFO: 3. Two-sided OI near ATM - [Y]
+2025-09-05 15:38:58,618 INFO: 4. IV crushing (div<=0, pctile<33) - [Y]
+2025-09-05 15:38:58,618 INFO: Final Verdict: Hold
+2025-09-05 15:38:58,618 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:38:58,618 INFO: Iteration 1 completed in 10.34s
+2025-09-05 15:38:58,618 INFO: Run-once mode, exiting
+2025-09-05 15:39:08,276 INFO: Engine started | provider=KITE | symbols=['NIFTY', 'BANKNIFTY'] | poll=60s | mode=auto
+2025-09-05 15:39:08,276 INFO: Micro penalty 0.67: spread=0.0000, qi=0.00, stab=0.50
+2025-09-05 15:39:08,276 INFO: Processing iteration 1
+2025-09-05 15:39:10,488 INFO: Got real option chain data for NIFTY with 86 strikes
+2025-09-05 15:39:10,492 INFO: expiry=2025-09-09 step=50 atm=24850 pcr=0.77
+2025-09-05 15:39:10,492 INFO: 21:09 IST | NIFTY 24741.00 | VWAP(fut) 24863
+2025-09-05 15:39:10,492 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:39:10,492 INFO: PCR 0.7677580177545565 (dz=0.0) | MaxPain 24750 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:39:10,492 INFO: ATM 24850 IV 8.678681263199252% (dIV_z=0.0) | Basis 122.01041095890105
+2025-09-05 15:39:10,492 INFO: Scenario: Pin and Decay (IV crush) 24% (alt: Short-Cover Reversion Up 12%)
+2025-09-05 15:39:10,492 INFO: Action: TRADE | BUY 24900 CE / 24950 CE
+2025-09-05 15:39:10,492 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:39:10,493 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:39:10,493 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:39:10,493 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:39:10,493 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:39:10,493 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:39:10,493 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:39:10,493 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:39:10,493 INFO: 1. Close back below VWAP
+2025-09-05 15:39:10,493 INFO: 2. ADX weakening (<16)
+2025-09-05 15:39:10,493 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:39:10,493 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:39:10,493 INFO: 5. MACD(5m) cross down
+2025-09-05 15:39:10,493 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:39:10,493 INFO: Final Verdict: Hold
+2025-09-05 15:39:10,493 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:39:12,857 INFO: Got real option chain data for BANKNIFTY with 100 strikes
+2025-09-05 15:39:12,862 INFO: expiry=2025-09-30 step=100 atm=54400 pcr=0.88
+2025-09-05 15:39:12,862 INFO: 21:09 IST | BANKNIFTY 54114.55 | VWAP(fut) 54381
+2025-09-05 15:39:12,862 INFO: D=0 | ATR_D=0 | VND=0.5 | SSD=0.5 | PD=0.1%
+2025-09-05 15:39:12,862 INFO: PCR 0.8838611771602402 (dz=0.0) | MaxPain 54600 | Drift 0.0/hr (norm 0.0)
+2025-09-05 15:39:12,862 INFO: ATM 54400 IV 10.329098409560569% (dIV_z=0.0) | Basis 266.8662739725987
+2025-09-05 15:39:12,862 INFO: Scenario: Pin and Decay (IV crush) 20% (alt: Short-Cover Reversion Up 13%)
+2025-09-05 15:39:12,862 INFO: Action: TRADE | BUY 54500 CE / 54600 CE
+2025-09-05 15:39:12,862 INFO: Enter when atleast 3 of below 6 are satisfied:
+2025-09-05 15:39:12,862 INFO: 1. Price above VWAP - [Y]
+2025-09-05 15:39:12,862 INFO: 2. ADX >= 18 (trend strength) - [N]
+2025-09-05 15:39:12,862 INFO: 3. OI flow supports up (PE write, CE unwind) - [N]
+2025-09-05 15:39:12,862 INFO: 4. PCR momentum up (dz >= 0.5) - [N]
+2025-09-05 15:39:12,862 INFO: 5. MACD(5m) cross up - [N]
+2025-09-05 15:39:12,862 INFO: 6. MaxPain drift up (norm >= thr) - [N]
+2025-09-05 15:39:12,862 INFO: Exit when atleast one or more satisfies:
+2025-09-05 15:39:12,862 INFO: 1. Close back below VWAP
+2025-09-05 15:39:12,862 INFO: 2. ADX weakening (<16)
+2025-09-05 15:39:12,862 INFO: 3. OI flips bearish (CE write, PE unwind)
+2025-09-05 15:39:12,862 INFO: 4. PCR momentum down (dz <= -0.5)
+2025-09-05 15:39:12,862 INFO: 5. MACD(5m) cross down
+2025-09-05 15:39:12,863 INFO: 6. MaxPain drift down (norm <= -thr)
+2025-09-05 15:39:12,863 INFO: Final Verdict: Hold
+2025-09-05 15:39:12,863 INFO: ALERT: IGNORE Max pain unreliable
+2025-09-05 15:39:12,863 INFO: Iteration 1 completed in 4.59s
+2025-09-05 15:39:12,863 INFO: Run-once mode, exiting

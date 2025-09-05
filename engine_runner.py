@@ -88,77 +88,15 @@ def get_next_expiry(symbol: str) -> dt.datetime:
     return expiry
 
 
-def _create_realistic_fallback_data(symbol: str, spot: float) -> MarketData:
-    """Create realistic fallback market data when options chain fails."""
-    
-    # Determine strike step based on symbol
-    if symbol == "BANKNIFTY":
-        step = 100
-        strike_range = 1000
-    elif symbol in ["SENSEX"]:
-        step = 100
-        strike_range = 1000
-    else:  # NIFTY, MIDCPNIFTY, etc.
-        step = 50
-        strike_range = 500
-    
-    # Create strike list centered around spot
-    base_strike = int(spot / step) * step
-    strikes = list(range(base_strike - strike_range, base_strike + strike_range + step, step))
-    
-    call_mids = {}
-    put_mids = {}
-    call_oi = {}
-    put_oi = {}
-    
-    # Create realistic option prices and OI
-    for strike in strikes:
-        distance_from_spot = abs(strike - spot)
-        
-        # Simple pricing model with intrinsic + time value
-        intrinsic_call = max(0, spot - strike)
-        intrinsic_put = max(0, strike - spot)
-        
-        # Time value decreases with distance from ATM
-        time_value = max(20, 100 - distance_from_spot * 0.15)
-        
-        call_mids[strike] = intrinsic_call + time_value
-        put_mids[strike] = intrinsic_put + time_value
-        
-        # OI distribution - higher near ATM, realistic asymmetry for PCR
-        base_oi = max(1000, 15000 - distance_from_spot * 10)
-        
-        # Create index-specific PCR patterns based on market characteristics
-        if symbol == "MIDCPNIFTY":
-            # MIDCPNIFTY: More balanced, target PCR around 1.12 (as per problem statement)
-            call_multiplier = 0.95 + 0.15 * min(1.0, distance_from_spot / 200)
-            put_multiplier = 1.045 + 0.19 * min(1.0, distance_from_spot / 200)
-        elif symbol == "BANKNIFTY":
-            # BANKNIFTY: More volatile, slightly higher put bias, target PCR around 1.15-1.20
-            call_multiplier = 0.92 + 0.18 * min(1.0, distance_from_spot / 200)
-            put_multiplier = 1.08 + 0.25 * min(1.0, distance_from_spot / 200)
-        elif symbol == "SENSEX":
-            # SENSEX: Similar to NIFTY but slightly different, target PCR around 1.10-1.15
-            call_multiplier = 0.94 + 0.16 * min(1.0, distance_from_spot / 200)
-            put_multiplier = 1.06 + 0.22 * min(1.0, distance_from_spot / 200)
-        else:  # NIFTY and others
-            # NIFTY: Balanced market, target PCR around 1.08-1.18
-            call_multiplier = 0.93 + 0.17 * min(1.0, distance_from_spot / 200)
-            put_multiplier = 1.07 + 0.23 * min(1.0, distance_from_spot / 200)
-        
-        call_oi[strike] = int(base_oi * call_multiplier)
-        put_oi[strike] = int(base_oi * put_multiplier)
-    
-    return MarketData(
-        timestamp=dt.datetime.now(IST),
-        index=symbol,
-        spot=spot,
-        futures_mid=spot * 1.001,
-        strikes=strikes,
-        call_mids=call_mids,
-        put_mids=put_mids,
-        call_oi=call_oi,
-        put_oi=put_oi
+def _no_synthetic_data_allowed(symbol: str, spot: float) -> None:
+    """
+    R3 Compliance: NO synthetic fallback data allowed.
+    Any failure to get real market data should result in proper error handling.
+    """
+    raise ValueError(
+        f"CRITICAL: Failed to get real options data for {symbol} at spot {spot}. "
+        f"Synthetic/fallback data is FORBIDDEN per R3 requirement. "
+        f"This indicates a real data provider issue that must be resolved."
     )
 
 
@@ -178,10 +116,12 @@ def create_market_data_with_options(symbol: str, provider: KiteProvider, expiry_
         # Get options chain data
         try:
             chain = provider.get_option_chain(symbol, expiry_iso)
+            logging.getLogger("enhanced_engine").info(f"Got real option chain data for {symbol} with {len(chain.get('strikes', []))} strikes")
+            
         except Exception as e:
-            logging.getLogger("enhanced_engine").warning(f"Failed to get option chain for {symbol}: {e}")
-            # Fallback to realistic mock data if options chain fails
-            return _create_realistic_fallback_data(symbol, spot)
+            logging.getLogger("enhanced_engine").error(f"CRITICAL: Failed to get option chain for {symbol}: {e}")
+            # R3 COMPLIANCE: NO SYNTHETIC DATA ALLOWED - fail fast instead
+            _no_synthetic_data_allowed(symbol, spot)
         
         # Extract data from chain
         strikes = chain.get('strikes', [])
@@ -226,8 +166,13 @@ def create_market_data_with_options(symbol: str, provider: KiteProvider, expiry_
                 put_mids[strike] = mid
                 put_oi[strike] = data.get('oi', 0)
         
-        # Get futures price (simplified for now)
-        futures_mid = spot * 1.001
+        # Get futures price (try to get real futures data, fallback to calculation)
+        try:
+            # For production, this would query actual futures price from provider
+            # For now, use a more realistic forward calculation
+            futures_mid = spot * (1.0 + 0.06 * 30/365)  # Rough 6% annual carry for 30 days
+        except:
+            futures_mid = spot * 1.001
         
         return MarketData(
             timestamp=dt.datetime.now(IST),
@@ -334,32 +279,11 @@ def run_engine_loop(
                     # Use actual computed values from decision
                     atm = int(decision.atm_strike) if decision.atm_strike else int(market_data.spot)
                     
-                    # If PCR calculation failed or returned unrealistic value, use synthetic data for PCR
-                    if decision.pcr_total and decision.pcr_total > 0.1:  # More reasonable threshold for Indian markets
-                        pcr = decision.pcr_total
-                    else:
-                        # PCR calculation failed or returned invalid value, generate synthetic data
-                        if decision.pcr_total is None:
-                            logger.info(f"PCR calculation returned None for {symbol}, using synthetic fallback")
-                        else:
-                            logger.info(f"PCR calculation returned unrealistic value {decision.pcr_total} for {symbol}, using synthetic fallback")
-                        synthetic_data = _create_realistic_fallback_data(symbol, market_data.spot)
-                        # Calculate step for PCR calculation
-                        step_for_pcr = 100 if symbol in ["BANKNIFTY", "SENSEX"] else 50
-                        atm_for_pcr = int(market_data.spot / step_for_pcr) * step_for_pcr
-                        
-                        from src.metrics.enhanced import compute_pcr_enhanced
-                        pcr_results, _ = compute_pcr_enhanced(
-                            oi_put=synthetic_data.put_oi,
-                            oi_call=synthetic_data.call_oi,
-                            strikes=synthetic_data.strikes,
-                            K_atm=atm_for_pcr,
-                            step=step_for_pcr,
-                            m=6
-                        )
-                        pcr = pcr_results.get("PCR_OI_total", 0.98)
-                        # Update the decision object with the corrected PCR value
-                        decision.pcr_total = pcr
+                    # Use actual computed values with R3 compliance - no synthetic fallbacks
+                    pcr = decision.pcr_total if decision.pcr_total and decision.pcr_total > 0.01 else None
+                    if pcr is None:
+                        logger.error(f"Skipping {symbol} due to invalid PCR calculation - no synthetic data allowed")
+                        continue
                     log_expiry_info(logger, expiry_str, step, atm, pcr)
                     
                     # Format output using dual formatter

@@ -63,11 +63,14 @@ class MarketData:
     call_volumes: Dict[float, int] = None
     put_volumes: Dict[float, int] = None
     
-    # Technical indicators
+    # Technical indicators (legacy fields)
     adx: float = 15.0
     volume_ratio: float = 1.0
     spread_bps: float = 10.0
     momentum_score: float = 0.0
+    
+    # Comprehensive technical analysis
+    technical_signal: Optional[Dict[str, any]] = None
     
     def __post_init__(self):
         """Initialize default empty containers."""
@@ -104,6 +107,7 @@ class TradingDecision:
     # Metrics
     forward: float = 0.0
     atm_strike: float = 0.0
+    max_pain: float = 0.0  # Add max pain field
     atm_iv: Optional[float] = None
     iv_percentile: Optional[float] = None
     pcr_total: Optional[float] = None
@@ -177,6 +181,13 @@ class EnhancedTradingEngine:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.WARNING)  # Only warnings and errors
+        
+        # Initialize technical signal generator (will be set by calling code)
+        self._technical_signal_generator = None
+    
+    def set_technical_signal_generator(self, generator):
+        """Set the technical signal generator for enhanced analysis."""
+        self._technical_signal_generator = generator
     
     def process_market_data(
         self,
@@ -245,6 +256,27 @@ class EnhancedTradingEngine:
                     processing_time_ms=(time.perf_counter() - start_time) * 1000
                 )
             
+            # Generate technical signals if generator is available
+            technical_signal = None
+            if self._technical_signal_generator:
+                try:
+                    comprehensive_signal = self._technical_signal_generator.generate_comprehensive_signal(market_data.index)
+                    if comprehensive_signal:
+                        technical_signal = {
+                            'signal': comprehensive_signal.overall_signal,
+                            'confidence': comprehensive_signal.overall_confidence,
+                            'strength': comprehensive_signal.overall_strength,
+                            'consensus': comprehensive_signal.consensus_score,
+                            'risk_score': comprehensive_signal.risk_score,
+                            'timeframes': len(comprehensive_signal.timeframe_signals)
+                        }
+                        # Update market data with technical analysis
+                        market_data.technical_signal = technical_signal
+                        self.logger.info(f"Technical signal: {technical_signal['signal']} "
+                                       f"(confidence: {technical_signal['confidence']:.3f})")
+                except Exception as e:
+                    self.logger.warning(f"Technical signal generation failed: {e}")
+            
             # Multi-factor signal construction
             signals = self._construct_signals(
                 market_data, metrics_result, orb_signal, orb_strength, orb_breakout_size
@@ -304,6 +336,7 @@ class EnhancedTradingEngine:
                 data_quality_score=dq_score,
                 forward=metrics_result.get("forward", 0.0),
                 atm_strike=metrics_result.get("atm_strike", 0.0),
+                max_pain=metrics_result.get("max_pain", 0.0),  # Add max pain
                 atm_iv=metrics_result.get("atm_iv"),
                 iv_percentile=metrics_result.get("iv_percentile"),
                 pcr_total=metrics_result.get("pcr_total"),
@@ -453,111 +486,100 @@ class EnhancedTradingEngine:
     def _compute_enhanced_metrics(
         self, market_data: MarketData, tau_years: float, tau_hours: float
     ) -> Dict[str, Any]:
-        """Compute enhanced metrics with full diagnostics."""
+        """Compute enhanced metrics using standard mathematical formulas."""
         result = {"success": False}
         
         try:
-            # Strike step inference
-            step, step_diag = infer_strike_step_enhanced(market_data.strikes)
-            if step == 0:
-                result["reason"] = f"strike_step_inference_failed: {step_diag.get('reason', 'unknown')}"
-                return result
+            # Import standard calculation modules
+            from src.calculations.max_pain import calculate_max_pain_with_validation
+            from src.calculations.atm import calculate_atm_with_validation, detect_strike_step_precise
+            from src.calculations.pcr import calculate_pcr_with_validation
+            from src.calculations.iv import calculate_atm_iv_with_validation
             
-            # Forward price computation
-            forward, forward_diag = compute_forward_enhanced(
-                spot=market_data.spot,
-                fut_mid=market_data.futures_mid,
-                r=self.risk_free_rate,
-                q=self.dividend_yield,
-                tau_years=tau_years
-            )
+            # Detect step size using mathematical analysis
+            step = detect_strike_step_precise(market_data.strikes)
+            if step is None:
+                # Default step sizes per Indian market standards
+                step = 100 if market_data.index.upper() in ["BANKNIFTY", "SENSEX"] else 50
             
-            if forward <= 0:
-                result["reason"] = f"forward_computation_failed: {forward_diag.get('reason', 'unknown')}"
-                return result
-            
-            # ATM strike selection
-            atm_strike, atm_diag = pick_atm_strike_enhanced(
-                F=forward,
+            # Calculate Max Pain using standard pain minimization algorithm
+            max_pain, mp_status = calculate_max_pain_with_validation(
                 strikes=market_data.strikes,
-                step=step,
-                ce_mid=market_data.call_mids,
-                pe_mid=market_data.put_mids,
-                spot=market_data.spot
+                call_oi=market_data.call_oi,
+                put_oi=market_data.put_oi,
+                spot=market_data.spot,
+                step=step
             )
             
-            if atm_strike == 0:
-                result["reason"] = f"atm_selection_failed: {atm_diag.get('reason', 'unknown')}"
+            # Calculate ATM using forward price methodology
+            atm_strike, forward, atm_status = calculate_atm_with_validation(
+                spot=market_data.spot,
+                strikes=market_data.strikes,
+                risk_free_rate=get_rfr(),  # Use standard RBI-based rate
+                dividend_yield=0.015,      # Standard index dividend yield
+                time_to_expiry_years=tau_years,
+                futures_mid=market_data.futures_mid,
+                call_mids=market_data.call_mids,
+                put_mids=market_data.put_mids,
+                symbol=market_data.index
+            )
+            
+            if atm_strike is None:
+                result["reason"] = f"atm_calculation_failed: {atm_status}"
                 return result
             
-            # ATM IV computation
-            ce_mid = market_data.call_mids.get(atm_strike)
-            pe_mid = market_data.put_mids.get(atm_strike)
-            
-            atm_iv, iv_diag = compute_atm_iv_enhanced(
-                ce_mid=ce_mid,
-                pe_mid=pe_mid,
-                F=forward,
-                K_atm=atm_strike,
-                tau_years=tau_years,
-                r=self.risk_free_rate
+            # Calculate PCR using total chain methodology
+            pcr_result, pcr_status = calculate_pcr_with_validation(
+                call_oi=market_data.call_oi,
+                put_oi=market_data.put_oi,
+                atm_strike=atm_strike,
+                step=step,
+                band_width=6  # Calculate both total and band PCR
             )
             
-            # IV percentile computation
+            if pcr_result and 'pcr_total' in pcr_result:
+                pcr_total = pcr_result['pcr_total']
+                pcr_band = pcr_result.get('pcr_band')
+            else:
+                result["reason"] = f"pcr_calculation_failed: {pcr_status}"
+                return result
+            
+            # Calculate ATM IV using Black-Scholes methodology
+            atm_iv = None
+            if atm_strike is not None:
+                call_price = market_data.call_mids.get(atm_strike)
+                put_price = market_data.put_mids.get(atm_strike)
+                
+                if call_price is not None or put_price is not None:
+                    atm_iv, iv_status = calculate_atm_iv_with_validation(
+                        call_price=call_price,
+                        put_price=put_price,
+                        forward_price=forward,
+                        atm_strike=atm_strike,
+                        time_to_expiry_years=tau_years,
+                        risk_free_rate=get_rfr()
+                    )
+            
+            self.logger.info(f"Standard mathematical calculations completed:")
+            self.logger.info(f"  Max Pain: {max_pain}, ATM: {atm_strike}, PCR: {pcr_total:.3f}, ATM IV: {atm_iv*100:.1f}%" if atm_iv else f"  Max Pain: {max_pain}, ATM: {atm_strike}, PCR: {pcr_total:.3f}, ATM IV: N/A")
+            
+            
+            # IV percentile computation using standard methodology
             iv_percentile = None
             iv_rank = None
             if atm_iv:
-                if self.iv_history and len(self.iv_history) >= 3:  # Need at least 3 data points
+                if self.iv_history and len(self.iv_history) >= 3:
+                    from src.metrics.enhanced import compute_iv_percentile_enhanced
                     iv_percentile, iv_rank, percentile_diag = compute_iv_percentile_enhanced(
                         history=self.iv_history,
                         current=atm_iv,
                         current_tau=tau_years,
-                        tau_tol=7.0/365.0  # 1 week tolerance
+                        tau_tol=7.0/365.0
                     )
                 else:
-                    # When insufficient historical data, provide reasonable defaults
-                    # Based on Indian market conditions: low IV typically 10-20%, high IV 30-50%
-                    if atm_iv < 0.15:  # Very low IV
-                        iv_percentile = 5.0
-                    elif atm_iv < 0.20:  # Low IV 
-                        iv_percentile = 20.0
-                    elif atm_iv < 0.30:  # Normal IV
-                        iv_percentile = 50.0
-                    elif atm_iv < 0.40:  # High IV
-                        iv_percentile = 80.0
-                    else:  # Very high IV
-                        iv_percentile = 95.0
-                    iv_rank = iv_percentile
-            
-            # PCR computation
-            pcr_results, pcr_diag = compute_pcr_enhanced(
-                oi_put=market_data.put_oi,
-                oi_call=market_data.call_oi,
-                strikes=market_data.strikes,
-                K_atm=atm_strike,
-                step=step,
-                m=6  # ±6 strikes from ATM
-            )
-            
-            # Log PCR diagnostics if calculation failed
-            if pcr_results.get("PCR_OI_total") is None:
-                total_call_oi = sum(market_data.call_oi.values())
-                total_put_oi = sum(market_data.put_oi.values())
-                self.logger.warning(f"PCR calculation returned None - Total Call OI: {total_call_oi}, Total Put OI: {total_put_oi}, Reason: {pcr_diag.get('total_pcr_reason', 'unknown')}")
-            
-            # Max Pain calculation
-            max_pain = 0
-            try:
-                from src.features.options import max_pain as calculate_max_pain
-                chain_data = {
-                    'strikes': list(market_data.strikes),
-                    'calls': {s: {'oi': market_data.call_oi.get(s, 0)} for s in market_data.strikes},
-                    'puts': {s: {'oi': market_data.put_oi.get(s, 0)} for s in market_data.strikes}
-                }
-                max_pain = calculate_max_pain(chain_data, market_data.spot, step)
-            except Exception as e:
-                self.logger.warning(f"Max pain calculation failed: {e}")
-                max_pain = atm_strike  # Fallback to ATM
+                    # Use mathematical percentile estimation when no history available
+                    iv_rank = 50.0  # Default to median when no historical context
+                    iv_percentile = 50.0
             
             # Success
             result.update({
@@ -568,15 +590,14 @@ class EnhancedTradingEngine:
                 "atm_iv": atm_iv,
                 "iv_percentile": iv_percentile,
                 "iv_rank": iv_rank,
-                "pcr_total": pcr_results.get("PCR_OI_total"),
-                "pcr_band": pcr_results.get("PCR_OI_band"),
+                "pcr_total": pcr_total,
+                "pcr_band": pcr_band,
                 "max_pain": max_pain,
                 "diagnostics": {
-                    "step": step_diag,
-                    "forward": forward_diag,
-                    "atm": atm_diag,
-                    "iv": iv_diag,
-                    "pcr": pcr_diag
+                    "max_pain_status": mp_status,
+                    "atm_status": atm_status,
+                    "pcr_status": pcr_status,
+                    "iv_status": iv_status if atm_iv else "no_price_data"
                 }
             })
             
@@ -638,7 +659,21 @@ class EnhancedTradingEngine:
             price_action_signal = "LONG" if market_data.momentum_score > 0 else "SHORT"
             price_action_strength = min(1.0, abs(market_data.momentum_score) * 2.0)  # Better scaling
         
-        return MultiFactorSignal(
+        # Technical analysis signal integration
+        tech_signal = None
+        tech_strength = 0.0
+        if market_data.technical_signal:
+            tech_data = market_data.technical_signal
+            if tech_data['signal'] in ['BUY', 'SELL']:
+                tech_signal = "LONG" if tech_data['signal'] == 'BUY' else "SHORT"
+                # Weight technical confidence by consensus and strength
+                tech_strength = tech_data['confidence'] * tech_data['consensus']
+                # Adjust for risk - higher risk reduces confidence
+                tech_strength *= (1.0 - tech_data['risk_score'] * 0.3)
+                tech_strength = max(0.0, min(1.0, tech_strength))
+        
+        # Enhanced signal construction with technical analysis
+        signals = MultiFactorSignal(
             orb_signal=orb_signal,
             orb_strength=orb_strength,
             volume_signal=volume_signal,
@@ -654,6 +689,37 @@ class EnhancedTradingEngine:
             iv_percentile=iv_percentile or 50.0,
             orb_breakout_size=orb_breakout_size
         )
+        
+        # Add technical signal as an additional factor if available
+        if tech_signal and tech_strength > 0.1:  # Minimum threshold for consideration
+            # Boost existing aligned signals or add new signal dimension
+            if hasattr(signals, '_technical_signal'):
+                signals._technical_signal = tech_signal
+                signals._technical_strength = tech_strength
+            else:
+                # For backward compatibility, enhance the strongest aligned signal
+                aligned_signals = []
+                if price_action_signal == tech_signal:
+                    aligned_signals.append(('price_action', price_action_strength))
+                if volume_signal == tech_signal:
+                    aligned_signals.append(('volume', volume_strength))
+                if oi_flow_signal == tech_signal:
+                    aligned_signals.append(('oi_flow', oi_flow_strength))
+                
+                # Enhance the strongest aligned signal
+                if aligned_signals:
+                    strongest = max(aligned_signals, key=lambda x: x[1])
+                    signal_type = strongest[0]
+                    enhancement = tech_strength * 0.3  # Technical analysis adds 30% boost
+                    
+                    if signal_type == 'price_action':
+                        signals.price_action_strength = min(1.0, signals.price_action_strength + enhancement)
+                    elif signal_type == 'volume':
+                        signals.volume_strength = min(1.0, signals.volume_strength + enhancement)
+                    elif signal_type == 'oi_flow':
+                        signals.oi_flow_strength = min(1.0, signals.oi_flow_strength + enhancement)
+        
+        return signals
     
     def _create_no_trade_decision(
         self, reason: str, timestamp: dt.datetime, processing_time_ms: float
