@@ -33,6 +33,12 @@ from .strategy.enhanced_gates import (
     detect_enhanced_regime,
     apply_enhanced_gates
 )
+from .strategy.scenario_classifier import (
+    classify_scenario,
+    ScenarioInputs,
+    get_top_scenario,
+    pretty_scenario_name
+)
 from .observability.enhanced_explain import emit_comprehensive_explain
 from .config import get_rfr
 
@@ -106,6 +112,16 @@ class TradingDecision:
     # Timing
     tau_hours: float = 0.0
     processing_time_ms: float = 0.0
+    
+    # Additional fields for compatibility
+    decision: Optional[str] = None  # Maps to action
+    scenario: Optional[str] = None
+    reason: Optional[str] = None
+    
+    def __post_init__(self):
+        """Ensure decision field matches action for backward compatibility."""
+        if self.decision is None:
+            self.decision = self.action
 
 
 class EnhancedTradingEngine:
@@ -151,6 +167,16 @@ class EnhancedTradingEngine:
         self.total_runs = 0
         self.successful_runs = 0
         self.error_count = 0
+        
+        # Setup basic logging
+        import logging
+        self.logger = logging.getLogger(f"EnhancedTradingEngine-{index}")
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            self.logger.setLevel(logging.WARNING)  # Only warnings and errors
     
     def process_market_data(
         self,
@@ -244,6 +270,24 @@ class EnhancedTradingEngine:
                 spike_classification="UNKNOWN"  # Could be enhanced with spike detection
             )
             
+            # Scenario classification
+            scenario_inputs = self._prepare_scenario_inputs(market_data, metrics_result, trend_score)
+            current_time = market_data.timestamp
+            hour = current_time.hour + current_time.minute / 60.0
+            
+            scenario_probs, block_gates, scenario_diag = classify_scenario(
+                inputs=scenario_inputs,
+                symbol=market_data.index,
+                hour=hour,
+                weights=None,  # Use dynamic weights
+                gate_cap=0.49,
+                mph_norm_thr=0.5,
+                inst_bias=0.0  # Could be parameterized
+            )
+            
+            top_scenario, top_prob = get_top_scenario(scenario_probs)
+            pretty_scenario = pretty_scenario_name(top_scenario)
+            
             # Final decision
             final_action = "NO_TRADE"
             if not gate_decision.muted and gate_decision.direction:
@@ -265,7 +309,9 @@ class EnhancedTradingEngine:
                 pcr_total=metrics_result.get("pcr_total"),
                 pcr_band=metrics_result.get("pcr_band"),
                 tau_hours=tau_hours,
-                processing_time_ms=(time.perf_counter() - start_time) * 1000
+                processing_time_ms=(time.perf_counter() - start_time) * 1000,
+                scenario=f"{pretty_scenario} {int(top_prob * 100)}%",
+                reason=gate_decision.primary_reason if gate_decision.muted else None
             )
             
             # Update IV history
@@ -322,6 +368,88 @@ class EnhancedTradingEngine:
         
         return flags
     
+    def _prepare_scenario_inputs(
+        self, 
+        market_data: MarketData, 
+        metrics_result: Dict[str, Any], 
+        trend_score: float
+    ) -> ScenarioInputs:
+        """Prepare inputs for scenario classification."""
+        
+        # Calculate required metrics for scenario classification
+        spot = market_data.spot
+        max_pain = metrics_result.get("max_pain", spot)  # Fallback to spot if not available
+        D = spot - max_pain
+        
+        # Estimate ATR_D (session range proxy) - this should be calculated from market data
+        # For now, use a simple estimate based on symbol
+        base_atr = 300 if "BANK" in market_data.index.upper() else 150
+        ATR_D = base_atr * (1 + abs(trend_score) * 0.5)  # Scale with trend
+        
+        VND = abs(D) / max(1.0, ATR_D)
+        
+        # Estimate other required values (in production these would come from market data)
+        SSD = trend_score * 0.1  # Rough proxy for session delta
+        PD = trend_score * 0.05   # Rough proxy for price delta
+        
+        # PCR metrics
+        pcr = metrics_result.get("pcr_total", 1.0)
+        dpcr = 0.0  # Delta PCR - would need historical tracking
+        dpcr_z = 0.0  # Delta PCR z-score - would need rolling calculation
+        
+        # Volatility metrics
+        atm_iv = metrics_result.get("atm_iv", 20.0) or 20.0
+        div = 0.0  # IV change - would need historical tracking
+        iv_z = 0.0  # IV z-score - would need rolling calculation
+        iv_percentile = metrics_result.get("iv_percentile", 50.0) or 50.0
+        
+        # Technical indicators
+        vwap = spot * 0.999  # Rough estimate - would need actual VWAP
+        
+        # OI flags - these would need more sophisticated analysis
+        oi_flags = {
+            "pe_write_above": pcr > 1.2,
+            "ce_unwind_below": pcr < 0.8,
+            "ce_write_above": pcr < 0.8,
+            "pe_unwind_below": pcr > 1.2,
+            "two_sided_adjacent": 0.9 < pcr < 1.1,
+        }
+        
+        # Max Pain dynamics
+        mph_norm = 0.0  # Would need historical max pain tracking
+        maxpain_drift_pts_per_hr = 0.0
+        
+        # Confirmations and techs
+        confirmations = {"price": 1, "flow": 1, "vol": 1}
+        techs = {"rsi": 50.0, "macd": 0.0}
+        
+        # Pin distance
+        pin_distance_points = abs(D)
+        
+        return ScenarioInputs(
+            spot=spot,
+            D=D,
+            ATR_D=ATR_D,
+            VND=VND,
+            SSD=SSD,
+            PD=PD,
+            pcr=pcr,
+            dpcr=dpcr,
+            dpcr_z=dpcr_z,
+            atm_iv=atm_iv,
+            div=div,
+            iv_z=iv_z,
+            iv_pct_hint=iv_percentile,
+            vwap=vwap,
+            adx5=market_data.adx,
+            oi_flags=oi_flags,
+            maxpain_drift_pts_per_hr=maxpain_drift_pts_per_hr,
+            mph_norm=mph_norm,
+            confirmations=confirmations,
+            techs=techs,
+            pin_distance_points=pin_distance_points
+        )
+
     def _compute_enhanced_metrics(
         self, market_data: MarketData, tau_years: float, tau_hours: float
     ) -> Dict[str, Any]:
@@ -417,6 +545,20 @@ class EnhancedTradingEngine:
                 total_put_oi = sum(market_data.put_oi.values())
                 self.logger.warning(f"PCR calculation returned None - Total Call OI: {total_call_oi}, Total Put OI: {total_put_oi}, Reason: {pcr_diag.get('total_pcr_reason', 'unknown')}")
             
+            # Max Pain calculation
+            max_pain = 0
+            try:
+                from src.features.options import max_pain as calculate_max_pain
+                chain_data = {
+                    'strikes': list(market_data.strikes),
+                    'calls': {s: {'oi': market_data.call_oi.get(s, 0)} for s in market_data.strikes},
+                    'puts': {s: {'oi': market_data.put_oi.get(s, 0)} for s in market_data.strikes}
+                }
+                max_pain = calculate_max_pain(chain_data, market_data.spot, step)
+            except Exception as e:
+                self.logger.warning(f"Max pain calculation failed: {e}")
+                max_pain = atm_strike  # Fallback to ATM
+            
             # Success
             result.update({
                 "success": True,
@@ -428,6 +570,7 @@ class EnhancedTradingEngine:
                 "iv_rank": iv_rank,
                 "pcr_total": pcr_results.get("PCR_OI_total"),
                 "pcr_band": pcr_results.get("PCR_OI_band"),
+                "max_pain": max_pain,
                 "diagnostics": {
                     "step": step_diag,
                     "forward": forward_diag,

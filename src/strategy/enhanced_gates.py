@@ -33,10 +33,16 @@ class EnhancedRegime:
     
     def is_tradeable(self) -> bool:
         """Check if regime supports active trading."""
-        # Made less restrictive - allow FAIR liquidity and LOW volatility in some cases
+        # Made much less restrictive to allow valid trades that were being blocked
         liquidity_ok = self.liquidity in ["EXCELLENT", "GOOD", "FAIR"]
-        volatility_ok = self.volatility != "LOW" or self.is_trending()  # Allow low vol if trending
-        return liquidity_ok and volatility_ok
+        
+        # Allow trading in most volatility conditions, only block when both 
+        # volatility is LOW AND liquidity is also poor
+        if self.volatility == "LOW" and self.liquidity == "POOR":
+            return False
+        
+        # Allow trading if liquidity is acceptable, regardless of volatility
+        return liquidity_ok
 
 
 @dataclass
