@@ -465,45 +465,58 @@ class EnhancedTradingEngine:
                 result["reason"] = f"strike_step_inference_failed: {step_diag.get('reason', 'unknown')}"
                 return result
             
-            # Forward price computation
-            forward, forward_diag = compute_forward_enhanced(
+            # Forward price computation using precise calculation
+            from src.calculations.atm import calculate_forward_price
+            forward = calculate_forward_price(
                 spot=market_data.spot,
-                fut_mid=market_data.futures_mid,
-                r=self.risk_free_rate,
-                q=self.dividend_yield,
-                tau_years=tau_years
+                risk_free_rate=self.risk_free_rate,
+                dividend_yield=self.dividend_yield,
+                time_to_expiry_years=tau_years,
+                futures_mid=market_data.futures_mid
             )
             
             if forward <= 0:
-                result["reason"] = f"forward_computation_failed: {forward_diag.get('reason', 'unknown')}"
+                result["reason"] = "forward_computation_failed"
                 return result
-            
-            # ATM strike selection
-            atm_strike, atm_diag = pick_atm_strike_enhanced(
-                F=forward,
+
+            # ATM strike selection using precise calculation
+            from src.calculations.atm import calculate_atm_with_validation
+            atm_result, forward_calc, status = calculate_atm_with_validation(
+                spot=market_data.spot,
                 strikes=market_data.strikes,
-                step=step,
-                ce_mid=market_data.call_mids,
-                pe_mid=market_data.put_mids,
-                spot=market_data.spot
+                risk_free_rate=self.risk_free_rate,
+                dividend_yield=self.dividend_yield,
+                time_to_expiry_years=tau_years,
+                futures_mid=market_data.futures_mid,
+                call_mids=market_data.call_mids,
+                put_mids=market_data.put_mids,
+                symbol=market_data.index
             )
             
-            if atm_strike == 0:
-                result["reason"] = f"atm_selection_failed: {atm_diag.get('reason', 'unknown')}"
+            if atm_result is None:
+                result["reason"] = f"atm_selection_failed: {status}"
                 return result
             
-            # ATM IV computation
+            atm_strike = atm_result
+            forward = forward_calc  # Use the forward from ATM calculation
+            
+            # ATM IV computation using precise calculation
             ce_mid = market_data.call_mids.get(atm_strike)
             pe_mid = market_data.put_mids.get(atm_strike)
             
-            atm_iv, iv_diag = compute_atm_iv_enhanced(
-                ce_mid=ce_mid,
-                pe_mid=pe_mid,
-                F=forward,
-                K_atm=atm_strike,
-                tau_years=tau_years,
-                r=self.risk_free_rate
+            from src.calculations.iv import calculate_atm_iv_with_validation
+            atm_iv, iv_status = calculate_atm_iv_with_validation(
+                call_price=ce_mid,
+                put_price=pe_mid,
+                forward_price=forward,
+                atm_strike=atm_strike,
+                time_to_expiry_years=tau_years,
+                risk_free_rate=self.risk_free_rate
             )
+            
+            if atm_iv is None:
+                self.logger.warning(f"ATM IV calculation failed: {iv_status}")
+                # R3 COMPLIANCE: Don't use synthetic IV, continue with None
             
             # IV percentile computation
             iv_percentile = None
@@ -531,49 +544,54 @@ class EnhancedTradingEngine:
                         iv_percentile = 95.0
                     iv_rank = iv_percentile
             
-            # PCR computation
-            pcr_results, pcr_diag = compute_pcr_enhanced(
-                oi_put=market_data.put_oi,
-                oi_call=market_data.call_oi,
-                strikes=market_data.strikes,
-                K_atm=atm_strike,
+            # PCR computation using precise calculation
+            from src.calculations.pcr import calculate_pcr_with_validation
+            pcr_result, pcr_status = calculate_pcr_with_validation(
+                call_oi=market_data.call_oi,
+                put_oi=market_data.put_oi,
+                atm_strike=atm_strike,
                 step=step,
-                m=6  # ±6 strikes from ATM
+                band_width=6  # ±6 strikes from ATM
             )
             
-            # Log PCR diagnostics if calculation failed
-            if pcr_results.get("PCR_OI_total") is None:
-                total_call_oi = sum(market_data.call_oi.values())
-                total_put_oi = sum(market_data.put_oi.values())
-                self.logger.warning(f"PCR calculation returned None - Total Call OI: {total_call_oi}, Total Put OI: {total_put_oi}, Reason: {pcr_diag.get('total_pcr_reason', 'unknown')}")
+            pcr_total = None
+            pcr_band = None
+            if pcr_result is not None:
+                pcr_total = pcr_result.get('pcr_total')
+                pcr_band = pcr_result.get('pcr_band')
+                self.logger.info(f"Precise PCR calculation - Total: {pcr_total:.3f}, Band: {pcr_band:.3f if pcr_band else 'N/A'}")
+            else:
+                self.logger.error(f"PCR calculation failed: {pcr_status}")
+                # R3 COMPLIANCE: NO synthetic PCR data
+                result["reason"] = f"pcr_calculation_failed: {pcr_status}"
+                return result
             
-            # Max Pain calculation - ensure this is independent from ATM
+            # Max Pain calculation using precise implementation
             max_pain = 0
             try:
-                from src.features.options import max_pain as calculate_max_pain
-                chain_data = {
-                    'strikes': list(market_data.strikes),
-                    'calls': {s: {'oi': market_data.call_oi.get(s, 0)} for s in market_data.strikes},
-                    'puts': {s: {'oi': market_data.put_oi.get(s, 0)} for s in market_data.strikes}
-                }
-                max_pain = calculate_max_pain(chain_data, market_data.spot, step)
-                self.logger.info(f"Max Pain calculation successful: {max_pain} (ATM: {atm_strike})")
+                from src.calculations.max_pain import calculate_max_pain_with_validation
                 
-                # Validate Max Pain calculation - it should never be identical to ATM unless by genuine coincidence
-                if max_pain == atm_strike:
-                    # Log this as it may indicate an issue with OI distribution
-                    self.logger.info(f"Max Pain ({max_pain}) equals ATM Strike ({atm_strike}) - verifying calculation")
+                max_pain_result, status = calculate_max_pain_with_validation(
+                    strikes=market_data.strikes,
+                    call_oi=market_data.call_oi,
+                    put_oi=market_data.put_oi,
+                    spot=market_data.spot,
+                    step=step
+                )
+                
+                if max_pain_result is not None:
+                    max_pain = max_pain_result
+                    self.logger.info(f"Precise Max Pain calculation: {max_pain} (ATM: {atm_strike}) - Status: {status}")
+                else:
+                    # R3 COMPLIANCE: NO fallback synthetic data - fail the calculation
+                    result["reason"] = f"max_pain_calculation_failed: {status}"
+                    return result
                     
             except Exception as e:
-                self.logger.warning(f"Max pain calculation failed: {e}")
-                # Instead of falling back to ATM, use a reasonable estimate based on spot
-                # This prevents identical values when calculation fails
-                max_pain = int(market_data.spot / step) * step
-                if max_pain < min(market_data.strikes):
-                    max_pain = min(market_data.strikes)
-                elif max_pain > max(market_data.strikes):
-                    max_pain = max(market_data.strikes)
-                self.logger.info(f"Max Pain fallback used: {max_pain}")
+                self.logger.error(f"Critical Max Pain calculation failure: {e}")
+                # R3 COMPLIANCE: NO synthetic fallback allowed
+                result["reason"] = f"max_pain_calculation_error: {str(e)}"
+                return result
             
             # Success
             result.update({
@@ -584,15 +602,15 @@ class EnhancedTradingEngine:
                 "atm_iv": atm_iv,
                 "iv_percentile": iv_percentile,
                 "iv_rank": iv_rank,
-                "pcr_total": pcr_results.get("PCR_OI_total"),
-                "pcr_band": pcr_results.get("PCR_OI_band"),
+                "pcr_total": pcr_total,
+                "pcr_band": pcr_band,
                 "max_pain": max_pain,
                 "diagnostics": {
                     "step": step_diag,
-                    "forward": forward_diag,
-                    "atm": atm_diag,
-                    "iv": iv_diag,
-                    "pcr": pcr_diag
+                    "atm_calculation": status,
+                    "iv_calculation": iv_status,
+                    "pcr_calculation": pcr_status,
+                    "max_pain_calculation": status
                 }
             })
             
