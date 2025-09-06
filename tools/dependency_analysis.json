@@ -1,0 +1,583 @@
+{
+  "static_graph": {
+    "engine_runner": [
+      "src.config",
+      "src.config.load_settings",
+      "src.engine_enhanced",
+      "src.engine_enhanced.EnhancedTradingEngine",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.provider.kite",
+      "src.provider.kite.KiteProvider",
+      "src.output.logging_formatter",
+      "src.output.logging_formatter.create_dual_logger",
+      "src.output.logging_formatter.DualOutputFormatter",
+      "src.output.logging_formatter.log_startup_message",
+      "src.output.logging_formatter.log_micro_penalty",
+      "src.output.logging_formatter.log_expiry_info",
+      "src.output.logging_formatter.log_alert",
+      "src.features.options",
+      "src.features.options.nearest_weekly_expiry"
+    ],
+    "tests.test_config": [
+      "src.config",
+      "src.config",
+      "src.config.compute_dynamic_bands",
+      "src.config.load_settings"
+    ],
+    "tests.test_expiry_rules": [
+      "src.features.options",
+      "src.features.options.nearest_weekly_expiry"
+    ],
+    "tests.test_enhanced_gates": [
+      "src.strategy.enhanced_gates",
+      "src.strategy.enhanced_gates.EnhancedRegime",
+      "src.strategy.enhanced_gates.MultiFactorSignal",
+      "src.strategy.enhanced_gates.EnhancedGateDecision",
+      "src.strategy.enhanced_gates.detect_enhanced_regime",
+      "src.strategy.enhanced_gates.apply_enhanced_gates",
+      "src.strategy.enhanced_gates.create_decision_table"
+    ],
+    "tests.test_core_metrics": [
+      "src.metrics.core",
+      "src.metrics.core.infer_strike_step",
+      "src.metrics.core.choose_expiry",
+      "src.metrics.core.compute_forward",
+      "src.metrics.core.pick_atm_strike",
+      "src.metrics.core.implied_vol",
+      "src.metrics.core.compute_atm_iv",
+      "src.metrics.core.compute_iv_stats",
+      "src.metrics.core.compute_pcr",
+      "src.metrics.core.apply_gates"
+    ],
+    "tests.test_expiry_rollover": [
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.compute_forward_enhanced",
+      "src.metrics.enhanced.pick_atm_strike_enhanced",
+      "src.metrics.enhanced.compute_atm_iv_enhanced",
+      "src.metrics.core",
+      "src.metrics.core.choose_expiry",
+      "src.strategy.enhanced_gates",
+      "src.strategy.enhanced_gates.apply_enhanced_gates",
+      "src.strategy.enhanced_gates.MultiFactorSignal",
+      "src.strategy.enhanced_gates.EnhancedRegime"
+    ],
+    "tests.test_engine_integration": [
+      "src.engine_enhanced",
+      "src.engine_enhanced.EnhancedTradingEngine",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.strategy.enhanced_gates",
+      "src.strategy.enhanced_gates.MultiFactorSignal"
+    ],
+    "tests.test_enhanced_metrics": [
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.infer_strike_step_enhanced",
+      "src.metrics.enhanced.compute_forward_enhanced",
+      "src.metrics.enhanced.pick_atm_strike_enhanced",
+      "src.metrics.enhanced.implied_vol_enhanced",
+      "src.metrics.enhanced.compute_atm_iv_enhanced",
+      "src.metrics.enhanced.compute_iv_percentile_enhanced",
+      "src.metrics.enhanced.compute_pcr_enhanced",
+      "src.metrics.enhanced.validate_inputs",
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.implied_vol_enhanced"
+    ],
+    "tests.test_options": [
+      "src.features.options",
+      "src.features.options.atm_strike",
+      "src.features.options.atm_iv_from_chain",
+      "src.features.options.max_pain",
+      "src.features.options.pcr_from_chain",
+      "src.config",
+      "src.config.get_rfr"
+    ],
+    "tests.test_metrics": [
+      "src.features.robust_metrics",
+      "src.features.robust_metrics.detect_strike_step",
+      "src.features.robust_metrics.pick_expiry",
+      "src.features.robust_metrics.compute_forward",
+      "src.features.robust_metrics.pick_atm_strike",
+      "src.features.robust_metrics.implied_vol_bs",
+      "src.features.robust_metrics.compute_atm_iv",
+      "src.features.robust_metrics.compute_iv_percentile",
+      "src.features.robust_metrics.compute_pcr"
+    ],
+    "src.engine_enhanced": [
+      "src.metrics.enhanced",
+      "src.strategy.enhanced_gates",
+      "src.strategy.scenario_classifier",
+      "src.observability.enhanced_explain",
+      "src.config",
+      "src.calculations.max_pain",
+      "src.calculations.max_pain.calculate_max_pain_with_validation",
+      "src.calculations.atm",
+      "src.calculations.atm.calculate_atm_with_validation",
+      "src.calculations.atm.detect_strike_step_precise",
+      "src.calculations.pcr",
+      "src.calculations.pcr.calculate_pcr_with_validation",
+      "src.calculations.iv",
+      "src.calculations.iv.calculate_atm_iv_with_validation",
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.compute_iv_percentile_enhanced"
+    ],
+    "src.output.logging_formatter": [
+      "src.engine_enhanced",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.output.format",
+      "src.output.format.format_output_line"
+    ],
+    "src.strategy.enhanced_gates": [
+      "src.strategy.metrics.core"
+    ],
+    "src.features.robust_metrics": [
+      "src.metrics.core",
+      "src.metrics.core.infer_strike_step",
+      "src.metrics.core.choose_expiry",
+      "src.metrics.core.compute_forward",
+      "src.metrics.core.pick_atm_strike",
+      "src.metrics.core.implied_vol",
+      "src.metrics.core.compute_atm_iv",
+      "src.metrics.core.compute_iv_stats",
+      "src.metrics.core.compute_pcr"
+    ],
+    "src.features": [
+      "src.options",
+      "src.robust_metrics"
+    ],
+    "src.features.options": [
+      "src.config",
+      "src.config.STEP_MAP",
+      "src.config.get_rfr",
+      "src.features.robust_metrics"
+    ],
+    "src.provider.kite": [
+      "src.provider.option_chain_builder"
+    ],
+    "src.cli.orchestrate": [
+      "src.stream.aggregate",
+      "src.stream.aggregate.aggregate_day"
+    ],
+    "src.observability.enhanced_explain": [
+      "src.observability.strategy.enhanced_gates"
+    ]
+  },
+  "dynamic_graph": {},
+  "plugin_graph": {
+    "tools.legacy_code_identifier": [
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "src",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "src",
+      "tools"
+    ],
+    "tools.dependency_audit": [
+      "src",
+      "tools",
+      "tools"
+    ],
+    "tools.entry_point_detector": [
+      "tools"
+    ],
+    "tools.dependency_graph_builder": [
+      "tools",
+      "tools",
+      "tools",
+      "src",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "tools",
+      "src",
+      "tools",
+      "tools",
+      "tools",
+      "tools"
+    ]
+  },
+  "runtime_graph": {
+    "runtime_execution": [
+      "engine_runner"
+    ]
+  },
+  "combined_graph": {
+    "engine_runner": [
+      "src.config",
+      "src.config.load_settings",
+      "src.engine_enhanced",
+      "src.engine_enhanced.EnhancedTradingEngine",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.features.options",
+      "src.features.options.nearest_weekly_expiry",
+      "src.output.logging_formatter",
+      "src.output.logging_formatter.DualOutputFormatter",
+      "src.output.logging_formatter.create_dual_logger",
+      "src.output.logging_formatter.log_alert",
+      "src.output.logging_formatter.log_expiry_info",
+      "src.output.logging_formatter.log_micro_penalty",
+      "src.output.logging_formatter.log_startup_message",
+      "src.provider.kite",
+      "src.provider.kite.KiteProvider"
+    ],
+    "tests.test_config": [
+      "src.config",
+      "src.config.compute_dynamic_bands",
+      "src.config.load_settings"
+    ],
+    "tests.test_expiry_rules": [
+      "src.features.options",
+      "src.features.options.nearest_weekly_expiry"
+    ],
+    "tests.test_enhanced_gates": [
+      "src.strategy.enhanced_gates",
+      "src.strategy.enhanced_gates.EnhancedGateDecision",
+      "src.strategy.enhanced_gates.EnhancedRegime",
+      "src.strategy.enhanced_gates.MultiFactorSignal",
+      "src.strategy.enhanced_gates.apply_enhanced_gates",
+      "src.strategy.enhanced_gates.create_decision_table",
+      "src.strategy.enhanced_gates.detect_enhanced_regime"
+    ],
+    "tests.test_core_metrics": [
+      "src.metrics.core",
+      "src.metrics.core.apply_gates",
+      "src.metrics.core.choose_expiry",
+      "src.metrics.core.compute_atm_iv",
+      "src.metrics.core.compute_forward",
+      "src.metrics.core.compute_iv_stats",
+      "src.metrics.core.compute_pcr",
+      "src.metrics.core.implied_vol",
+      "src.metrics.core.infer_strike_step",
+      "src.metrics.core.pick_atm_strike"
+    ],
+    "tests.test_expiry_rollover": [
+      "src.metrics.core",
+      "src.metrics.core.choose_expiry",
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.compute_atm_iv_enhanced",
+      "src.metrics.enhanced.compute_forward_enhanced",
+      "src.metrics.enhanced.pick_atm_strike_enhanced",
+      "src.strategy.enhanced_gates",
+      "src.strategy.enhanced_gates.EnhancedRegime",
+      "src.strategy.enhanced_gates.MultiFactorSignal",
+      "src.strategy.enhanced_gates.apply_enhanced_gates"
+    ],
+    "tests.test_engine_integration": [
+      "src.engine_enhanced",
+      "src.engine_enhanced.EnhancedTradingEngine",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.strategy.enhanced_gates",
+      "src.strategy.enhanced_gates.MultiFactorSignal"
+    ],
+    "tests.test_enhanced_metrics": [
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.compute_atm_iv_enhanced",
+      "src.metrics.enhanced.compute_forward_enhanced",
+      "src.metrics.enhanced.compute_iv_percentile_enhanced",
+      "src.metrics.enhanced.compute_pcr_enhanced",
+      "src.metrics.enhanced.implied_vol_enhanced",
+      "src.metrics.enhanced.infer_strike_step_enhanced",
+      "src.metrics.enhanced.pick_atm_strike_enhanced",
+      "src.metrics.enhanced.validate_inputs"
+    ],
+    "tests.test_options": [
+      "src.config",
+      "src.config.get_rfr",
+      "src.features.options",
+      "src.features.options.atm_iv_from_chain",
+      "src.features.options.atm_strike",
+      "src.features.options.max_pain",
+      "src.features.options.pcr_from_chain"
+    ],
+    "tests.test_metrics": [
+      "src.features.robust_metrics",
+      "src.features.robust_metrics.compute_atm_iv",
+      "src.features.robust_metrics.compute_forward",
+      "src.features.robust_metrics.compute_iv_percentile",
+      "src.features.robust_metrics.compute_pcr",
+      "src.features.robust_metrics.detect_strike_step",
+      "src.features.robust_metrics.implied_vol_bs",
+      "src.features.robust_metrics.pick_atm_strike",
+      "src.features.robust_metrics.pick_expiry"
+    ],
+    "src.engine_enhanced": [
+      "src.calculations.atm",
+      "src.calculations.atm.calculate_atm_with_validation",
+      "src.calculations.atm.detect_strike_step_precise",
+      "src.calculations.iv",
+      "src.calculations.iv.calculate_atm_iv_with_validation",
+      "src.calculations.max_pain",
+      "src.calculations.max_pain.calculate_max_pain_with_validation",
+      "src.calculations.pcr",
+      "src.calculations.pcr.calculate_pcr_with_validation",
+      "src.config",
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.compute_iv_percentile_enhanced",
+      "src.observability.enhanced_explain",
+      "src.strategy.enhanced_gates",
+      "src.strategy.scenario_classifier"
+    ],
+    "src.output.logging_formatter": [
+      "src.engine_enhanced",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.output.format",
+      "src.output.format.format_output_line"
+    ],
+    "src.strategy.enhanced_gates": [
+      "src.strategy.metrics.core"
+    ],
+    "src.features.robust_metrics": [
+      "src.metrics.core",
+      "src.metrics.core.choose_expiry",
+      "src.metrics.core.compute_atm_iv",
+      "src.metrics.core.compute_forward",
+      "src.metrics.core.compute_iv_stats",
+      "src.metrics.core.compute_pcr",
+      "src.metrics.core.implied_vol",
+      "src.metrics.core.infer_strike_step",
+      "src.metrics.core.pick_atm_strike"
+    ],
+    "src.features": [
+      "src.options",
+      "src.robust_metrics"
+    ],
+    "src.features.options": [
+      "src.config",
+      "src.config.STEP_MAP",
+      "src.config.get_rfr",
+      "src.features.robust_metrics"
+    ],
+    "src.provider.kite": [
+      "src.provider.option_chain_builder"
+    ],
+    "src.cli.orchestrate": [
+      "src.stream.aggregate",
+      "src.stream.aggregate.aggregate_day"
+    ],
+    "src.observability.enhanced_explain": [
+      "src.observability.strategy.enhanced_gates"
+    ],
+    "tools.legacy_code_identifier": [
+      "src",
+      "tools"
+    ],
+    "tools.dependency_audit": [
+      "src",
+      "tools"
+    ],
+    "tools.entry_point_detector": [
+      "tools"
+    ],
+    "tools.dependency_graph_builder": [
+      "src",
+      "tools"
+    ],
+    "runtime_execution": [
+      "engine_runner"
+    ]
+  },
+  "outputs": {
+    "dot_file": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tools/dependency_graph.dot",
+    "png_file": null,
+    "json_file": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tools/dependency_graph.json"
+  },
+  "statistics": {
+    "total_modules": 98,
+    "total_dependencies": 128,
+    "root_modules": [
+      "runtime_execution",
+      "src.cli.orchestrate",
+      "src.features",
+      "tests.test_config",
+      "tests.test_core_metrics",
+      "tests.test_engine_integration",
+      "tests.test_enhanced_gates",
+      "tests.test_enhanced_metrics",
+      "tests.test_expiry_rollover",
+      "tests.test_expiry_rules",
+      "tests.test_metrics",
+      "tests.test_options",
+      "tools.dependency_audit",
+      "tools.dependency_graph_builder",
+      "tools.entry_point_detector",
+      "tools.legacy_code_identifier"
+    ],
+    "leaf_modules": [
+      "src",
+      "src.calculations.atm",
+      "src.calculations.atm.calculate_atm_with_validation",
+      "src.calculations.atm.detect_strike_step_precise",
+      "src.calculations.iv",
+      "src.calculations.iv.calculate_atm_iv_with_validation",
+      "src.calculations.max_pain",
+      "src.calculations.max_pain.calculate_max_pain_with_validation",
+      "src.calculations.pcr",
+      "src.calculations.pcr.calculate_pcr_with_validation",
+      "src.config",
+      "src.config.STEP_MAP",
+      "src.config.compute_dynamic_bands",
+      "src.config.get_rfr",
+      "src.config.load_settings",
+      "src.engine_enhanced.EnhancedTradingEngine",
+      "src.engine_enhanced.MarketData",
+      "src.engine_enhanced.TradingDecision",
+      "src.features.options.atm_iv_from_chain",
+      "src.features.options.atm_strike",
+      "src.features.options.max_pain",
+      "src.features.options.nearest_weekly_expiry",
+      "src.features.options.pcr_from_chain",
+      "src.features.robust_metrics.compute_atm_iv",
+      "src.features.robust_metrics.compute_forward",
+      "src.features.robust_metrics.compute_iv_percentile",
+      "src.features.robust_metrics.compute_pcr",
+      "src.features.robust_metrics.detect_strike_step",
+      "src.features.robust_metrics.implied_vol_bs",
+      "src.features.robust_metrics.pick_atm_strike",
+      "src.features.robust_metrics.pick_expiry",
+      "src.metrics.core",
+      "src.metrics.core.apply_gates",
+      "src.metrics.core.choose_expiry",
+      "src.metrics.core.compute_atm_iv",
+      "src.metrics.core.compute_forward",
+      "src.metrics.core.compute_iv_stats",
+      "src.metrics.core.compute_pcr",
+      "src.metrics.core.implied_vol",
+      "src.metrics.core.infer_strike_step",
+      "src.metrics.core.pick_atm_strike",
+      "src.metrics.enhanced",
+      "src.metrics.enhanced.compute_atm_iv_enhanced",
+      "src.metrics.enhanced.compute_forward_enhanced",
+      "src.metrics.enhanced.compute_iv_percentile_enhanced",
+      "src.metrics.enhanced.compute_pcr_enhanced",
+      "src.metrics.enhanced.implied_vol_enhanced",
+      "src.metrics.enhanced.infer_strike_step_enhanced",
+      "src.metrics.enhanced.pick_atm_strike_enhanced",
+      "src.metrics.enhanced.validate_inputs",
+      "src.observability.strategy.enhanced_gates",
+      "src.options",
+      "src.output.format",
+      "src.output.format.format_output_line",
+      "src.output.logging_formatter.DualOutputFormatter",
+      "src.output.logging_formatter.create_dual_logger",
+      "src.output.logging_formatter.log_alert",
+      "src.output.logging_formatter.log_expiry_info",
+      "src.output.logging_formatter.log_micro_penalty",
+      "src.output.logging_formatter.log_startup_message",
+      "src.provider.kite.KiteProvider",
+      "src.provider.option_chain_builder",
+      "src.robust_metrics",
+      "src.strategy.enhanced_gates.EnhancedGateDecision",
+      "src.strategy.enhanced_gates.EnhancedRegime",
+      "src.strategy.enhanced_gates.MultiFactorSignal",
+      "src.strategy.enhanced_gates.apply_enhanced_gates",
+      "src.strategy.enhanced_gates.create_decision_table",
+      "src.strategy.enhanced_gates.detect_enhanced_regime",
+      "src.strategy.metrics.core",
+      "src.strategy.scenario_classifier",
+      "src.stream.aggregate",
+      "src.stream.aggregate.aggregate_day",
+      "tools"
+    ],
+    "most_dependent": [
+      [
+        "src.config",
+        5
+      ],
+      [
+        "src.strategy.enhanced_gates",
+        4
+      ],
+      [
+        "tools",
+        4
+      ],
+      [
+        "src.engine_enhanced",
+        3
+      ],
+      [
+        "src.engine_enhanced.MarketData",
+        3
+      ],
+      [
+        "src.engine_enhanced.TradingDecision",
+        3
+      ],
+      [
+        "src.features.options",
+        3
+      ],
+      [
+        "src.strategy.enhanced_gates.MultiFactorSignal",
+        3
+      ],
+      [
+        "src.metrics.core",
+        3
+      ],
+      [
+        "src.metrics.core.choose_expiry",
+        3
+      ]
+    ],
+    "most_dependencies": [
+      [
+        "engine_runner",
+        17
+      ],
+      [
+        "src.engine_enhanced",
+        15
+      ],
+      [
+        "tests.test_core_metrics",
+        10
+      ],
+      [
+        "tests.test_expiry_rollover",
+        10
+      ],
+      [
+        "tests.test_enhanced_metrics",
+        9
+      ],
+      [
+        "tests.test_metrics",
+        9
+      ],
+      [
+        "src.features.robust_metrics",
+        9
+      ],
+      [
+        "tests.test_enhanced_gates",
+        7
+      ],
+      [
+        "tests.test_options",
+        7
+      ],
+      [
+        "tests.test_engine_integration",
+        6
+      ]
+    ],
+    "cycles_detected": 0,
+    "cycles": []
+  }
+}

@@ -1,0 +1,940 @@
+{
+  "python_main_scripts": [
+    {
+      "file": "engine_runner.py",
+      "size_lines": 445,
+      "imports": [
+        "__future__",
+        "argparse",
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "sys",
+        "time",
+        "typing",
+        "pytz",
+        "src.config",
+        "src.engine_enhanced",
+        "src.provider.kite",
+        "src.output.logging_formatter",
+        "src.features.options"
+      ],
+      "functions": [
+        "setup_logging",
+        "is_market_open",
+        "get_next_expiry",
+        "_no_synthetic_data_allowed",
+        "create_market_data_with_options",
+        "run_engine_loop",
+        "main"
+      ],
+      "has_argparse": true,
+      "has_click": false,
+      "enhanced_engine_refs": 17,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "tools/legacy_code_identifier.py",
+      "size_lines": 612,
+      "imports": [
+        "__future__",
+        "ast",
+        "json",
+        "pathlib",
+        "subprocess",
+        "sys",
+        "re",
+        "os",
+        "typing",
+        "collections"
+      ],
+      "functions": [
+        "main",
+        "__init__",
+        "identify_legacy_candidates",
+        "_load_entry_points",
+        "_load_dependency_graph",
+        "_identify_enhanced_entry_points",
+        "_calculate_reachability",
+        "_analyze_static_references",
+        "_analyze_runtime_usage",
+        "_analyze_test_coverage",
+        "_build_evidence_table",
+        "_build_allowlist",
+        "_generate_candidates",
+        "_get_all_modules",
+        "_file_to_module",
+        "_module_to_file",
+        "_module_to_file_path",
+        "_is_local_module",
+        "_extract_imports_with_targets",
+        "_generate_statistics"
+      ],
+      "has_argparse": false,
+      "has_click": false,
+      "enhanced_engine_refs": 9,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "tools/safety_checker.py",
+      "size_lines": 753,
+      "imports": [
+        "__future__",
+        "json",
+        "pathlib",
+        "re",
+        "subprocess",
+        "sys",
+        "yaml",
+        "os",
+        "shutil",
+        "tempfile",
+        "typing",
+        "collections"
+      ],
+      "functions": [
+        "generate_removal_simulation_report",
+        "main",
+        "__init__",
+        "run_safety_checks",
+        "_load_legacy_candidates",
+        "_check_external_references",
+        "_check_ci_workflows",
+        "_check_packaging_entry_points",
+        "_check_documentation",
+        "_check_ui_api_references",
+        "_run_removal_simulation",
+        "_check_import_breaks",
+        "_run_test_simulation",
+        "_generate_quick_fixes",
+        "_check_workflow_file",
+        "_check_packaging_file",
+        "_should_skip_file",
+        "_extract_context",
+        "_generate_safety_summary"
+      ],
+      "has_argparse": false,
+      "has_click": false,
+      "enhanced_engine_refs": 10,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "tools/runtime_import_logger.py",
+      "size_lines": 352,
+      "imports": [
+        "__future__",
+        "argparse",
+        "importlib.util",
+        "json",
+        "os",
+        "pathlib",
+        "subprocess",
+        "sys",
+        "time",
+        "typing",
+        "dataclasses",
+        "threading"
+      ],
+      "functions": [
+        "run_with_import_logging",
+        "main",
+        "__init__",
+        "is_internal_module",
+        "get_caller_info",
+        "import_hook",
+        "_get_stack_frames",
+        "is_internal_frame",
+        "install_hook",
+        "remove_hook",
+        "get_loaded_modules",
+        "export_to_json",
+        "generate_report"
+      ],
+      "has_argparse": true,
+      "has_click": false,
+      "enhanced_engine_refs": 15,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "tools/dependency_audit.py",
+      "size_lines": 482,
+      "imports": [
+        "__future__",
+        "ast",
+        "argparse",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "sys",
+        "typing",
+        "dataclasses",
+        "collections",
+        "graphviz"
+      ],
+      "functions": [
+        "main",
+        "__init__",
+        "scan_python_files",
+        "extract_imports_from_file",
+        "resolve_module_name",
+        "build_dependency_graph",
+        "_resolve_relative_import",
+        "_is_internal_module",
+        "detect_entry_points",
+        "find_reachable_modules",
+        "find_dead_modules",
+        "export_dot",
+        "export_json",
+        "generate_report"
+      ],
+      "has_argparse": true,
+      "has_click": false,
+      "enhanced_engine_refs": 1,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "tools/entry_point_detector.py",
+      "size_lines": 654,
+      "imports": [
+        "__future__",
+        "ast",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "yaml",
+        "typing",
+        "subprocess",
+        "tomllib",
+        "configparser",
+        "tomli"
+      ],
+      "functions": [
+        "main",
+        "__init__",
+        "detect_all_entry_points",
+        "_detect_python_main_scripts",
+        "_detect_cli_entry_points",
+        "_detect_service_scripts",
+        "_detect_notebook_entry_points",
+        "_detect_ci_workflows",
+        "_detect_package_entry_points",
+        "_detect_feature_flags",
+        "_detect_import_based_entries",
+        "_extract_imports",
+        "_extract_functions",
+        "_count_enhanced_refs",
+        "_count_legacy_refs",
+        "_parse_github_workflow",
+        "_parse_gitlab_ci",
+        "_parse_jenkinsfile",
+        "_parse_setup_py",
+        "_parse_pyproject_toml",
+        "_parse_setup_cfg",
+        "_generate_summary"
+      ],
+      "has_argparse": true,
+      "has_click": true,
+      "enhanced_engine_refs": 45,
+      "legacy_engine_refs": 19
+    },
+    {
+      "file": "tools/find_config_refs.py",
+      "size_lines": 413,
+      "imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "pathlib",
+        "re",
+        "sys",
+        "typing",
+        "dataclasses",
+        "yaml",
+        "configparser",
+        "tomllib",
+        "tomli"
+      ],
+      "functions": [
+        "extract_module_names_from_file",
+        "main",
+        "__init__",
+        "scan_file_for_references",
+        "_line_contains_module_reference",
+        "_determine_reference_type",
+        "_get_context",
+        "find_config_files",
+        "scan_for_module_references",
+        "scan_entry_points",
+        "generate_report",
+        "export_report"
+      ],
+      "has_argparse": true,
+      "has_click": false,
+      "enhanced_engine_refs": 0,
+      "legacy_engine_refs": 2
+    },
+    {
+      "file": "tools/dependency_graph_builder.py",
+      "size_lines": 556,
+      "imports": [
+        "__future__",
+        "ast",
+        "json",
+        "pathlib",
+        "importlib.util",
+        "subprocess",
+        "sys",
+        "os",
+        "re",
+        "typing",
+        "collections"
+      ],
+      "functions": [
+        "main",
+        "__init__",
+        "build_complete_graph",
+        "_build_static_graph",
+        "_extract_all_imports",
+        "_detect_dynamic_imports",
+        "_detect_plugin_registries",
+        "_run_runtime_analysis",
+        "_is_local_module",
+        "_combine_graphs",
+        "_generate_outputs",
+        "_generate_dot",
+        "_generate_statistics",
+        "_detect_cycles",
+        "dfs"
+      ],
+      "has_argparse": false,
+      "has_click": false,
+      "enhanced_engine_refs": 18,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "src/cli/orchestrate.py",
+      "size_lines": 289,
+      "imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "os",
+        "signal",
+        "subprocess",
+        "sys",
+        "threading",
+        "time",
+        "datetime",
+        "pathlib",
+        "typing",
+        "src.stream.aggregate",
+        "pytz"
+      ],
+      "functions": [
+        "load_settings",
+        "choose",
+        "main",
+        "__init__",
+        "start_stream",
+        "start_aggregator",
+        "start_engine",
+        "_parse_hhmm",
+        "_seconds_until_ist",
+        "start_eod_trainer",
+        "stop",
+        "run",
+        "loop",
+        "loop",
+        "handle_sig"
+      ],
+      "has_argparse": true,
+      "has_click": false,
+      "enhanced_engine_refs": 0,
+      "legacy_engine_refs": 0
+    }
+  ],
+  "cli_entry_points": [
+    {
+      "file": "tools/entry_point_detector.py",
+      "cli_score": 34,
+      "matched_patterns": [
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 45,
+      "legacy_engine_refs": 19,
+      "is_executable": false
+    },
+    {
+      "file": "src/provider/option_chain_builder.py",
+      "cli_score": 10,
+      "matched_patterns": [
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 0,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    },
+    {
+      "file": "tools/dependency_audit.py",
+      "cli_score": 7,
+      "matched_patterns": [
+        "argparse\\.ArgumentParser",
+        "parser\\.add_argument",
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 1,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    },
+    {
+      "file": "tools/find_config_refs.py",
+      "cli_score": 7,
+      "matched_patterns": [
+        "argparse\\.ArgumentParser",
+        "parser\\.add_argument",
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 0,
+      "legacy_engine_refs": 2,
+      "is_executable": false
+    },
+    {
+      "file": "tools/legacy_code_identifier.py",
+      "cli_score": 5,
+      "matched_patterns": [
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 9,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    },
+    {
+      "file": "tools/runtime_import_logger.py",
+      "cli_score": 5,
+      "matched_patterns": [
+        "argparse\\.ArgumentParser",
+        "parser\\.add_argument",
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 15,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    },
+    {
+      "file": "engine_runner.py",
+      "cli_score": 4,
+      "matched_patterns": [
+        "argparse\\.ArgumentParser",
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 17,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    },
+    {
+      "file": "src/cli/orchestrate.py",
+      "cli_score": 3,
+      "matched_patterns": [
+        "argparse\\.ArgumentParser",
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 0,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    },
+    {
+      "file": "tools/dependency_graph_builder.py",
+      "cli_score": 2,
+      "matched_patterns": [
+        "CLI|Command Line|commander"
+      ],
+      "enhanced_engine_refs": 18,
+      "legacy_engine_refs": 0,
+      "is_executable": false
+    }
+  ],
+  "service_scripts": [
+    {
+      "file": "tools/entry_point_detector.py",
+      "service_score": 36,
+      "matched_patterns": [
+        "daemon|service|worker|server",
+        "multiprocessing"
+      ],
+      "enhanced_engine_refs": 45,
+      "legacy_engine_refs": 19
+    },
+    {
+      "file": "src/cli/orchestrate.py",
+      "service_score": 14,
+      "matched_patterns": [
+        "daemon|service|worker|server",
+        "subprocess\\.Popen",
+        "threading\\.Thread",
+        "signal\\.signal",
+        "time\\.sleep"
+      ],
+      "enhanced_engine_refs": 0,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "tools/legacy_code_identifier.py",
+      "service_score": 5,
+      "matched_patterns": [
+        "daemon|service|worker|server"
+      ],
+      "enhanced_engine_refs": 9,
+      "legacy_engine_refs": 0
+    },
+    {
+      "file": "engine_runner.py",
+      "service_score": 4,
+      "matched_patterns": [
+        "while\\s+True:",
+        "time\\.sleep"
+      ],
+      "enhanced_engine_refs": 17,
+      "legacy_engine_refs": 0
+    }
+  ],
+  "notebook_entry_points": [],
+  "ci_workflows": [],
+  "package_entry_points": [],
+  "feature_flags": {
+    "config_files": [
+      {
+        "file": "dashboard/package-lock.json",
+        "toggles": [
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version",
+          "version"
+        ]
+      },
+      {
+        "file": "dashboard/package.json",
+        "toggles": [
+          "version"
+        ]
+      }
+    ],
+    "environment_variables": [
+      {
+        "file": "src/provider/kite.py",
+        "env_vars": [
+          "KITE_API_KEY",
+          "KITE_API_KEY"
+        ]
+      }
+    ],
+    "feature_toggles": []
+  },
+  "import_based_entries": {
+    "enhanced_engine_importers": [
+      {
+        "file": "engine_runner.py",
+        "imports": [
+          "engine_enhanced",
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "tests/test_engine_integration.py",
+        "imports": [
+          "engine_enhanced",
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "tools/safety_checker.py",
+        "imports": [
+          "engine_enhanced",
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "tools/runtime_import_logger.py",
+        "imports": [
+          "engine_enhanced",
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "tools/entry_point_detector.py",
+        "imports": [
+          "engine_enhanced",
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "tools/dependency_graph_builder.py",
+        "imports": [
+          "engine_enhanced",
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "src/engine_enhanced.py",
+        "imports": [
+          "EnhancedTradingEngine"
+        ]
+      },
+      {
+        "file": "src/output/logging_formatter.py",
+        "imports": [
+          "engine_enhanced"
+        ]
+      }
+    ],
+    "legacy_engine_importers": [
+      {
+        "file": "tools/runtime_import_logger.py",
+        "imports": [
+          "engine"
+        ]
+      },
+      {
+        "file": "tools/dependency_graph_builder.py",
+        "imports": [
+          "engine"
+        ]
+      }
+    ],
+    "engine_factories": [
+      {
+        "file": "engine_runner.py",
+        "patterns": [
+          "create_dual_logger(\"enhanced_engine",
+          "getLogger(\"enhanced_engine",
+          "getLogger(\"enhanced_engine",
+          "getLogger(\"enhanced_engine"
+        ]
+      },
+      {
+        "file": "tools/legacy_code_identifier.py",
+        "patterns": [
+          "get(\"enhanced_engine",
+          "get(\"enhanced_engine",
+          "get(\"enhanced_engine",
+          "get(\"enhanced_engine"
+        ]
+      },
+      {
+        "file": "tools/entry_point_detector.py",
+        "patterns": [
+          "create.*engine|engine.*factory|get.*engine",
+          "create.*engine|engine.*factory|get.*engine",
+          "get(\"enhanced_engine",
+          "get(\"legacy_engine",
+          "get(\"enhanced_engine",
+          "get(\"legacy_engine",
+          "get(\"enhanced_engine",
+          "get(\"legacy_engine",
+          "get(\"enhanced_engine"
+        ]
+      },
+      {
+        "file": "src/engine_enhanced.py",
+        "patterns": [
+          "getLogger(f\"EnhancedTradingEngine",
+          "Get engine"
+        ]
+      },
+      {
+        "file": "src/output/logging_formatter.py",
+        "patterns": [
+          "Create snap dict from enhanced engine"
+        ]
+      },
+      {
+        "file": "src/provider/kite.py",
+        "patterns": [
+          "getLogger(\"engine"
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_entry_points": {
+      "python_main": 9,
+      "cli_tools": 9,
+      "service_scripts": 4,
+      "notebooks": 0,
+      "ci_workflows": 0,
+      "package_defined": 0
+    },
+    "enhanced_engine_files": [
+      "engine_runner.py",
+      "tools/dependency_audit.py",
+      "tools/dependency_graph_builder.py",
+      "tools/entry_point_detector.py",
+      "tools/legacy_code_identifier.py",
+      "tools/runtime_import_logger.py",
+      "tools/safety_checker.py"
+    ],
+    "legacy_engine_files": [
+      "tools/entry_point_detector.py",
+      "tools/find_config_refs.py"
+    ],
+    "feature_flag_files": 2,
+    "top_entry_points": {
+      "highest_cli_score": {
+        "file": "tools/entry_point_detector.py",
+        "cli_score": 34,
+        "matched_patterns": [
+          "CLI|Command Line|commander"
+        ],
+        "enhanced_engine_refs": 45,
+        "legacy_engine_refs": 19,
+        "is_executable": false
+      },
+      "highest_service_score": {
+        "file": "tools/entry_point_detector.py",
+        "service_score": 36,
+        "matched_patterns": [
+          "daemon|service|worker|server",
+          "multiprocessing"
+        ],
+        "enhanced_engine_refs": 45,
+        "legacy_engine_refs": 19
+      },
+      "most_enhanced_refs": {
+        "file": "tools/entry_point_detector.py",
+        "size_lines": 654,
+        "imports": [
+          "__future__",
+          "ast",
+          "json",
+          "os",
+          "pathlib",
+          "re",
+          "yaml",
+          "typing",
+          "subprocess",
+          "tomllib",
+          "configparser",
+          "tomli"
+        ],
+        "functions": [
+          "main",
+          "__init__",
+          "detect_all_entry_points",
+          "_detect_python_main_scripts",
+          "_detect_cli_entry_points",
+          "_detect_service_scripts",
+          "_detect_notebook_entry_points",
+          "_detect_ci_workflows",
+          "_detect_package_entry_points",
+          "_detect_feature_flags",
+          "_detect_import_based_entries",
+          "_extract_imports",
+          "_extract_functions",
+          "_count_enhanced_refs",
+          "_count_legacy_refs",
+          "_parse_github_workflow",
+          "_parse_gitlab_ci",
+          "_parse_jenkinsfile",
+          "_parse_setup_py",
+          "_parse_pyproject_toml",
+          "_parse_setup_cfg",
+          "_generate_summary"
+        ],
+        "has_argparse": true,
+        "has_click": true,
+        "enhanced_engine_refs": 45,
+        "legacy_engine_refs": 19
+      }
+    }
+  }
+}
