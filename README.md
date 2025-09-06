@@ -1,6 +1,54 @@
-# ExpiryDayTrading
+# ExpiryDayTrading - Enhanced Trading Engine
 
-## Band presets
+A modern, modular trading engine for Indian index options with enhanced capabilities.
+
+## Quick Start
+
+### Running the Enhanced Engine
+
+```bash
+# Basic usage
+python engine_runner.py --symbols NIFTY,BANKNIFTY --run-once
+
+# With specific polling interval
+python engine_runner.py --symbols NIFTY --poll-seconds 30
+
+# See all options
+python engine_runner.py --help
+```
+
+### Entry Points
+
+- **Primary CLI**: `engine_runner.py` - Enhanced trading engine runner
+- **Core Engine**: `src/engine_enhanced.py` - Main enhanced trading engine implementation
+
+## Architecture
+
+The enhanced engine uses a modular architecture with the following key components:
+
+### Core Components
+- `src/engine_enhanced.py` - Enhanced trading engine with India-specific conventions
+- `src/config.py` - Configuration management
+- `engine_runner.py` - CLI interface and orchestration
+
+### Calculations & Metrics
+- `src/calculations/` - Core calculations (ATM, IV, Max Pain, PCR)
+- `src/metrics/` - Enhanced metrics framework
+- `src/features/` - Options processing and robust metrics
+
+### Strategy & Decision Making
+- `src/strategy/enhanced_gates.py` - Multi-factor gating with regime detection
+- `src/strategy/scenario_classifier.py` - Advanced scenario classification
+
+### Data & Providers
+- `src/provider/kite.py` - Kite Connect API integration
+- `src/provider/option_chain_builder.py` - Efficient option chain construction
+
+### Output & Observability
+- `src/output/` - Enhanced logging and formatting
+- `src/observability/` - Comprehensive decision explanations
+
+## Configuration Band presets
 
 Band width defaults are read from `settings.json`.  Top-level keys such as
 `BAND_MAX_STRIKES_ABOVE`, `BAND_MAX_STRIKES_BELOW`, `FAR_OTM_FILTER_POINTS`
