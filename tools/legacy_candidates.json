@@ -1,0 +1,1723 @@
+{
+  "enhanced_entry_points": [
+    "tools.safety_checker",
+    "tools.legacy_code_identifier",
+    "tools.dependency_audit",
+    "tools.runtime_import_logger",
+    "engine_runner",
+    "tools.entry_point_detector",
+    "tools.dependency_graph_builder"
+  ],
+  "reachable_modules": [
+    "src.provider.kite.KiteProvider",
+    "tools.safety_checker",
+    "src.calculations.atm.detect_strike_step_precise",
+    "src.engine_enhanced.MarketData",
+    "src.strategy.scenario_classifier",
+    "src.metrics.core.infer_strike_step",
+    "src.engine_enhanced.EnhancedTradingEngine",
+    "src.output.logging_formatter.create_dual_logger",
+    "tools",
+    "src.calculations.iv.calculate_atm_iv_with_validation",
+    "src.metrics.enhanced.compute_iv_percentile_enhanced",
+    "src.calculations.atm.calculate_atm_with_validation",
+    "src.output.logging_formatter.DualOutputFormatter",
+    "src.config.load_settings",
+    "src.metrics.core.compute_pcr",
+    "src.metrics.core.compute_iv_stats",
+    "src.output.logging_formatter.log_startup_message",
+    "src.output.logging_formatter.log_micro_penalty",
+    "src.calculations.iv",
+    "src.calculations.pcr.calculate_pcr_with_validation",
+    "src.metrics.core.compute_atm_iv",
+    "tools.runtime_import_logger",
+    "src.output.logging_formatter.log_expiry_info",
+    "src.features.robust_metrics",
+    "src.metrics.core.compute_forward",
+    "engine_runner",
+    "src.calculations.pcr",
+    "src.features.options",
+    "src.config.get_rfr",
+    "src.observability.strategy.enhanced_gates",
+    "src.strategy.enhanced_gates",
+    "src.output.format",
+    "src",
+    "src.observability.enhanced_explain",
+    "src.engine_enhanced.TradingDecision",
+    "src.output.logging_formatter.log_alert",
+    "src.output.format.format_output_line",
+    "src.features.options.nearest_weekly_expiry",
+    "src.provider.kite",
+    "src.config",
+    "src.metrics.core.choose_expiry",
+    "src.engine_enhanced",
+    "src.metrics.enhanced",
+    "tools.legacy_code_identifier",
+    "tools.dependency_audit",
+    "src.provider.option_chain_builder",
+    "src.calculations.max_pain.calculate_max_pain_with_validation",
+    "src.metrics.core",
+    "src.calculations.max_pain",
+    "src.strategy.metrics.core",
+    "src.config.STEP_MAP",
+    "tools.entry_point_detector",
+    "src.metrics.core.pick_atm_strike",
+    "src.metrics.core.implied_vol",
+    "src.calculations.atm",
+    "src.output.logging_formatter",
+    "tools.dependency_graph_builder"
+  ],
+  "evidence_table": {
+    "tools.safety_checker": {
+      "reachable_from_enhanced": false,
+      "static_references": 0,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 0,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 8,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_expiry_rules": {
+      "reachable_from_enhanced": false,
+      "static_references": 3,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_enhanced_metrics": {
+      "reachable_from_enhanced": false,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.strategy.scenario_classifier": {
+      "reachable_from_enhanced": true,
+      "static_references": 3,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.provider": {
+      "reachable_from_enhanced": false,
+      "static_references": 5,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tools.runtime_logger": {
+      "reachable_from_enhanced": false,
+      "static_references": 0,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 0,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 8,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tools": {
+      "reachable_from_enhanced": true,
+      "static_references": 32,
+      "import_count": 0,
+      "string_references": 27,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.conftest": {
+      "reachable_from_enhanced": false,
+      "static_references": 1,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 1,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.output": {
+      "reachable_from_enhanced": false,
+      "static_references": 5,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.calculations.iv": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "src/engine_enhanced.py"
+      ],
+      "test_files": []
+    },
+    "tools.runtime_import_logger": {
+      "reachable_from_enhanced": false,
+      "static_references": 1,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 1,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.features.robust_metrics": {
+      "reachable_from_enhanced": true,
+      "static_references": 5,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "tests/test_metrics.py"
+      ],
+      "test_files": [
+        "tests/test_metrics.py"
+      ]
+    },
+    "engine_runner": {
+      "reachable_from_enhanced": true,
+      "static_references": 14,
+      "import_count": 1,
+      "string_references": 7,
+      "config_references": 6,
+      "runtime_usage": true,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 1,
+      "risk_level": "LOW",
+      "referencing_files": [
+        "tools/runtime_logger.py"
+      ],
+      "test_files": []
+    },
+    "src.calculations.pcr": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "src/engine_enhanced.py"
+      ],
+      "test_files": []
+    },
+    "src.features.options": {
+      "reachable_from_enhanced": true,
+      "static_references": 8,
+      "import_count": 3,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "engine_runner.py",
+        "tests/test_expiry_rules.py",
+        "tests/test_options.py"
+      ],
+      "test_files": [
+        "tests/test_expiry_rules.py",
+        "tests/test_options.py"
+      ]
+    },
+    "tests.test_metrics": {
+      "reachable_from_enhanced": false,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_core_metrics": {
+      "reachable_from_enhanced": false,
+      "static_references": 3,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.output.format": {
+      "reachable_from_enhanced": true,
+      "static_references": 5,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "src/output/logging_formatter.py"
+      ],
+      "test_files": []
+    },
+    "src.strategy.enhanced_gates": {
+      "reachable_from_enhanced": true,
+      "static_references": 7,
+      "import_count": 3,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "tests/test_enhanced_gates.py",
+        "tests/test_expiry_rollover.py",
+        "tests/test_engine_integration.py"
+      ],
+      "test_files": [
+        "tests/test_enhanced_gates.py",
+        "tests/test_expiry_rollover.py",
+        "tests/test_engine_integration.py"
+      ]
+    },
+    "src": {
+      "reachable_from_enhanced": true,
+      "static_references": 22,
+      "import_count": 0,
+      "string_references": 17,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.observability.enhanced_explain": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.observability": {
+      "reachable_from_enhanced": false,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_enhanced_gates": {
+      "reachable_from_enhanced": false,
+      "static_references": 3,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_config": {
+      "reachable_from_enhanced": false,
+      "static_references": 3,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_options": {
+      "reachable_from_enhanced": false,
+      "static_references": 3,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.calculations": {
+      "reachable_from_enhanced": false,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.provider.kite": {
+      "reachable_from_enhanced": true,
+      "static_references": 7,
+      "import_count": 2,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "engine_runner.py",
+        "tools/runtime_logger.py"
+      ],
+      "test_files": []
+    },
+    "src.config": {
+      "reachable_from_enhanced": true,
+      "static_references": 11,
+      "import_count": 6,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "engine_runner.py",
+        "tests/test_config.py",
+        "tests/test_config.py",
+        "tests/test_options.py",
+        "tools/runtime_logger.py",
+        "src/features/options.py"
+      ],
+      "test_files": [
+        "tests/test_config.py",
+        "tests/test_config.py",
+        "tests/test_options.py"
+      ]
+    },
+    "tests.test_expiry_rollover": {
+      "reachable_from_enhanced": false,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "get_access_token": {
+      "reachable_from_enhanced": false,
+      "static_references": 2,
+      "import_count": 0,
+      "string_references": 1,
+      "config_references": 1,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.engine_enhanced": {
+      "reachable_from_enhanced": true,
+      "static_references": 9,
+      "import_count": 4,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "engine_runner.py",
+        "tests/test_engine_integration.py",
+        "tools/runtime_logger.py",
+        "src/output/logging_formatter.py"
+      ],
+      "test_files": [
+        "tests/test_engine_integration.py"
+      ]
+    },
+    "src.metrics.enhanced": {
+      "reachable_from_enhanced": true,
+      "static_references": 8,
+      "import_count": 4,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "tests/test_expiry_rollover.py",
+        "tests/test_enhanced_metrics.py",
+        "tests/test_enhanced_metrics.py",
+        "src/engine_enhanced.py"
+      ],
+      "test_files": [
+        "tests/test_expiry_rollover.py",
+        "tests/test_enhanced_metrics.py",
+        "tests/test_enhanced_metrics.py"
+      ]
+    },
+    "tools.legacy_code_identifier": {
+      "reachable_from_enhanced": true,
+      "static_references": 2,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 2,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tools.dependency_audit": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tools.find_config_refs": {
+      "reachable_from_enhanced": false,
+      "static_references": 1,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 1,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.provider.option_chain_builder": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.cli.orchestrate": {
+      "reachable_from_enhanced": false,
+      "static_references": 5,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [
+        "tools/runtime_logger.py"
+      ],
+      "test_files": []
+    },
+    "src.features": {
+      "reachable_from_enhanced": false,
+      "static_references": 5,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.metrics.core": {
+      "reachable_from_enhanced": true,
+      "static_references": 7,
+      "import_count": 3,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": true,
+      "coverage_percentage": 0.0,
+      "risk_score": 2,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "tests/test_core_metrics.py",
+        "tests/test_expiry_rollover.py",
+        "src/features/robust_metrics.py"
+      ],
+      "test_files": [
+        "tests/test_core_metrics.py",
+        "tests/test_expiry_rollover.py"
+      ]
+    },
+    "src.calculations.max_pain": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "src/engine_enhanced.py"
+      ],
+      "test_files": []
+    },
+    "tools.entry_point_detector": {
+      "reachable_from_enhanced": true,
+      "static_references": 2,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 2,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "tests.test_engine_integration": {
+      "reachable_from_enhanced": false,
+      "static_references": 4,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 4,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 6,
+      "risk_level": "VERY_HIGH",
+      "referencing_files": [],
+      "test_files": []
+    },
+    "src.calculations.atm": {
+      "reachable_from_enhanced": true,
+      "static_references": 4,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 3,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "src/engine_enhanced.py"
+      ],
+      "test_files": []
+    },
+    "src.output.logging_formatter": {
+      "reachable_from_enhanced": true,
+      "static_references": 6,
+      "import_count": 1,
+      "string_references": 0,
+      "config_references": 5,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [
+        "engine_runner.py"
+      ],
+      "test_files": []
+    },
+    "tools.dependency_graph_builder": {
+      "reachable_from_enhanced": true,
+      "static_references": 2,
+      "import_count": 0,
+      "string_references": 0,
+      "config_references": 2,
+      "runtime_usage": false,
+      "test_coverage": false,
+      "coverage_percentage": 0.0,
+      "risk_score": 3,
+      "risk_level": "MEDIUM",
+      "referencing_files": [],
+      "test_files": []
+    }
+  },
+  "allowlist": {
+    "tests.test_expiry_rules": "Referenced in configuration files",
+    "tests.test_enhanced_metrics": "Referenced in configuration files",
+    "src.strategy.scenario_classifier": "Referenced in configuration files",
+    "src.provider": "Referenced in configuration files",
+    "tools": "Referenced in configuration files",
+    "tests.conftest": "Referenced in configuration files",
+    "src.output": "Referenced in configuration files",
+    "src.calculations.iv": "Referenced in configuration files",
+    "tools.runtime_import_logger": "Referenced in configuration files",
+    "src.features.robust_metrics": "Referenced in configuration files",
+    "engine_runner": "Referenced in configuration files",
+    "src.calculations.pcr": "Referenced in configuration files",
+    "src.features.options": "Referenced in configuration files",
+    "tests.test_metrics": "Referenced in configuration files",
+    "tests.test_core_metrics": "Referenced in configuration files",
+    "src.output.format": "Referenced in configuration files",
+    "src.strategy.enhanced_gates": "Referenced in configuration files",
+    "src": "Referenced in configuration files",
+    "src.observability.enhanced_explain": "Referenced in configuration files",
+    "src.observability": "Referenced in configuration files",
+    "tests.test_enhanced_gates": "Referenced in configuration files",
+    "tests.test_config": "Referenced in configuration files",
+    "tests.test_options": "Referenced in configuration files",
+    "src.calculations": "Referenced in configuration files",
+    "src.provider.kite": "Referenced in configuration files",
+    "src.config": "Referenced in configuration files",
+    "tests.test_expiry_rollover": "Referenced in configuration files",
+    "get_access_token": "Referenced in configuration files",
+    "src.engine_enhanced": "Referenced in configuration files",
+    "src.metrics.enhanced": "Referenced in configuration files",
+    "tools.legacy_code_identifier": "Referenced in configuration files",
+    "tools.dependency_audit": "Referenced in configuration files",
+    "tools.find_config_refs": "Referenced in configuration files",
+    "src.provider.option_chain_builder": "Referenced in configuration files",
+    "src.cli.orchestrate": "Referenced in configuration files",
+    "src.features": "Referenced in configuration files",
+    "src.metrics.core": "Referenced in configuration files",
+    "src.calculations.max_pain": "Referenced in configuration files",
+    "tools.entry_point_detector": "Referenced in configuration files",
+    "tests.test_engine_integration": "Referenced in configuration files",
+    "src.calculations.atm": "Referenced in configuration files",
+    "src.output.logging_formatter": "Referenced in configuration files",
+    "tools.dependency_graph_builder": "Referenced in configuration files"
+  },
+  "legacy_candidates": {
+    "high_confidence": [
+      {
+        "module": "tools.safety_checker",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 0,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 0,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 8,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        },
+        "file_path": "tools/safety_checker.py"
+      },
+      {
+        "module": "tools.runtime_logger",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 0,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 0,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 8,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        },
+        "file_path": "tools/runtime_logger.py"
+      }
+    ],
+    "medium_confidence": [],
+    "low_confidence": [],
+    "allowlisted": [
+      {
+        "module": "tests.test_expiry_rules",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 3,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.test_enhanced_metrics",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.strategy.scenario_classifier",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 3,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.provider",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 5,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tools",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 32,
+          "import_count": 0,
+          "string_references": 27,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.conftest",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 1,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 1,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.output",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 5,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.calculations.iv",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "src/engine_enhanced.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tools.runtime_import_logger",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 1,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 1,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.features.robust_metrics",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 5,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "tests/test_metrics.py"
+          ],
+          "test_files": [
+            "tests/test_metrics.py"
+          ]
+        }
+      },
+      {
+        "module": "engine_runner",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 14,
+          "import_count": 1,
+          "string_references": 7,
+          "config_references": 6,
+          "runtime_usage": true,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 1,
+          "risk_level": "LOW",
+          "referencing_files": [
+            "tools/runtime_logger.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.calculations.pcr",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "src/engine_enhanced.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.features.options",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 8,
+          "import_count": 3,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "engine_runner.py",
+            "tests/test_expiry_rules.py",
+            "tests/test_options.py"
+          ],
+          "test_files": [
+            "tests/test_expiry_rules.py",
+            "tests/test_options.py"
+          ]
+        }
+      },
+      {
+        "module": "tests.test_metrics",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.test_core_metrics",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 3,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.output.format",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 5,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "src/output/logging_formatter.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.strategy.enhanced_gates",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 7,
+          "import_count": 3,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "tests/test_enhanced_gates.py",
+            "tests/test_expiry_rollover.py",
+            "tests/test_engine_integration.py"
+          ],
+          "test_files": [
+            "tests/test_enhanced_gates.py",
+            "tests/test_expiry_rollover.py",
+            "tests/test_engine_integration.py"
+          ]
+        }
+      },
+      {
+        "module": "src",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 22,
+          "import_count": 0,
+          "string_references": 17,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.observability.enhanced_explain",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.observability",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.test_enhanced_gates",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 3,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.test_config",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 3,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.test_options",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 3,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.calculations",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.provider.kite",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 7,
+          "import_count": 2,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "engine_runner.py",
+            "tools/runtime_logger.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.config",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 11,
+          "import_count": 6,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "engine_runner.py",
+            "tests/test_config.py",
+            "tests/test_config.py",
+            "tests/test_options.py",
+            "tools/runtime_logger.py",
+            "src/features/options.py"
+          ],
+          "test_files": [
+            "tests/test_config.py",
+            "tests/test_config.py",
+            "tests/test_options.py"
+          ]
+        }
+      },
+      {
+        "module": "tests.test_expiry_rollover",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "get_access_token",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 2,
+          "import_count": 0,
+          "string_references": 1,
+          "config_references": 1,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.engine_enhanced",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 9,
+          "import_count": 4,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "engine_runner.py",
+            "tests/test_engine_integration.py",
+            "tools/runtime_logger.py",
+            "src/output/logging_formatter.py"
+          ],
+          "test_files": [
+            "tests/test_engine_integration.py"
+          ]
+        }
+      },
+      {
+        "module": "src.metrics.enhanced",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 8,
+          "import_count": 4,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "tests/test_expiry_rollover.py",
+            "tests/test_enhanced_metrics.py",
+            "tests/test_enhanced_metrics.py",
+            "src/engine_enhanced.py"
+          ],
+          "test_files": [
+            "tests/test_expiry_rollover.py",
+            "tests/test_enhanced_metrics.py",
+            "tests/test_enhanced_metrics.py"
+          ]
+        }
+      },
+      {
+        "module": "tools.legacy_code_identifier",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 2,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 2,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tools.dependency_audit",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tools.find_config_refs",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 1,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 1,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.provider.option_chain_builder",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.cli.orchestrate",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 5,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [
+            "tools/runtime_logger.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.features",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 5,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.metrics.core",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 7,
+          "import_count": 3,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": true,
+          "coverage_percentage": 0.0,
+          "risk_score": 2,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "tests/test_core_metrics.py",
+            "tests/test_expiry_rollover.py",
+            "src/features/robust_metrics.py"
+          ],
+          "test_files": [
+            "tests/test_core_metrics.py",
+            "tests/test_expiry_rollover.py"
+          ]
+        }
+      },
+      {
+        "module": "src.calculations.max_pain",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "src/engine_enhanced.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tools.entry_point_detector",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 2,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 2,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tests.test_engine_integration",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": false,
+          "static_references": 4,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 4,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 6,
+          "risk_level": "VERY_HIGH",
+          "referencing_files": [],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.calculations.atm",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 4,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 3,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "src/engine_enhanced.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "src.output.logging_formatter",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 6,
+          "import_count": 1,
+          "string_references": 0,
+          "config_references": 5,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [
+            "engine_runner.py"
+          ],
+          "test_files": []
+        }
+      },
+      {
+        "module": "tools.dependency_graph_builder",
+        "reason": "Referenced in configuration files",
+        "evidence": {
+          "reachable_from_enhanced": true,
+          "static_references": 2,
+          "import_count": 0,
+          "string_references": 0,
+          "config_references": 2,
+          "runtime_usage": false,
+          "test_coverage": false,
+          "coverage_percentage": 0.0,
+          "risk_score": 3,
+          "risk_level": "MEDIUM",
+          "referencing_files": [],
+          "test_files": []
+        }
+      }
+    ]
+  },
+  "statistics": {
+    "total_modules": 45,
+    "reachable_from_enhanced": 24,
+    "runtime_used": 1,
+    "test_covered": 7,
+    "high_confidence_candidates": 2,
+    "medium_confidence_candidates": 0,
+    "low_confidence_candidates": 0,
+    "allowlisted_modules": 43,
+    "removal_potential": {
+      "high_confidence": 4.4,
+      "total_candidates": 4.4
+    }
+  }
+}

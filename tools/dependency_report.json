@@ -1,0 +1,1023 @@
+{
+  "summary": {
+    "total_modules": 114,
+    "entry_points": 1,
+    "reachable_modules": 18,
+    "dead_modules": 96
+  },
+  "entry_points": [
+    "engine_runner"
+  ],
+  "dead_modules": [
+    "src.risk",
+    "src.ai.llm_features",
+    "src.cli.orchestrate",
+    "src.calibration.harness",
+    "test_expected_values",
+    "src.strategy.select",
+    "src.cli.train_lgbm",
+    "test_gate_fixes",
+    "src.data.quality",
+    "tests.test_enhanced_gates",
+    "src.stream.aggregate",
+    "src.cli.train",
+    "demonstrate_fix",
+    "test_comprehensive_validation",
+    "src.models.conformal",
+    "src.ai.ensemble",
+    "src.provider",
+    "test_technical_indicators",
+    "comprehensive_validation",
+    "test_calculation_logic",
+    "src.features.options_ext",
+    "src.ai",
+    "get_access_token",
+    "tests.test_metrics_india",
+    "src.features",
+    "tests.test_expiry_rules",
+    "src.risk.execution",
+    "tests.conftest",
+    "src.observability.explain",
+    "test_empty_data",
+    "src.signals.technical_signals",
+    "demo_technical_indicators",
+    "src.cli.predict_lgbm",
+    "tools.find_config_refs",
+    "test_max_pain_atm_fix",
+    "src.validation",
+    "src.features.clients",
+    "src",
+    "src.cli.replay_trend",
+    "test_pcr_fixes",
+    "src.risk.sizing",
+    "src.output.explain",
+    "test_enhanced_engine_fix",
+    "src.strategy.decision_table",
+    "src.strategy.trend_consensus",
+    "src.risk.pattern",
+    "src.data",
+    "src.calculations",
+    "src.features.macro",
+    "tests.test_options",
+    "src.signals",
+    "src.validation.market_validation",
+    "src.offline.labels",
+    "src.calibration",
+    "debug_indicators",
+    "src.features.technicals",
+    "src.strategy.gates",
+    "src.stream.orderbook",
+    "src.models.prob",
+    "tests.test_engine_utils",
+    "src.features.events",
+    "src.features.oi",
+    "test_log_output",
+    "tests.test_core_metrics",
+    "test_option_chain_integration",
+    "src.ai.reweight",
+    "src.cli.build_features",
+    "tools.dependency_audit",
+    "src.strategy.filters",
+    "test_engine_fixes_demo",
+    "engine",
+    "validate_accuracy",
+    "test_with_mock_data",
+    "src.output",
+    "tests.test_metrics",
+    "test_pcr_fix_demo",
+    "tests.test_config",
+    "tools",
+    "src.features.greeks",
+    "src.signals.ensemble",
+    "test_full_pipeline",
+    "src.calculations.technical_indicators",
+    "tests.test_expiry_rollover",
+    "tests.test_engine_integration",
+    "src.features.patterns",
+    "src.ai.llm_gateway",
+    "src.features.ivterm",
+    "tests.test_enhanced_metrics",
+    "src.features.flows",
+    "src.observability",
+    "tests.test_metrics_ext",
+    "tools.runtime_import_logger",
+    "test_logging_fixes",
+    "tests.test_trend_replay",
+    "src.features.breadth",
+    "tests.test_patterns"
+  ],
+  "module_details": {
+    "test_calculation_logic": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_calculation_logic.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 9,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_expected_values": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_expected_values.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_max_pain_atm_fix": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_max_pain_atm_fix.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 8,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_pcr_fix_demo": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_pcr_fix_demo.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 10,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "demonstrate_fix": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/demonstrate_fix.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "test_pcr_fixes": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_pcr_fixes.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_logging_fixes": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_logging_fixes.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 9,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_option_chain_integration": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_option_chain_integration.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 11,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "engine_runner": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/engine_runner.py",
+      "is_entry_point": true,
+      "is_reachable": true,
+      "import_count": 18,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "test_with_mock_data": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_with_mock_data.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 8,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "engine": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/engine.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 54,
+      "dynamic_imports": 0,
+      "plugin_refs": 9
+    },
+    "test_comprehensive_validation": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_comprehensive_validation.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 18,
+      "dynamic_imports": 0,
+      "plugin_refs": 3
+    },
+    "comprehensive_validation": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/comprehensive_validation.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "test_full_pipeline": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_full_pipeline.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_empty_data": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_empty_data.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_log_output": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_log_output.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "get_access_token": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/get_access_token.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "demo_technical_indicators": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/demo_technical_indicators.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 8,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_gate_fixes": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_gate_fixes.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_enhanced_engine_fix": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_enhanced_engine_fix.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 8,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "validate_accuracy": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/validate_accuracy.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 9,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_technical_indicators": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_technical_indicators.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 9,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "debug_indicators": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/debug_indicators.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "test_engine_fixes_demo": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/test_engine_fixes_demo.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_config": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_config.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "tests.test_trend_replay": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_trend_replay.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "tests.test_expiry_rules": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_expiry_rules.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_enhanced_gates": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_enhanced_gates.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "tests.test_engine_utils": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_engine_utils.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_metrics_ext": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_metrics_ext.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_patterns": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_patterns.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_core_metrics": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_core_metrics.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_expiry_rollover": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_expiry_rollover.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_engine_integration": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_engine_integration.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_enhanced_metrics": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_enhanced_metrics.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "tests.test_options": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_options.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "tests.test_metrics_india": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_metrics_india.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.conftest": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/conftest.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tests.test_metrics": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tests/test_metrics.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tools.runtime_import_logger": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tools/runtime_import_logger.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 13,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "tools": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tools/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "tools.dependency_audit": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tools/dependency_audit.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 20,
+      "dynamic_imports": 0,
+      "plugin_refs": 8
+    },
+    "tools.find_config_refs": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/tools/find_config_refs.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 18,
+      "dynamic_imports": 0,
+      "plugin_refs": 6
+    },
+    "src": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.config": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/config.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "src.engine_enhanced": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/engine_enhanced.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 18,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.output.explain": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/output/explain.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.output": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/output/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.output.logging_formatter": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/output/logging_formatter.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 9,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.output.format": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/output/format.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.validation": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/validation/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.validation.market_validation": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/validation/market_validation.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.offline.labels": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/offline/labels.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calibration.harness": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calibration/harness.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calibration": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calibration/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calculations.technical_indicators": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calculations/technical_indicators.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calculations.atm": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calculations/atm.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calculations.iv": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calculations/iv.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calculations": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calculations/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calculations.max_pain": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calculations/max_pain.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.calculations.pcr": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/calculations/pcr.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.select": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/select.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.decision_table": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/decision_table.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.filters": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/filters.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.scenario_classifier": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/scenario_classifier.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.gates": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/gates.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.trend_consensus": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/trend_consensus.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.strategy.enhanced_gates": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/strategy/enhanced_gates.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.oi": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/oi.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.clients": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/clients.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.robust_metrics": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/robust_metrics.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.events": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/events.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "src.features.ivterm": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/ivterm.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.patterns": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/patterns.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.options": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/options.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.greeks": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/greeks.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.options_ext": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/options_ext.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.breadth": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/breadth.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 1,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.flows": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/flows.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 1,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.technicals": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/technicals.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.features.macro": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/features/macro.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 1,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.provider.option_chain_builder": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/provider/option_chain_builder.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 8,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.provider": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/provider/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.provider.kite": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/provider/kite.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 13,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "src.cli.orchestrate": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/cli/orchestrate.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 20,
+      "dynamic_imports": 0,
+      "plugin_refs": 6
+    },
+    "src.cli.train": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/cli/train.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "src.cli.predict_lgbm": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/cli/predict_lgbm.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 16,
+      "dynamic_imports": 0,
+      "plugin_refs": 7
+    },
+    "src.cli.build_features": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/cli/build_features.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 2
+    },
+    "src.cli.replay_trend": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/cli/replay_trend.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 9,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "src.cli.train_lgbm": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/cli/train_lgbm.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 20,
+      "dynamic_imports": 0,
+      "plugin_refs": 6
+    },
+    "src.observability.explain": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/observability/explain.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.observability": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/observability/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.observability.enhanced_explain": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/observability/enhanced_explain.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.data": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/data/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 0,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.data.quality": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/data/quality.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.risk.pattern": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/risk/pattern.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 1,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.risk.execution": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/risk/execution.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.risk": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/risk/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.risk.sizing": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/risk/sizing.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.signals.ensemble": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/signals/ensemble.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.signals.technical_signals": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/signals/technical_signals.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 7,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.signals": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/signals/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 1,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.metrics.core": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/metrics/core.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.metrics.enhanced": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/metrics/enhanced.py",
+      "is_entry_point": false,
+      "is_reachable": true,
+      "import_count": 6,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.ai.ensemble": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/ai/ensemble.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.ai": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/ai/__init__.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 1,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.ai.reweight": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/ai/reweight.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 8,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.ai.llm_features": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/ai/llm_features.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 4,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.ai.llm_gateway": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/ai/llm_gateway.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 12,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "src.models.conformal": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/models/conformal.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 2,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.models.prob": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/models/prob.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 3,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    },
+    "src.stream.orderbook": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/stream/orderbook.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 13,
+      "dynamic_imports": 0,
+      "plugin_refs": 1
+    },
+    "src.stream.aggregate": {
+      "file_path": "/home/runner/work/ExpiryDayTrading/ExpiryDayTrading/src/stream/aggregate.py",
+      "is_entry_point": false,
+      "is_reachable": false,
+      "import_count": 5,
+      "dynamic_imports": 0,
+      "plugin_refs": 0
+    }
+  }
+}
